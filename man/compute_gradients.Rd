@@ -8,7 +8,8 @@ compute_gradients(
   ifn,
   indicateurs = NULL,
   climat = NULL,
-  ru_table = ru_coefficients()
+  ru_table = ru_coefficients(),
+  min_res_ifn_m = 1000
 )
 }
 \arguments{
@@ -18,9 +19,13 @@ compute_gradients(
 TAXREF v13.0, colonnes \code{ph}, \code{azote}), ou \code{NULL} pour l'AFC. Voir
 \code{inst/extdata/synth_indicateurs.csv} (synthétique).}
 
-\item{climat}{\code{SpatRaster} ou \code{NULL}.}
+\item{climat}{\code{SpatRaster} ou \code{NULL}. Maille d'au moins \code{min_res_ifn_m}, quel que
+soit le nom des couches ; agréger avant avec \code{\link[=aggregate_to_km]{aggregate_to_km()}}.}
 
 \item{ru_table}{Vecteur nommé de coefficients mm/cm par code de texture.}
+
+\item{min_res_ifn_m}{Maille minimale (m) d'une couche croisée avec des placettes
+IFN : 1000 (brief technique, étape 5 : climat et pH agrégés à 1 km).}
 }
 \value{
 Un \code{sf} (Lambert-93) : \code{id_placette}, \code{CAMPAGNE}, \code{IDP}, \code{source},

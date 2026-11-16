@@ -42,3 +42,26 @@ test_that("stack_soil_layers : nom du fichier par défaut, seuil réglable, erre
   expect_error(stack_soil_layers(f, g4326))
   expect_error(stack_soil_layers(c(a = f, a = f), grille_25()), "double")
 })
+
+test_that("aggregate_to_km : moyenne à 1000 m, noms conservés, erreurs", {
+  f <- make_synth_sol(100, "x")
+  r <- terra::rast(f)
+  a <- aggregate_to_km(r)
+  expect_equal(terra::res(a), c(1000, 1000))
+  expect_equal(names(a), names(r))
+  # x relatif moyen de la maille de 1 km : 0,5 (x en km)
+  expect_equal(terra::extract(a, cbind(1007500, 6790500))[[1]], 0.5)
+  expect_equal(terra::res(aggregate_to_km(r, 500)), c(500, 500))
+  expect_error(aggregate_to_km(r, 150), "multiple")
+  expect_error(aggregate_to_km(r, -1), "positif")
+  expect_error(aggregate_to_km(3), "SpatRaster")
+})
+
+test_that("une couche agrégée à 1 km passe l'extraction IFN, la couche à 100 m non", {
+  r <- terra::rast(make_synth_sol(100, "x"))
+  clim <- function(x) { y <- c(x, x, x); names(y) <- c("p_sv", "etp_sv", "t_moy"); y }
+  expect_error(compute_gradients(make_synth_ifn(), make_synth_indic(), climat = clim(r)),
+               "1000 m")
+  expect_no_error(compute_gradients(make_synth_ifn(), make_synth_indic(),
+                                    climat = clim(aggregate_to_km(r))))
+})

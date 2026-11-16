@@ -8,6 +8,11 @@
 #' rééchantillonnage ne rend pas une couche grossière plus fine : le préfixe suit la
 #' résolution native, jamais celle de `grid`.
 #'
+#' **Attention** : `coarse_` signifie maille >= 90 m (prédicteurs du modèle local),
+#' pas « croisable avec l'IFN ». Avant tout croisement avec des placettes IFN, ces
+#' couches doivent être agrégées à 1 km ([aggregate_to_km()]) ; l'extraction exige
+#' une maille >= 1000 m.
+#'
 #' Pour une source en degrés (WGS84), la maille est estimée à 111 320 m par degré
 #' (approximation).
 #'
@@ -56,4 +61,33 @@ stack_soil_layers <- function(paths, grid, method = "bilinear", coarse_res_m = 9
          call. = FALSE)
   }
   s
+}
+
+#' Agréger un raster à la maille kilométrique
+#'
+#' Agrège par la **moyenne** un raster à une maille de `res_m` mètres (1000 par
+#' défaut). C'est l'étape obligatoire avant de croiser une couche de sols ou de climat
+#' avec des placettes IFN (localisées à 700 m près ; brief technique, étape 5 : pH
+#' GlobalSoilMap agrégé à 1 km). `res_m` doit être un multiple entier de la maille de
+#' `x`.
+#'
+#' @param x `SpatRaster` en EPSG:2154, à maille carrée.
+#' @param res_m Maille cible, en mètres.
+#' @return Un `SpatRaster` de maille `res_m`, de mêmes noms de couches.
+#' @examples
+#' r <- terra::rast(system.file("extdata", "synth_dtm.tif", package = "sylvostation"))
+#' terra::res(aggregate_to_km(r))
+#' @export
+aggregate_to_km <- function(x, res_m = 1000) {
+  if (!inherits(x, "SpatRaster")) stop("`x` doit \u00eatre un SpatRaster.", call. = FALSE)
+  assert_crs_2154(x)
+  if (!is.numeric(res_m) || length(res_m) != 1L || !is.finite(res_m) || res_m <= 0) {
+    stop("`res_m` doit \u00eatre un nombre positif.", call. = FALSE)
+  }
+  fact <- res_m / terra::res(x)
+  if (any(abs(fact - round(fact)) > 1e-8) || any(round(fact) < 1)) {
+    stop("`res_m` doit \u00eatre un multiple entier de la maille de `x` (",
+         paste(terra::res(x), collapse = " x "), " m).", call. = FALSE)
+  }
+  terra::aggregate(x, fact = round(fact), fun = "mean", na.rm = TRUE)
 }

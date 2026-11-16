@@ -287,6 +287,11 @@ ru_coefficients <- function() {
   ru <- (ep_haut * c_haut + ep_bas * c_bas) * (1 - pmin(cail, 10) / 10)
   sans_fosse <- toupper(col("OBSPEDO")) %in% c("5", "X")
   ru[sans_fosse | is.na(p2) | is.na(c_bas)] <- NA_real_
+  # horizon entierement organique (H) : non modelise -> NA ; entierement caillouteux
+  # (OBSPEDO R) : aucune terre fine -> 0
+  organique <- toupper(col("TEXT1")) %in% "H" | toupper(col("TEXT2")) %in% "H"
+  ru[organique] <- NA_real_
+  ru[toupper(col("OBSPEDO")) %in% "R"] <- 0
   ru
 }
 
@@ -327,7 +332,10 @@ ru_coefficients <- function() {
 #' @param indicateurs `data.frame` des valeurs indicatrices (colonne `cd_ref` en
 #'   TAXREF v13.0, colonnes `ph`, `azote`), ou `NULL` pour l'AFC. Voir
 #'   `inst/extdata/synth_indicateurs.csv` (synthétique).
-#' @param climat `SpatRaster` ou `NULL`.
+#' @param climat `SpatRaster` ou `NULL`. Maille d'au moins `min_res_ifn_m`, quel que
+#'   soit le nom des couches ; agréger avant avec [aggregate_to_km()].
+#' @param min_res_ifn_m Maille minimale (m) d'une couche croisée avec des placettes
+#'   IFN : 1000 (brief technique, étape 5 : climat et pH agrégés à 1 km).
 #' @param ru_table Vecteur nommé de coefficients mm/cm par code de texture.
 #' @return Un `sf` (Lambert-93) : `id_placette`, `CAMPAGNE`, `IDP`, `source`,
 #'   `loc_precision_m`, `n_taxa_indic`, `grad_ph`, `grad_azote`, `grad_trophique`,
@@ -342,7 +350,7 @@ ru_coefficients <- function() {
 #' head(sf::st_drop_geometry(g)[, c("id_placette", "grad_trophique", "ru_mm")])
 #' @export
 compute_gradients <- function(ifn, indicateurs = NULL, climat = NULL,
-                              ru_table = ru_coefficients()) {
+                              ru_table = ru_coefficients(), min_res_ifn_m = 1000) {
   .check_ifn(ifn)
   if (!is.numeric(ru_table) || is.null(names(ru_table))) {
     stop("`ru_table` doit \u00eatre un vecteur num\u00e9rique nomm\u00e9 par code de texture.",
@@ -405,10 +413,11 @@ compute_gradients <- function(ifn, indicateurs = NULL, climat = NULL,
 
   # --- bioclimatique (maille large uniquement)
   if (!is.null(climat)) {
-    cl <- .extraire_climat(out, climat)
+    cl <- .extraire_climat(out, climat, min_res_ifn_m)
     out$coarse_p_etp_sv <- cl$p_etp_sv
     out$coarse_t_moy <- cl$t_moy
   }
+  attr(out, "ru_verifie") <- FALSE  # coefficients par defaut : a verifier
   attr(out, "methode_trophique") <- methode
   attr(out, "taxa_non_apparies") <- non_app
   out
@@ -416,7 +425,7 @@ compute_gradients <- function(ifn, indicateurs = NULL, climat = NULL,
 
 # Extraction du climat kilometrique aux placettes. La regle bloquante est appelee en
 # premier ; les couches de maille < 90 m ou portant un nom de variable fine sont refusees.
-.extraire_climat <- function(pts, climat) {
+.extraire_climat <- function(pts, climat, min_res_ifn_m = 1000) {
   if (!inherits(climat, "SpatRaster")) {
     stop("`climat` doit \u00eatre un SpatRaster.", call. = FALSE)
   }
@@ -427,8 +436,8 @@ compute_gradients <- function(ifn, indicateurs = NULL, climat = NULL,
     assert_no_fine_extract_on_ifn(pts, fines)  # leve l'erreur de la regle bloquante
   }
   assert_no_fine_extract_on_ifn(pts, paste0("coarse_", noms))
-  if (any(terra::res(climat) < 90)) {
-    stop("`climat` doit \u00eatre de maille large (>= 90 m ; kilom\u00e9trique attendu) : ",
+  if (any(terra::res(climat) < min_res_ifn_m)) {
+    stop("`climat` doit \u00eatre de maille >= ", min_res_ifn_m, " m pour \u00eatre crois\u00e9e avec des placettes IFN (agr\u00e9ger : aggregate_to_km()) : ",
          "r\u00e9solution ", paste(terra::res(climat), collapse = " x "), " m.", call. = FALSE)
   }
   requis <- c("p_sv", "etp_sv", "t_moy")

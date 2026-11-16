@@ -221,7 +221,7 @@ test_that("climat kilométrique extrait aux placettes (valeur connue)", {
 
 test_that("règle bloquante : climat de maille fine ou couche fine refusés", {
   expect_error(compute_gradients(make_synth_ifn(), make_synth_indic(),
-                                 climat = make_synth_climat(res = 25)), "maille large")
+                                 climat = make_synth_climat(res = 25)), "maille >=")
   c2 <- make_synth_climat()
   names(c2)[1] <- "pente"
   expect_error(compute_gradients(make_synth_ifn(), make_synth_indic(), climat = c2),
@@ -233,4 +233,26 @@ test_that("règle bloquante : climat de maille fine ou couche fine refusés", {
   expect_error(compute_gradients(make_synth_ifn(), make_synth_indic(), climat = c4))
   expect_error(compute_gradients(make_synth_ifn(), make_synth_indic(), climat = 3),
                "SpatRaster")
+})
+
+test_that("climat : maille < 1000 m refusée quel que soit le nom, 1000 m acceptée", {
+  ifn <- make_synth_ifn(); ind <- make_synth_indic()
+  # noms neutres (p_sv, etp_sv, t_moy) : refusé quand même
+  expect_error(compute_gradients(ifn, ind, climat = make_synth_climat(res = 100)), "1000 m")
+  expect_error(compute_gradients(ifn, ind, climat = make_synth_climat(res = 500)), "1000 m")
+  expect_no_error(compute_gradients(ifn, ind, climat = make_synth_climat(res = 1000)))
+  expect_no_error(compute_gradients(ifn, ind, climat = make_synth_climat(res = 500),
+                                    min_res_ifn_m = 500))
+})
+
+test_that("réserve utile : OBSPEDO R -> 0, texture H -> NA ; ru_verifie = FALSE", {
+  ifn <- make_synth_ifn()
+  ifn$placettes$OBSPEDO[1] <- "R"
+  ifn$placettes$TEXT1[1] <- "0"
+  ifn$placettes$TEXT2[2] <- "H"
+  g <- compute_gradients(ifn, make_synth_indic())
+  expect_equal(g$ru_mm[1], 0)
+  expect_true(is.na(g$ru_mm[2]))
+  expect_equal(g$ru_mm[3], 70)
+  expect_false(attr(g, "ru_verifie"))
 })

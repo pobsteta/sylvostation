@@ -31,6 +31,11 @@ rééchantillonnage ne rend pas une couche grossière plus fine : le préfixe su
 résolution native, jamais celle de \code{grid}.
 }
 \details{
+\strong{Attention} : \code{coarse_} signifie maille >= 90 m (prédicteurs du modèle local),
+pas « croisable avec l'IFN ». Avant tout croisement avec des placettes IFN, ces
+couches doivent être agrégées à 1 km (\code{\link[=aggregate_to_km]{aggregate_to_km()}}) ; l'extraction exige
+une maille >= 1000 m.
+
 Pour une source en degrés (WGS84), la maille est estimée à 111 320 m par degré
 (approximation).
 }
