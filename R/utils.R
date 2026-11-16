@@ -8,7 +8,10 @@
 FINE_VARIABLES <- c(
   "pente", "exposition", "courbure", "courbure_plan", "courbure_profil",
   "tpi", "twi", "mrvbf", "hauteur_reseau", "rayonnement",
-  "mnt", "mhc", "metriques_lidar"
+  "mnt", "mhc", "metriques_lidar",
+  # couches de derive_terrain() (mission 005)
+  "exposition_cos", "exposition_sin", "surface_drainee",
+  "tpi_100", "tpi_300", "tpi_1000"
 )
 
 #' Variables à maille large (autorisées aux placettes IFN)
