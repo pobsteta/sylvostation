@@ -73,3 +73,8 @@ Les tests passent, et le rendu dit ce qui a tourné sur données réelles et ce 
 
 - Le rapport et `write_outputs()` produisent un tableau « état de preuve » (étape → `réel` / `réel réduit` / `synthétique`).
 - La carte des types est aussi livrée en GeoPackage consultable hors ligne.
+
+## Compléments (relecture 008)
+
+- `predict_raster()` : passer les plis spatiaux de `spatial_cv()` à `CAST::aoa()` (méthode de Meyer et Pebesma) quand CAST est installé ; ajouter une couche `sd_cv` calibrée sur l'erreur de validation croisée (par ex. RMSE par blocs) à côté de `sd`.
+- Un `data.frame` x/y passé à `fit_gradient()` doit passer par `assert_crs_2154()` (via conversion en `sf` EPSG:2154) ou être refusé.
