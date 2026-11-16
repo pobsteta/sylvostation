@@ -1,0 +1,7 @@
+"id","x","y","loc_precision_m","species","synthetic"
+"G01",1010012,6795012,3,"Synthia alpha",TRUE
+"G01",1010012,6795012,3,"Synthia beta",TRUE
+"G01",1010012,6795012,3,"Synthia gamma",TRUE
+"G02",1012500,6797500,5,"Synthia delta",TRUE
+"G02",1012500,6797500,5,"Synthia beta",TRUE
+"G03",1015030,6800020,8,"Synthia eta",TRUE
