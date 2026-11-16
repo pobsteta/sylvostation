@@ -43,15 +43,17 @@ Mission 003. Compte rendu **écrit par `inst/scripts/increment1.R`** le 2026-11-
 
 ## Produits
 
-| dalle | vol | cellules | mnt_na | mnt_min_max | mhc_moy_max | mhc_neg | mnt_mo | mhc_mo |
-|---|---|---|---|---|---|---|---|---|
-| 1014-6793 | 2022-01-13 -> 2022-04-21 | 1 000 000 | 0.00 % | 287.7 ; 534.2 | 11.9 ; 47.4 | 0.00 % | 2.1 | 2.6 |
-| 1014-6794 | 2022-01-13 -> 2022-04-21 | 1 000 000 | 0.00 % | 358.8 ; 620.7 | 18.0 ; 54.6 | 0.00 % | 2.2 | 2.8 |
-| 1015-6793 | 2022-01-13 -> 2022-01-13 | 1 000 000 | 0.00 % | 272.6 ; 553.3 | 10.1 ; 60.9 | 0.00 % | 2.1 | 2.7 |
-| 1015-6794 | 2022-01-13 -> 2022-01-13 | 1 000 000 | 0.00 % | 399.1 ; 652.0 | 16.0 ; 41.7 | 0.00 % | 2.1 | 2.8 |
+| dalle | vol | cellules | mnt_na | mnt_min_max | mhc_moy_max | mhc_na | mhc_min | mhc_neg | mnt_mo | mhc_mo |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1014-6793 | 2022-01-13 -> 2022-04-21 | 1 000 000 | 0.00 % | 287.7 ; 534.2 | 11.9 ; 47.4 | 0.41 % | -1.28 | 0.000 % | 2.1 | 2.6 |
+| 1014-6794 | 2022-01-13 -> 2022-04-21 | 1 000 000 | 0.00 % | 358.8 ; 620.7 | 18.0 ; 54.6 | 0.03 % | 0.00 | 0.000 % | 2.2 | 2.8 |
+| 1015-6793 | 2022-01-13 -> 2022-01-13 | 1 000 000 | 0.00 % | 272.6 ; 553.3 | 10.1 ; 60.9 | 0.09 % | -0.03 | 0.000 % | 2.1 | 2.7 |
+| 1015-6794 | 2022-01-13 -> 2022-01-13 | 1 000 000 | 0.00 % | 399.1 ; 652.0 | 16.0 ; 41.7 | 0.03 % | 0.00 | 0.000 % | 2.1 | 2.8 |
 
 Colonnes : `mnt_na` = part des cellules sans valeur ; `mnt_min_max` en m (IGN69) ; `mhc_moy_max` en m ; 
-`mhc_neg` = part des cellules du MHC < 0 (bruit sous le MNT, non écrêté).
+`mhc_na` = part des cellules du MHC sans valeur (aucun point retenu dans la cellule de 1 m) ; `mhc_min` = minimum en m ; `mhc_neg` = part des cellules < 0 (bruit sous le MNT, non écrêté). Le minimum de -1,28 m (dalle 1014-6793) concerne quelques cellules : la part négative, affichée « 0.00 % » dans une version antérieure du tableau, est un effet d'arrondi (0,000 % à trois décimales, ce n'est pas zéro cellule).
+
+Calcul de toute l'emprise (décision provisoire, par délégation) : par blocs de 3 x 3 dalles contiguës (environ 1,7 Go de LAZ au pic, le tampon de 20 m voit les voisines du bloc). Aucune fonction d'enchaînement n'est écrite dans cette mission : `run_lasr()` est appelée bloc par bloc.
 
 ## Écart MNT recalculé (1 m) moins MNT IGN (0,5 m)
 
@@ -93,6 +95,6 @@ Par classe de pente du MNT recalculé (degrés, voisinage 8) :
 - Le MHC est la hauteur maximale par cellule de 1 m, sans lissage ni remplissage des trous.
 - Le repli `lidR` n'est testé que sur l'extrait de 80 m (tests unitaires), pas sur ces 4 dalles.
 
-## Fichiers gardés (hors dépôt)
+## Fichiers gardés (hors dépôt, `data/` est ignoré par git)
 
-- `/tmp/claude-0/incr1/sorties/mnt_<dalle>.tif` et `mhc_<dalle>.tif` (EPSG:2154, 1 m, rognés à l'emprise de 1 km de la dalle).
+- `data/increment1/sorties/mnt_<dalle>.tif` et `mhc_<dalle>.tif` (EPSG:2154, 1 m, rognés à l'emprise de 1 km de la dalle) ; MNT IGN de contrôle dans `data/increment1/ign_mnt/`. Dossier par défaut de `inst/scripts/increment1.R` (`<data_dir>/increment1`). Les chiffres ont été mesurés avec un dossier de travail dans `/tmp`, puis les GeoTIFF ont été recopiés sans relancer le calcul.

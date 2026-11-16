@@ -5,11 +5,11 @@
 #
 # Usage (depuis la racine du dépôt) :
 #   LC_ALL=C.UTF-8 Rscript inst/scripts/increment1.R [dossier_de_travail] [xmin ymin xmax ymax]
-# Par défaut : /tmp/claude-0/incr1 et le carré 2 x 2 de dalles 1014-6793 à 1015-6794.
+# Par défaut : <data_dir de config.yml>/increment1 et le carré 2 x 2 de dalles 1014-6793 à 1015-6794.
 # Hors dépôt : LAZ éphémères dans <travail>/laz, GeoTIFF gardés dans <travail>/sorties.
 
 args <- commandArgs(TRUE)
-work <- if (length(args) >= 1) args[1] else "/tmp/claude-0/incr1"
+work <- if (length(args) >= 1) args[1] else file.path(read_config()$data_dir, "increment1")  # data/ est ignoré par git
 emprise <- if (length(args) >= 5) as.numeric(args[2:5]) else c(1014000, 6792000, 1016000, 6794000)
 names(emprise) <- c("xmin", "ymin", "xmax", "ymax")
 ncores <- 3L; buffer <- 20
@@ -88,7 +88,9 @@ prod <- do.call(rbind, lapply(seq_len(nrow(res)), function(i) {
     cellules = format(terra::ncell(m), big.mark = " ", scientific = FALSE), mnt_na = sprintf("%.2f %%", 100 * mean(is.na(vm))),
     mnt_min_max = sprintf("%.1f ; %.1f", min(vm, na.rm = TRUE), max(vm, na.rm = TRUE)),
     mhc_moy_max = sprintf("%.1f ; %.1f", mean(vh, na.rm = TRUE), max(vh, na.rm = TRUE)),
-    mhc_neg = sprintf("%.2f %%", 100 * mean(vh < 0, na.rm = TRUE)),
+    mhc_na = sprintf("%.2f %%", 100 * mean(is.na(vh))),
+    mhc_min = sprintf("%.2f", min(vh, na.rm = TRUE)),
+    mhc_neg = sprintf("%.3f %%", 100 * mean(vh < 0, na.rm = TRUE)),
     mnt_mo = mo(file.size(res$mnt[i])), mhc_mo = mo(file.size(res$mhc[i])))
 }))
 n <- nrow(res)
@@ -173,7 +175,9 @@ doc <- c(
   tbl(prod),
   "",
   "Colonnes : `mnt_na` = part des cellules sans valeur ; `mnt_min_max` en m (IGN69) ; `mhc_moy_max` en m ; ",
-  "`mhc_neg` = part des cellules du MHC < 0 (bruit sous le MNT, non écrêté).",
+  "`mhc_na` = part des cellules du MHC sans valeur ; `mhc_neg` = part des cellules du MHC < 0 (bruit sous le MNT, non écrêté) ; `mhc_min` = minimum (négatif, de l'ordre de -1 m) : la part « 0.00 % » d'une version antérieure du tableau n'était qu'un effet d'arrondi à deux décimales.",
+  "",
+  "Calcul de toute l'emprise (décision provisoire, par délégation) : par blocs de 3 x 3 dalles contiguës (environ 1,7 Go de LAZ au pic, le tampon de 20 m voit les voisines du bloc) ; pas de fonction d'enchaînement écrite dans cette mission.",
   "",
   "## Écart MNT recalculé (1 m) moins MNT IGN (0,5 m)",
   "",

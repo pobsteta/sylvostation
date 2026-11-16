@@ -30,7 +30,7 @@
   tri <- lasR::triangulate(filter = filtre_sol)
   mnt <- lasR::rasterize(res, tri, ofile = file.path(raw_dir, "*_mnt.tif"))
   nrm <- lasR::transform_with(tri, "-")
-  # Classes 65 (artefacts) et 66 (points virtuels) exclues du MHC : à vérifier (nomenclature
+  # Exclusion provisoire (décision par délégation). Classes 65 (artefacts) et 66 (points virtuels) exclues du MHC : à vérifier (nomenclature
   # complète des classes LiDAR HD non reprise dans docs/referentiels.md).
   mhc <- lasR::rasterize(res, "max", filter = "Classification %out% 65 66",
                          ofile = file.path(raw_dir, "*_mhc.tif"))
@@ -67,7 +67,8 @@
 #' [list_tiles()]). Les URL sont téléchargées dans `laz_dir`, **toutes avant le calcul**
 #' (les voisines servent au tampon `buffer`), puis supprimées après le calcul si
 #' `keep_laz = FALSE`. Les fichiers locaux fournis par l'appelant ne sont **jamais**
-#' supprimés. Pour un massif entier, appeler la fonction par blocs de dalles contiguës.
+#' supprimés. Pour un massif entier, appeler la fonction par blocs de 3 x 3 dalles contiguës
+#' (valeur provisoire, décision par délégation : environ 1,7 Go de LAZ au pic).
 #' Chaque raster est rogné à l'emprise de 1 km de sa dalle quand le nom du fichier suit
 #' `LHD_FXX_XXXX_YYYY_*`.
 #'
@@ -78,7 +79,7 @@
 #' @param buffer Tampon en mètres lu autour de chaque dalle (20 par défaut, valeur
 #'   provisoire de l'esquisse du brief).
 #' @param keep_laz Garder les LAZ téléchargés (`FALSE` par défaut).
-#' @param engine `"auto"` (lasR si installé, sinon lidR), `"lasr"` ou `"lidr"`.
+#' @param engine `"auto"` (lasR si installé, sinon lidR), `"lasr"` ou `"lidr"` (casse ignorée).
 #' @param laz_dir Dossier des LAZ téléchargés.
 #' @return Un `data.frame` : `tile_id`, `mnt`, `mhc` (chemins des GeoTIFF). Attribut
 #'   `timing` : liste `download_s`, `compute_s`, `laz_bytes`, `engine`.
@@ -91,7 +92,8 @@
 run_lasr <- function(laz_files, out_dir, res = 1, ncores = 3, buffer = 20,
                      keep_laz = FALSE, engine = c("auto", "lasr", "lidr"),
                      laz_dir = file.path(out_dir, "laz")) {
-  engine <- match.arg(engine)
+  engine <- if (length(engine) > 1L) "auto" else tolower(engine)
+  engine <- match.arg(engine, c("auto", "lasr", "lidr"))
   if (!is.character(laz_files) || !length(laz_files) || anyNA(laz_files)) {
     stop("`laz_files` doit \u00eatre un vecteur de chemins ou d'URL.", call. = FALSE)
   }

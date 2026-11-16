@@ -69,3 +69,25 @@ Extraits le 2026-11-16, mission 001 (voir `docs/referentiels.md`, § 5 et § 7).
   environ 0,3 million de points (classes 1 à 5 ; ni classe 9 ni classe 66 dans cet extrait). 1,6 Mo.
   Script : `inst/scripts/extdata_mission003.R`.
 - **Licence :** Licence Ouverte / Open Licence Etalab 2.0 (LiDAR HD, IGN).
+
+## `lithologie_regles.csv` et `lithologie_massif_test.csv` (mission 004)
+
+- **Nature :** travail de l'équipe (pas une donnée tierce). `lithologie_regles.csv` :
+  règles provisoires mots-clés (expressions régulières sur `DESCR`, sans accents) vers
+  classes lithologiques, par priorité. `lithologie_massif_test.csv` : les 94 `NOTATION` de
+  `bdcharm50_emprise_test.gpkg`, recodées par ces règles (`statut` = `regle` ou
+  `non_classe`, `validated = FALSE` jusqu'à relecture de Pascal). Les classes ne sont pas
+  une nomenclature du BRGM.
+
+## `synth_indicateurs.csv` (SYNTHÉTIQUE)
+
+- **Nature :** valeurs indicatrices **fabriquées** (tirage uniforme, graine 2026), colonne
+  `synthetic = TRUE` ; Baseflor n'était pas joignable (docs/referentiels.md § 9). Ne
+  représente aucune mesure écologique : sert uniquement à tester `compute_gradients()`.
+- **Format** (séparateur `;`, décimale `.`, UTF-8) : `cd_ref` (TAXREF v13.0, comme
+  `FLORE.CD_REF`), `nom` (libellé du `CD_REF` dans `metadonnees.csv` de l'IFN), `ph`,
+  `azote`, `humidite` (échelle 1 à 9 fictive), `synthetic`. Les 269 `CD_REF` de
+  `ifn_flore.csv` y figurent. Pour brancher Baseflor ou EcoPlant : fournir un fichier de
+  mêmes colonnes `cd_ref`, `ph`, `azote` (ajouter la jointure `CD_NOM` vers `CD_REF`).
+- **Licence :** sans objet (données fabriquées) ; les libellés viennent de l'IFN
+  (Licence Ouverte Etalab 2.0).

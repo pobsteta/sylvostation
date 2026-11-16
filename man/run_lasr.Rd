@@ -29,7 +29,7 @@ provisoire de l'esquisse du brief).}
 
 \item{keep_laz}{Garder les LAZ téléchargés (\code{FALSE} par défaut).}
 
-\item{engine}{\code{"auto"} (lasR si installé, sinon lidR), \code{"lasr"} ou \code{"lidr"}.}
+\item{engine}{\code{"auto"} (lasR si installé, sinon lidR), \code{"lasr"} ou \code{"lidr"} (casse ignorée).}
 
 \item{laz_dir}{Dossier des LAZ téléchargés.}
 }
@@ -50,7 +50,8 @@ refusant la classe 66).
 \code{\link[=list_tiles]{list_tiles()}}). Les URL sont téléchargées dans \code{laz_dir}, \strong{toutes avant le calcul}
 (les voisines servent au tampon \code{buffer}), puis supprimées après le calcul si
 \code{keep_laz = FALSE}. Les fichiers locaux fournis par l'appelant ne sont \strong{jamais}
-supprimés. Pour un massif entier, appeler la fonction par blocs de dalles contiguës.
+supprimés. Pour un massif entier, appeler la fonction par blocs de 3 x 3 dalles contiguës
+(valeur provisoire, décision par délégation : environ 1,7 Go de LAZ au pic).
 Chaque raster est rogné à l'emprise de 1 km de sa dalle quand le nom du fichier suit
 \verb{LHD_FXX_XXXX_YYYY_*}.
 }

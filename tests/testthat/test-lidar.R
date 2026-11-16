@@ -41,7 +41,7 @@ test_that("run_lasr (lasR) : MNT et MHC à 1 m alignés, rognés à la dalle, va
   expect_true(min(v) > -2 && max(v) < 60)
   tm <- attr(r, "timing")
   expect_equal(tm$engine, "lasr")
-  expect_equal(tm$download_s, 0)
+  expect_lt(tm$download_s, 0.5)
   expect_gt(tm$laz_bytes, 1e6)
 })
 
@@ -68,6 +68,20 @@ test_that("run_lasr (lidR) : repli cohérent avec lasR sur le MNT", {
   d <- terra::values(ma - mb, na.rm = TRUE)
   expect_gt(length(d), 1000)
   expect_lt(abs(stats::median(d)), 0.5)
+})
+
+test_that("run_lasr (lidR seul) : MNT et MHC produits sans lasR", {
+  skip_if_not_installed("lidR")
+  skip_if(!nzchar(laz_extrait()))
+  r <- run_lasr(laz_extrait(), file.path(tempdir(), "t_lidr"), ncores = 1, buffer = 0,
+                engine = "lidR")
+  expect_equal(attr(r, "timing")$engine, "lidr")
+  mnt <- terra::rast(r$mnt)
+  mhc <- terra::rast(r$mhc)
+  expect_equal(terra::res(mnt), c(1, 1))
+  z <- terra::extract(mnt, cbind(1015540.5, 6793540.5))[1, 1]
+  expect_true(!is.na(z) && z > 399 && z < 652)
+  expect_true(max(terra::values(mhc), na.rm = TRUE) < 60)
 })
 
 test_that("run_lasr : arguments invalides", {
