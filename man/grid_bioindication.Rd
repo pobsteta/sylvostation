@@ -11,9 +11,13 @@ grid_bioindication(occ, indicateurs, cell = 50, min_species = 5)
 \code{loc_precision_m}). Refusés si la précision est absente, \code{NA} ou supérieure à
 \code{cell / 2} (le point pourrait tomber dans une autre maille).}
 
-\item{indicateurs}{\code{data.frame} : colonne \code{species} et une ou plusieurs colonnes
-numériques (une par gradient, ex. \code{trophique}, \code{humidite}). Format provisoire du
-jeu synthétique \code{synth_indicateurs.csv}, à aligner sur la mission 006 (à vérifier).}
+\item{indicateurs}{\code{data.frame} des valeurs indicatrices, format partagé de la mission
+006 (\code{inst/extdata/synth_indicateurs.csv}, séparateur \verb{;}) : \code{cd_ref}, \code{nom}, et une
+colonne numérique par gradient (\code{ph}, \code{azote}, \code{humidite}). Les colonnes \code{cd_ref},
+\code{cd_nom}, \code{id} et \code{synthetic} ne sont jamais des gradients. L'appariement se fait sur
+\code{cd_ref} quand \code{occ} et \code{indicateurs} le portent, sinon sur le nom (\code{nom} ou
+\code{species}, nom vernaculaire entre parenthèses ignoré ; repli \strong{à vérifier} : la
+table GBIF vers TAXREF \code{CD_REF} manque).}
 
 \item{cell}{Côté de la maille, en mètres (50).}
 
@@ -23,7 +27,8 @@ jeu synthétique \code{synth_indicateurs.csv}, à aligner sur la mission 006 (à
 Un \code{sf} de polygones (mailles exploitables, EPSG:2154) : \code{cell_id}, \code{x_min},
 \code{y_min} (coin sud-ouest), \code{n_occ}, \code{poids}, une colonne par gradient, et les
 attributs \code{n_mailles_occupees} (mailles comptant au moins une occurrence),
-\code{n_mailles_exploitables} et \code{cell}.
+\code{n_mailles_exploitables}, \code{cell}, \code{especes_non_appariees} (espèces
+d'\code{occ} absentes de \code{indicateurs}, avec leur nombre d'occurrences) et \code{log_appariement}.
 }
 \description{
 Pose une grille de \code{cell} mètres calée sur l'origine (0, 0) de Lambert-93 (donc sur un
@@ -34,15 +39,14 @@ ce nombre est conservé comme poids (\code{poids}). La valeur bioindiquée de ch
 est la moyenne, sur les espèces indicatrices de la maille, de la valeur indicatrice.
 }
 \details{
-Les noms d'espèces sont comparés tels quels (espaces rognés, casse ignorée) : GBIF
-emploie le référentiel GBIF, Baseflor TAXREF. Une table de correspondance de
-synonymes reste \strong{à faire} (à vérifier) ; sans elle, des espèces indicatrices se
-perdent.
+GBIF emploie le référentiel GBIF, Baseflor TAXREF : sans \code{cd_ref} dans \code{occ}, le repli
+par nom perd des espèces indicatrices. Elles sont listées dans l'attribut
+\code{especes_non_appariees}, jamais supprimées en silence.
 }
 \examples{
 p <- sf::st_as_sf(data.frame(x = c(1010010, 1010020), y = c(6795010, 6795020),
                              species = c("A a", "B b"), loc_precision_m = 10),
                   coords = c("x", "y"), crs = 2154)
-ind <- data.frame(species = c("A a", "B b"), trophique = c(2, 4))
+ind <- data.frame(nom = c("A a", "B b"), trophique = c(2, 4))
 nrow(grid_bioindication(p, ind, min_species = 2))
 }

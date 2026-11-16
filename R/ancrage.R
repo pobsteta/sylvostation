@@ -97,6 +97,13 @@ IFN_GBIF_DATASET_KEYS <- "e5f16d86-e225-4822-97be-a64ce17079c7"
 #'   incertitude (`FALSE` par défaut, conforme au brief).
 #' @param limit Mode `"search"` : nombre maximal d'occurrences (≤ 100 000).
 #' @param path Dossier du fichier téléchargé (mode `"download"`).
+#' @param format Mode `"download"` : format du téléchargement, `"SIMPLE_CSV"` (défaut, celui
+#'   du brief technique, léger : une table à plat) ou `"DWCA"`. **`DWCA` apporte les
+#'   colonnes `dataGeneralizations` et `informationWithheld`**, qui permettent à
+#'   [clean_occ()] de reconnaître les données généralisées (`loc_precision_m = NA`) ; avec
+#'   `SIMPLE_CSV`, ces colonnes sont absentes (présence **à vérifier** au premier
+#'   téléchargement réel) et seule l'incertitude déclarée décide. Choisir `"DWCA"` si l'on
+#'   garde les points sans incertitude (`keep_unknown = TRUE`).
 #' @param wait Mode `"download"` : attendre et importer (`TRUE`) ou rendre seulement
 #'   la clé de téléchargement.
 #' @return Un `data.frame` d'occurrences (colonnes Darwin Core de GBIF, coordonnées en
@@ -112,8 +119,9 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
                      pwd = Sys.getenv("GBIF_PWD"), email = Sys.getenv("GBIF_EMAIL"),
                      method = c("download", "search"), year_min = 2000,
                      max_uncertainty = 25, keep_unknown = FALSE, limit = 100000,
-                     path = tempdir(), wait = TRUE) {
+                     path = tempdir(), wait = TRUE, format = c("SIMPLE_CSV", "DWCA")) {
   method <- match.arg(method)
+  format <- match.arg(format)
   if (!requireNamespace("rgbif", quietly = TRUE)) {
     stop("Le paquet `rgbif` est requis (Suggests).", call. = FALSE)
   }
@@ -151,8 +159,8 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
   # checklistKey : cle 7707728 = GBIF Backbone ; comportement d'occ_download avec ce
   # referentiel a verifier au premier telechargement reel (compte requis).
   dl <- do.call(rgbif::occ_download,
-                c(preds, list(checklistKey = .GBIF_BACKBONE_KEY, user = user, pwd = pwd,
-                              email = email)))
+                c(preds, list(format = format, checklistKey = .GBIF_BACKBONE_KEY,
+                              user = user, pwd = pwd, email = email)))
   if (!wait) return(dl)
   rgbif::occ_download_wait(dl)
   got <- rgbif::occ_download_get(dl, path = path, overwrite = TRUE)
@@ -161,6 +169,21 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
   attr(out, "method") <- "download"
   attr(out, "download_key") <- meta$key
   attr(out, "doi") <- meta$doi
+  out
+}
+
+# Licence GBIF : URL (\"http://creativecommons.org/licenses/by-nc/4.0/legalcode\") ou code
+# (\"CC_BY_NC_4_0\") -> code de type CC_BY_NC_4_0 ; CC0 -> CC0_1_0. Autre valeur : inchangee.
+.normalise_licence <- function(x) {
+  x <- as.character(x)
+  m <- regmatches(x, regexec("creativecommons\\.org/licenses/([a-z-]+)/([0-9.]+)", x))
+  out <- vapply(seq_along(x), function(i) {
+    if (length(m[[i]]) == 3L) {
+      paste0("CC_", toupper(gsub("-", "_", m[[i]][2])), "_", gsub("\\.", "_", m[[i]][3]))
+    } else if (!is.na(x[i]) && grepl("publicdomain/zero", x[i])) {
+      "CC0_1_0"
+    } else x[i]
+  }, character(1))
   out
 }
 
@@ -196,7 +219,8 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
 #'    `min_canopy` m. C'est une **extraction fine** : la règle bloquante s'applique
 #'    (donc erreur si des points de précision `NA` ou > 25 m subsistent).
 #'
-#' La licence de chaque jeu (`license`) est conservée.
+#' La licence de chaque jeu (`license`) est conservée et normalisée en code de type
+#' `CC_BY_4_0`, `CC_BY_NC_4_0` ou `CC0_1_0` (GBIF la donne tantôt en URL, tantôt en code).
 #'
 #' @param occ `data.frame` d'occurrences GBIF (WGS84) : `decimalLongitude`,
 #'   `decimalLatitude`, `species` ; facultatives : `gbifID` (ou `key` en mode `"search"`), `speciesKey`, `datasetKey`,
@@ -236,8 +260,9 @@ clean_occ <- function(occ, max_uncertainty = 25, exclude_datasets = IFN_GBIF_DAT
     gbif_id = as.character(if ("gbifID" %in% names(occ)) occ$gbifID else col("key", NA_character_)),  # occ_search donne `key`
     species = as.character(occ$species),
     species_key = as.character(col("speciesKey", NA_character_)),
+    cd_ref = suppressWarnings(as.numeric(col("cd_ref", NA_real_))),
     dataset_key = as.character(col("datasetKey", NA_character_)),
-    license = as.character(col("license", NA_character_)),
+    license = .normalise_licence(col("license", NA_character_)),
     year = suppressWarnings(as.integer(col("year", NA_integer_))),
     lon = suppressWarnings(as.numeric(occ$decimalLongitude)),
     lat = suppressWarnings(as.numeric(occ$decimalLatitude)),
@@ -310,28 +335,32 @@ clean_occ <- function(occ, max_uncertainty = 25, exclude_datasets = IFN_GBIF_DAT
 #' ce nombre est conservé comme poids (`poids`). La valeur bioindiquée de chaque gradient
 #' est la moyenne, sur les espèces indicatrices de la maille, de la valeur indicatrice.
 #'
-#' Les noms d'espèces sont comparés tels quels (espaces rognés, casse ignorée) : GBIF
-#' emploie le référentiel GBIF, Baseflor TAXREF. Une table de correspondance de
-#' synonymes reste **à faire** (à vérifier) ; sans elle, des espèces indicatrices se
-#' perdent.
+#' GBIF emploie le référentiel GBIF, Baseflor TAXREF : sans `cd_ref` dans `occ`, le repli
+#' par nom perd des espèces indicatrices. Elles sont listées dans l'attribut
+#' `especes_non_appariees`, jamais supprimées en silence.
 #'
 #' @param occ Points `sf` en EPSG:2154 issus de [clean_occ()] (colonnes `species` et
 #'   `loc_precision_m`). Refusés si la précision est absente, `NA` ou supérieure à
 #'   `cell / 2` (le point pourrait tomber dans une autre maille).
-#' @param indicateurs `data.frame` : colonne `species` et une ou plusieurs colonnes
-#'   numériques (une par gradient, ex. `trophique`, `humidite`). Format provisoire du
-#'   jeu synthétique `synth_indicateurs.csv`, à aligner sur la mission 006 (à vérifier).
+#' @param indicateurs `data.frame` des valeurs indicatrices, format partagé de la mission
+#'   006 (`inst/extdata/synth_indicateurs.csv`, séparateur `;`) : `cd_ref`, `nom`, et une
+#'   colonne numérique par gradient (`ph`, `azote`, `humidite`). Les colonnes `cd_ref`,
+#'   `cd_nom`, `id` et `synthetic` ne sont jamais des gradients. L'appariement se fait sur
+#'   `cd_ref` quand `occ` et `indicateurs` le portent, sinon sur le nom (`nom` ou
+#'   `species`, nom vernaculaire entre parenthèses ignoré ; repli **à vérifier** : la
+#'   table GBIF vers TAXREF `CD_REF` manque).
 #' @param cell Côté de la maille, en mètres (50).
 #' @param min_species Nombre minimal d'espèces indicatrices par maille (5).
 #' @return Un `sf` de polygones (mailles exploitables, EPSG:2154) : `cell_id`, `x_min`,
 #'   `y_min` (coin sud-ouest), `n_occ`, `poids`, une colonne par gradient, et les
 #'   attributs `n_mailles_occupees` (mailles comptant au moins une occurrence),
-#'   `n_mailles_exploitables` et `cell`.
+#'   `n_mailles_exploitables`, `cell`, `especes_non_appariees` (espèces
+#'   d'`occ` absentes de `indicateurs`, avec leur nombre d'occurrences) et `log_appariement`.
 #' @examples
 #' p <- sf::st_as_sf(data.frame(x = c(1010010, 1010020), y = c(6795010, 6795020),
 #'                              species = c("A a", "B b"), loc_precision_m = 10),
 #'                   coords = c("x", "y"), crs = 2154)
-#' ind <- data.frame(species = c("A a", "B b"), trophique = c(2, 4))
+#' ind <- data.frame(nom = c("A a", "B b"), trophique = c(2, 4))
 #' nrow(grid_bioindication(p, ind, min_species = 2))
 #' @export
 grid_bioindication <- function(occ, indicateurs, cell = 50, min_species = 5) {
@@ -350,15 +379,20 @@ grid_bioindication <- function(occ, indicateurs, cell = 50, min_species = 5) {
          cell / 2, " m (demi-maille) : regroupement en mailles de ", cell, " m refus\u00e9.",
          call. = FALSE)
   }
-  if (!is.data.frame(indicateurs) || !"species" %in% names(indicateurs)) {
-    stop("`indicateurs` doit \u00eatre un data.frame avec une colonne `species`.", call. = FALSE)
+  nom_col <- intersect(c("nom", "species"), names(indicateurs))[1]
+  if (!is.data.frame(indicateurs) || (is.na(nom_col) && !"cd_ref" %in% names(indicateurs))) {
+    stop("`indicateurs` doit \u00eatre un data.frame avec une colonne `cd_ref`, `nom` ou `species`.",
+         call. = FALSE)
   }
-  grad <- setdiff(names(indicateurs)[vapply(indicateurs, is.numeric, logical(1))], "synthetic")
+  # gradients = colonnes numeriques hors identifiants et marques
+  non_grad <- c("cd_ref", "cd_nom", "id", "synthetic")
+  grad <- setdiff(names(indicateurs)[vapply(indicateurs, is.numeric, logical(1))], non_grad)
   if (!length(grad)) {
     stop("`indicateurs` n'a aucune colonne num\u00e9rique de gradient.", call. = FALSE)
   }
 
-  norm <- function(s) tolower(trimws(as.character(s)))
+  # nom sans nom vernaculaire entre parentheses, casse et espaces ignores
+  norm <- function(s) tolower(trimws(sub("\\s*\\(.*\\)\\s*$", "", as.character(s))))
   xy <- sf::st_coordinates(occ)  # colonnes X (est), Y (nord)
   d <- data.frame(ix = floor(xy[, 1] / cell), iy = floor(xy[, 2] / cell),
                   sp = norm(occ$species), stringsAsFactors = FALSE)
@@ -366,10 +400,32 @@ grid_bioindication <- function(occ, indicateurs, cell = 50, min_species = 5) {
   n_occ <- table(d$cell_id)
   occupees <- length(n_occ)
 
-  ind <- indicateurs[!duplicated(norm(indicateurs$species)), c("species", grad), drop = FALSE]
-  ind$sp <- norm(ind$species)
-  d <- unique(d[, c("cell_id", "ix", "iy", "sp")])
-  d <- merge(d, ind[, c("sp", grad)], by = "sp")   # garde les seules especes indicatrices
+  # Appariement : par cd_ref si occ et indicateurs le portent ; a defaut, par nom
+  # (a verifier : la table GBIF -> TAXREF CD_REF manque ; un nom GBIF different du nom
+  # TAXREF n'apparie pas). Les non apparies sont listes, jamais supprimes en silence.
+  i_nom <- if (is.na(nom_col)) rep(NA_integer_, nrow(d)) else
+    match(d$sp, norm(indicateurs[[nom_col]]))
+  i_ref <- rep(NA_integer_, nrow(d))
+  if ("cd_ref" %in% names(occ) && "cd_ref" %in% names(indicateurs)) {
+    i_ref <- match(suppressWarnings(as.numeric(occ$cd_ref)),
+                   suppressWarnings(as.numeric(indicateurs$cd_ref)))
+  }
+  d$ind_id <- ifelse(!is.na(i_ref), i_ref, i_nom)
+  par_ref <- sum(!is.na(i_ref))
+  par_nom <- sum(is.na(i_ref) & !is.na(i_nom))
+  non <- is.na(d$ind_id)
+  non_app <- if (any(non)) {
+    t <- table(as.character(occ$species)[non])
+    data.frame(species = names(t), n_occ = as.integer(t), stringsAsFactors = FALSE)
+  } else data.frame(species = character(0), n_occ = integer(0))
+  non_app <- non_app[order(-non_app$n_occ, non_app$species), , drop = FALSE]
+  rownames(non_app) <- NULL
+  log_app <- data.frame(
+    etape = c("apparie_cd_ref", "apparie_nom_a_verifier", "non_apparie"),
+    n = c(par_ref, par_nom, sum(non)), stringsAsFactors = FALSE)
+
+  d <- unique(d[!non, c("cell_id", "ix", "iy", "ind_id")])
+  d <- cbind(d, indicateurs[d$ind_id, grad, drop = FALSE])  # une ligne par espece indicatrice
   if (nrow(d)) {
     n_sp <- table(d$cell_id)
     d <- d[d$cell_id %in% names(n_sp)[n_sp >= min_species], ]
@@ -397,6 +453,8 @@ grid_bioindication <- function(occ, indicateurs, cell = 50, min_species = 5) {
     })
     out <- sf::st_sf(out, geometry = sf::st_sfc(geom, crs = 2154))
   }
+  attr(out, "especes_non_appariees") <- non_app
+  attr(out, "log_appariement") <- log_app
   attr(out, "n_mailles_occupees") <- occupees
   attr(out, "n_mailles_exploitables") <- nrow(out)
   attr(out, "cell") <- cell

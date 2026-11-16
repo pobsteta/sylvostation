@@ -15,7 +15,8 @@ get_gbif(
   keep_unknown = FALSE,
   limit = 1e+05,
   path = tempdir(),
-  wait = TRUE
+  wait = TRUE,
+  format = c("SIMPLE_CSV", "DWCA")
 )
 }
 \arguments{
@@ -42,6 +43,14 @@ incertitude (\code{FALSE} par défaut, conforme au brief).}
 
 \item{wait}{Mode \code{"download"} : attendre et importer (\code{TRUE}) ou rendre seulement
 la clé de téléchargement.}
+
+\item{format}{Mode \code{"download"} : format du téléchargement, \code{"SIMPLE_CSV"} (défaut, celui
+du brief technique, léger : une table à plat) ou \code{"DWCA"}. \strong{\code{DWCA} apporte les
+colonnes \code{dataGeneralizations} et \code{informationWithheld}}, qui permettent à
+\code{\link[=clean_occ]{clean_occ()}} de reconnaître les données généralisées (\code{loc_precision_m = NA}) ; avec
+\code{SIMPLE_CSV}, ces colonnes sont absentes (présence \strong{à vérifier} au premier
+téléchargement réel) et seule l'incertitude déclarée décide. Choisir \code{"DWCA"} si l'on
+garde les points sans incertitude (\code{keep_unknown = TRUE}).}
 }
 \value{
 Un \code{data.frame} d'occurrences (colonnes Darwin Core de GBIF, coordonnées en

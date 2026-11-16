@@ -62,14 +62,35 @@ Lecture :
 
 - **11 mailles de 50 m** (18 de 100 m) en forêt comptent au moins 5 espèces, soit 0,03 km²
   (0,18 km²) sur 159 km² de forêt. Poids (nombre d'espèces) : 5 (4 mailles), 6 (2), 7 (2), 8 (2),
-  **48 (1)**. La maille à 48 espèces est un seul relevé (CardObs, 2015) : **10 mailles
-  indépendantes** de 5 à 8 espèces.
+  **48 (1)**. La maille à 48 espèces est un seul relevé (CardObs, 2015) : **9 mailles
+  indépendantes** (voir le tableau ci-dessous), 7 d'entre elles groupées dans un carré d'environ 500 m.
 - Le jeu IFN, s'il était gardé sur la foi de son incertitude déclarée (1 m), ferait passer le
   compte à **74** mailles de 50 m en forêt (80 à 100 m) : le filtre IFN retire 63 mailles
   fictives sur 74, soit 85 %. Une mauvaise localisation (700 m) y fabriquerait des ancrages.
 - Sans les jeux CC BY-NC (dont iNaturalist et Observation.org), il reste 4 mailles de 50 m. Sans
   les observations citoyennes, une seule.
 - Le seuil d'espèces domine : à 3 espèces, 43 mailles de 50 m.
+
+## Les 11 mailles de 50 m en forêt à au moins 5 espèces
+
+Agrégats (pas d'occurrences) ; coin sud-ouest de la maille en Lambert-93 (x = est, y = nord).
+« Indépendante » : au moins deux jeux ou deux années dans la maille (sinon : un relevé unique
+probable). Le jeu dominant est le plus fréquent de la maille ; le nombre d'espèces est celui du
+jeu synthétique (borne haute). Sortie brute : `data/ancrage/mailles_50m_exploitables.csv`.
+
+| x_min | y_min | Espèces (poids) | Occ. | Jeux | Années | Jeu dominant | Licence dominante | Indépendante |
+|---|---|---|---|---|---|---|---|---|
+| 1010500 | 6791650 | 48 | 48 | 1 | 1 | CardObs (7d2dc1b9) | CC BY 4.0 | non |
+| 1019700 | 6797850 | 8 | 10 | 2 | 3 | Observation.org (8a863029) | CC BY-NC 4.0 | oui |
+| 1019800 | 6797950 | 8 | 9 | 4 | 4 | iNaturalist (50c9509d) | CC BY-NC 4.0 | oui |
+| 1016800 | 6792050 | 7 | 7 | 1 | 1 | Observation.org (8a863029) | CC BY-NC 4.0 | non |
+| 1019650 | 6798200 | 7 | 9 | 4 | 6 | Pl@ntNet auto (14d5676a) | CC BY 4.0 | oui |
+| 1018800 | 6794100 | 6 | 7 | 3 | 5 | Observation.org (8a863029) | CC BY-NC 4.0 | oui |
+| 1020100 | 6797550 | 6 | 7 | 4 | 3 | iNaturalist (50c9509d) | CC BY-NC 4.0 | oui |
+| 1019700 | 6797900 | 5 | 5 | 2 | 3 | Pl@ntNet obs. (7a3679ef) | CC BY 4.0 | oui |
+| 1019700 | 6798150 | 5 | 5 | 2 | 4 | Observation.org (8a863029) | CC BY-NC 4.0 | oui |
+| 1019850 | 6797950 | 5 | 5 | 2 | 5 | Pl@ntNet auto (14d5676a) | CC BY 4.0 | oui |
+| 1021150 | 6795450 | 5 | 6 | 1 | 4 | Pl@ntNet auto (14d5676a) | CC BY 4.0 | oui |
 
 ## Jeux de données principaux et licences
 
@@ -95,7 +116,7 @@ produit redistribué doit les écarter ou respecter la clause non commerciale.
 
 ## Réponse à la question du brief
 
-Sur le massif test, **GBIF ne suffit pas, de loin** : 11 mailles de 50 m (dont 10
+Sur le massif test, **GBIF ne suffit pas, de loin** : 11 mailles de 50 m (dont 9
 indépendantes) en forêt, au plus 18 à 100 m, sur une borne haute (Baseflor réduira ce compte)
 et dont près des deux tiers dépendent de jeux CC BY-NC ou citoyens. Le brief prévoit 30 à 50
 relevés GNSS pour validation : le même ordre de grandeur est à produire sur le terrain pour
@@ -105,9 +126,11 @@ seuil à choisir), source SINP, seuil de 3 espèces. Dégrader la précision dem
 
 ## Reproduire
 
-Le code de mesure n'est pas versionné (script jetable). Étapes : lecture de l'API par année,
-pages de 100 (les pages de 300 au-delà du rang 10 000 et `occ_search(limit = 100000)` n'ont
-pas abouti dans la session, la sortie réseau étant interrompue ou très lente : cause non
-diagnostiquée), puis `clean_occ(occ, forest = <BD Forêt>)` et
-`grid_bioindication(p, indicateurs, cell = 50, min_species = 5)`. Pour des occurrences à jour et
-un DOI, utiliser `get_gbif(emprise, user, pwd, email)` avec un compte GBIF.
+Script versionné : `inst/scripts/ancrage_massif_test.R` (`LC_ALL=C.UTF-8 Rscript
+inst/scripts/ancrage_massif_test.R`, sorties sous `data/ancrage/`, ignoré par git).
+Il lit l'API par année, en pages de 100 (les pages de 300 au-delà du rang 10 000 et
+`occ_search(limit = 100000)` n'ont pas abouti dans la session, la sortie réseau étant
+interrompue ou très lente : cause non diagnostiquée), puis appelle
+`clean_occ(occ, forest = <BD Forêt>)` et `grid_bioindication(p, indicateurs, cell = 50,
+min_species = 5)`. Pour des occurrences à jour et un DOI, utiliser
+`get_gbif(emprise, user, pwd, email)` avec un compte GBIF.

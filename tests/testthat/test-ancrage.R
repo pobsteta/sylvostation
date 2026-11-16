@@ -22,11 +22,15 @@ test_that("le jeu synthetique est marque synthetic = TRUE", {
 
 test_that("get_gbif sans identifiants echoue clairement, sans reseau", {
   skip_if_not_installed("rgbif")
-  withr_env <- Sys.getenv(c("GBIF_USER", "GBIF_PWD", "GBIF_EMAIL"), unset = NA)
-  Sys.unsetenv(c("GBIF_USER", "GBIF_PWD", "GBIF_EMAIL"))
-  on.exit(for (n in names(withr_env)) {
-    if (!is.na(withr_env[[n]])) do.call(Sys.setenv, stats::setNames(list(withr_env[[n]]), n))
-  })
+  if (requireNamespace("withr", quietly = TRUE)) {
+    withr::local_envvar(c(GBIF_USER = NA, GBIF_PWD = NA, GBIF_EMAIL = NA))
+  } else {
+    old <- Sys.getenv(c("GBIF_USER", "GBIF_PWD", "GBIF_EMAIL"), unset = NA)
+    Sys.unsetenv(c("GBIF_USER", "GBIF_PWD", "GBIF_EMAIL"))
+    on.exit(for (n in names(old)) {
+      if (!is.na(old[[n]])) do.call(Sys.setenv, stats::setNames(list(old[[n]]), n))
+    })
+  }
   expect_error(get_gbif(c(1007000, 6790000, 1022000, 6805000)), "Identifiants GBIF manquants")
   expect_error(get_gbif(c(1007000, 6790000, 1022000, 6805000), user = "u", pwd = "p"),
                "Identifiants GBIF manquants")
@@ -168,7 +172,8 @@ test_that("grid_bioindication : points connus dans la bonne maille de 50 m", {
   expect_equal(cc$poids, 5L)
   expect_equal(cc$trophique, mean(c(1, 2, 3, 4, 5)))
   expect_equal(as.numeric(sf::st_area(g$geometry[1])), 2500)
-  # mailles de 100 m : A+B regroupees (8 especes via alpha..gamma deja comptees : 6)
+  # mailles de 100 m : [1010000 ; 1010100[ regroupe A (6 especes) et B (3 especes, deja
+  # presentes dans A) -> 6 especes ; [1010100 ; 1010200[ est la maille C (5 especes)
   g100 <- grid_bioindication(p, synth_ind(), cell = 100, min_species = 5)
   expect_equal(nrow(g100), 2L)
   expect_equal(g100$x_min, c(1010000, 1010100))
@@ -242,4 +247,81 @@ test_that("clean_occ accepte la colonne `key` de occ_search a la place de gbifID
   p <- clean_occ(o)
   expect_equal(nrow(p), 15L)
   expect_true("S001" %in% p$gbif_id)
+})
+
+test_that("la licence GBIF est normalisee en code de type", {
+  l <- sylvostation:::.normalise_licence(c(
+    "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+    "http://creativecommons.org/licenses/by/4.0/legalcode",
+    "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+    "CC_BY_4_0", NA))
+  expect_equal(l, c("CC_BY_NC_4_0", "CC_BY_4_0", "CC0_1_0", "CC_BY_4_0", NA))
+  o <- synth_occ()
+  o$license[1:2] <- c("http://creativecommons.org/licenses/by-nc/4.0/legalcode", "x")
+  p <- clean_occ(o)
+  expect_equal(p$license[p$gbif_id == "S001"], "CC_BY_NC_4_0")
+})
+
+test_that("get_gbif : le format de telechargement est un argument (SIMPLE_CSV par defaut)", {
+  expect_equal(eval(formals(get_gbif)$format)[1], "SIMPLE_CSV")
+  expect_error(get_gbif(c(1007000, 6790000, 1022000, 6805000), format = "XLS"), "arg")
+})
+
+# --- format partage de la mission 006 : synth_indicateurs.csv (separateur ;) ---
+read_ind006 <- function() {
+  f <- system.file("extdata", "synth_indicateurs.csv", package = "sylvostation")
+  if (!nzchar(f)) f <- testthat::test_path("..", "..", "inst", "extdata", "synth_indicateurs.csv")
+  utils::read.delim(f, sep = ";", stringsAsFactors = FALSE, encoding = "UTF-8")
+}
+
+# 6 especes du fichier dans une meme maille de 50 m (x = est, y = nord), plus une espece
+# absente du fichier ; `nom_gbif` = nom GBIF sans l'auteur ni le nom vernaculaire
+occ_ind006 <- function(ind, avec_cd_ref = TRUE) {
+  sp <- ind[1:6, ]
+  d <- data.frame(x = 1010005 + 5 * (1:7), y = 6795005 + 5 * (1:7),
+                  species = c(sub(" \\(.*$", "", sp$nom), "Inconnua nulla"),
+                  cd_ref = c(sp$cd_ref, 999999999), loc_precision_m = 10,
+                  stringsAsFactors = FALSE)
+  if (!avec_cd_ref) d$cd_ref <- NULL
+  sf::st_as_sf(d, coords = c("x", "y"), crs = 2154)
+}
+
+test_that("grid_bioindication lit synth_indicateurs.csv (cd_ref, ph, azote, humidite)", {
+  ind <- read_ind006()
+  expect_true(all(ind$synthetic))
+  g <- grid_bioindication(occ_ind006(ind), ind, cell = 50, min_species = 5)
+  expect_equal(nrow(g), 1L)
+  expect_equal(g$poids, 6L)
+  expect_equal(g$n_occ, 7L)
+  expect_true(all(c("ph", "azote", "humidite") %in% names(g)))
+  expect_false(any(c("cd_ref", "synthetic", "nom") %in% names(g)))
+  expect_equal(g$ph, mean(ind$ph[1:6]))
+  expect_equal(g$azote, mean(ind$azote[1:6]))
+  expect_equal(g$humidite, mean(ind$humidite[1:6]))
+  # espece non appariee : listee, pas supprimee en silence
+  na <- attr(g, "especes_non_appariees")
+  expect_equal(na$species, "Inconnua nulla")
+  expect_equal(na$n_occ, 1L)
+  lg <- stats::setNames(attr(g, "log_appariement")$n, attr(g, "log_appariement")$etape)
+  expect_equal(unname(lg["apparie_cd_ref"]), 6L)
+  expect_equal(unname(lg["non_apparie"]), 1L)
+})
+
+test_that("grid_bioindication : cd_ref prime sur le nom, repli par nom marque", {
+  ind <- read_ind006()
+  p <- occ_ind006(ind)
+  p$species[1:6] <- paste("Nom GBIF different", 1:6)  # synonymes : le cd_ref apparie quand meme
+  g <- grid_bioindication(p, ind, min_species = 5)
+  expect_equal(g$poids, 6L)
+  # sans cd_ref dans occ : repli par nom (nom vernaculaire entre parentheses ignore)
+  g2 <- grid_bioindication(occ_ind006(ind, avec_cd_ref = FALSE), ind, min_species = 5)
+  expect_equal(g2$poids, 6L)
+  lg <- stats::setNames(attr(g2, "log_appariement")$n, attr(g2, "log_appariement")$etape)
+  expect_equal(unname(lg["apparie_nom_a_verifier"]), 6L)
+  # noms differents et pas de cd_ref : rien n'apparie, tout est liste
+  p3 <- occ_ind006(ind, avec_cd_ref = FALSE)
+  p3$species <- paste("Autre", 1:7)
+  g3 <- grid_bioindication(p3, ind, min_species = 5)
+  expect_equal(nrow(g3), 0L)
+  expect_equal(nrow(attr(g3, "especes_non_appariees")), 7L)
 })

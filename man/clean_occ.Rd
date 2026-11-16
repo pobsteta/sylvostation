@@ -60,7 +60,8 @@ codes \verb{FF*} et \verb{FO*} hors \code{FF0} (provisoire : décision à prendr
 }
 }
 \details{
-La licence de chaque jeu (\code{license}) est conservée.
+La licence de chaque jeu (\code{license}) est conservée et normalisée en code de type
+\code{CC_BY_4_0}, \code{CC_BY_NC_4_0} ou \code{CC0_1_0} (GBIF la donne tantôt en URL, tantôt en code).
 }
 \examples{
 f <- system.file("extdata", "synth_occ.csv", package = "sylvostation")
