@@ -31,7 +31,9 @@
 - **Bénéficiaires** : d'abord les forestiers gestionnaires qui choisissent les essences et
   diagnostiquent les stations sur le terrain ; ensuite les rédacteurs de catalogues et
   les analystes de la vulnérabilité climatique **[délégué : la finalité principale
-  (§ 11) reste à trancher par Pascal ; par défaut, « choix des essences »]**.
+  (§ 11) reste à trancher par Pascal ; par défaut, « diagnostic de station », le plus
+  neutre ; sylvostation fournit la couche « station » sans concurrencer les outils de
+  choix des essences existants (ClimEssences, BioClimSol) — mission 000, I1]**.
 - **Coût complet aujourd'hui** : inconnu.
 
 ## Ce que fait sylvostation

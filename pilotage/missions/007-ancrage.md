@@ -66,3 +66,9 @@ Conventions : `CLAUDE.md` (EPSG:2154, `snake_case`, roxygen2 en français, une f
 ## Comment saura-t-on que ça marche ?
 
 Les tests passent, et le rendu dit ce qui a tourné sur données réelles et ce qui ne l'a pas fait.
+
+## Compléments (mission 000, I6 et M4)
+
+- Filtre GBIF en trois catégories : incertitude ≤ 25 m (gardée), incertitude absente et données généralisées (`dataGeneralizations`, `informationWithheld`) : `loc_precision_m = NA`, donc refusées pour toute extraction fine par la règle bloquante.
+- `load_gnss()` exige une colonne de précision horizontale (`loc_precision_m`).
+- Licence de chaque jeu GBIF conservée ; pas d'extrait CC BY-NC dans `inst/extdata`.

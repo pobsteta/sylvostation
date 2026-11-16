@@ -41,7 +41,8 @@
 | [008 modèles](missions/008-modeles.md) | `dev` | sonnet | appuyer | oui · oui · oui (synthétique) | 3 |
 | [009 typologie, caractérisation, clé](missions/009-typologie-cle.md) | `dev` | sonnet | appuyer | oui · oui · oui (synthétique) | 4 |
 | [010 validation, référence, sorties, pipeline](missions/010-pipeline-sorties.md) | `dev` | sonnet | appuyer | oui · oui · oui | 4 |
+| [011 tests d'acceptation de la règle bloquante](missions/011-tests-regle-bloquante.md) | `testeur` | sonnet | appuyer | oui · oui · oui après 002 | 2 |
 
 Pas de mission `testeur` séparée par mission de développement : le `dev` écrit ses tests
-et le `relecteur` les contrôle (décision déléguée, prix au journal). Le test de la règle
-bloquante est écrit dans la mission 002, avant tout code d'extraction.
+et le `relecteur` les contrôle (décision déléguée, prix au journal). Exception (mission 000, B2) : la règle bloquante a ses tests d'acceptation écrits par
+le `testeur` de la mission 011, sans lire le code.

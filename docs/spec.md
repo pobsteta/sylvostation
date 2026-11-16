@@ -19,7 +19,7 @@
 | Fichier | Fonctions | Étape |
 |---|---|---|
 | `R/config.R` | `read_config()` | — |
-| `R/utils.R` | `assert_no_fine_extract_on_ifn()`, `assert_crs_2154()` | règle bloquante |
+| `R/utils.R` | `assert_no_fine_extract_on_ifn()`, `mark_ifn()`, `assert_crs_2154()` | règle bloquante, fondée aussi sur `loc_precision_m` |
 | `R/emprise.R` | `get_ser()`, `build_grid()` | 1 |
 | `R/geologie.R` | `list_formations()`, `recode_lithology()`, `rasterize_geol()`, `dominant_lithology()` | 1 |
 | `R/lidar.R` | `list_tiles()`, `run_lasr()`, `point_lidar_metrics()` | 2, § 5 |
@@ -57,7 +57,12 @@ Ceux du brief technique, § 7, plus, pour cette session :
 - incrément 1 (emprise, tableau d'assemblage LiDAR HD, MNT sur 4 dalles du massif test)
   exécuté **sur données réelles** et chiffré (temps, stockage), ou son blocage écrit au
   journal ;
-- le pipeline `targets` s'exécute de bout en bout sur les jeux d'essai.
+- **contrat d'interface vérifié** (ce n'est pas une acceptation) : le pipeline `targets`
+  s'exécute de bout en bout sur les jeux d'essai ;
+- les critères du brief technique § 7 restent **« non atteints »** tant qu'ils n'ont pas
+  tourné sur données réelles ;
+- la PR et le rapport Quarto portent un tableau **« état de preuve »** : pour chaque étape,
+  `réel`, `réel réduit` ou `synthétique` (objection B1 de la mission 000).
 
 ## Besoins en référentiels (mission `acquereur`)
 

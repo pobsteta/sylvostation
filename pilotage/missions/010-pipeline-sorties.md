@@ -68,3 +68,8 @@ Conventions : `CLAUDE.md` (EPSG:2154, `snake_case`, roxygen2 en français, une f
 ## Comment saura-t-on que ça marche ?
 
 Les tests passent, et le rendu dit ce qui a tourné sur données réelles et ce qui ne l'a pas fait.
+
+## Compléments (mission 000, B1 et M4)
+
+- Le rapport et `write_outputs()` produisent un tableau « état de preuve » (étape → `réel` / `réel réduit` / `synthétique`).
+- La carte des types est aussi livrée en GeoPackage consultable hors ligne.

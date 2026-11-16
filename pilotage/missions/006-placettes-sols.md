@@ -66,3 +66,8 @@ Conventions : `CLAUDE.md` (EPSG:2154, `snake_case`, roxygen2 en français, une f
 ## Comment saura-t-on que ça marche ?
 
 Les tests passent, et le rendu dit ce qui a tourné sur données réelles et ce qui ne l'a pas fait.
+
+## Compléments (mission 000, I5)
+
+- Jointure des noms d'espèces (IFN, Baseflor, GBIF) par TAXREF `CD_NOM` → `CD_REF`, version de TAXREF dans `config.yml` ; `unmatched_taxa()` renvoie les noms non appariés (publiés dans le rapport).
+- Toute table de points porte `loc_precision_m` ; `load_ifn()` appelle `mark_ifn()`.
