@@ -2,8 +2,10 @@
 
 export(COARSE_VARIABLES)
 export(FINE_VARIABLES)
+export(aggregate_dtm)
 export(assert_crs_2154)
 export(assert_no_fine_extract_on_ifn)
+export(derive_terrain)
 export(mark_ifn)
 export(read_config)
 importFrom(stats,setNames)
