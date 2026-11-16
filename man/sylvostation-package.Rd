@@ -14,5 +14,10 @@ Lambert-93 (EPSG:2154), x = est, y = nord. Les placettes de l'IFN, localisées
 \author{
 \strong{Maintainer}: Équipe sylvostation \email{contact@example.org}
 
+Authors:
+\itemize{
+  \item Équipe sylvostation \email{contact@example.org}
+}
+
 }
 \keyword{internal}
