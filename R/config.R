@@ -6,7 +6,8 @@
 #' @param path Chemin du fichier YAML. Par défaut `"config.yml"`.
 #' @return Une liste nommée : `ser_code`, `emprise_test` (xmin, ymin, xmax, ymax,
 #'   crs), `buffer_m`, `resolution_m`, `crs`, `data_dir`, `laz_dir`, `out_dir`,
-#'   `ifn_precision_m`.
+#'   `ifn_precision_m`, `demo` (booléen, `FALSE` si la clé est absente : en mode démo,
+#'   le pipeline tourne sans réseau sur les jeux d'essai synthétiques de `inst/extdata`).
 #' @examples
 #' f <- tempfile(fileext = ".yml")
 #' writeLines(c(
@@ -48,6 +49,10 @@ read_config <- function(path = "config.yml") {
     if (!est_nombre(cfg[[k]]) || cfg[[k]] <= 0) {
       stop("`", k, "` doit \u00eatre un nombre strictement positif.", call. = FALSE)
     }
+  }
+  if (is.null(cfg$demo)) cfg$demo <- FALSE
+  if (!is.logical(cfg$demo) || length(cfg$demo) != 1L || is.na(cfg$demo)) {
+    stop("`demo` doit \u00eatre true ou false.", call. = FALSE)
   }
   if (!est_nombre(cfg$crs) || cfg$crs != 2154) {
     stop("`crs` doit valoir 2154 (Lambert-93) ; re\u00e7u : ",

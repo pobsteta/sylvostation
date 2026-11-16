@@ -28,6 +28,7 @@ Suggests:
     cluster,
     happign,
     indicspecies,
+    knitr,
     lasR,
     lidR,
     mgcv,
@@ -35,6 +36,7 @@ Suggests:
     quarto,
     ranger,
     rgbif,
+    rmarkdown,
     rpart,
     targets,
     testthat (>= 3.0.0),
@@ -42,3 +44,4 @@ Suggests:
     whitebox
 Additional_repositories: https://r-lidar.r-universe.dev
 Config/testthat/edition: 3
+VignetteBuilder: knitr

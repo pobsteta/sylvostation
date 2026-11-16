@@ -111,8 +111,12 @@ indicator_species <- function(flore, types, nperm = 199L, seed = 1L) {
 #'   placette.
 #' @param cols Noms des colonnes de `arbres`, vecteur nommé `plot`, `species`,
 #'   `height`, `age`.
-#' @param age_ref Âge de référence en années : un nombre, ou un vecteur nommé par
-#'   essence (défaut provisoire : 50).
+#' @param age_ref Âge de référence en années (hauteur dominante attendue à cet âge :
+#'   c'est l'âge auquel l'indice de fertilité est exprimé). Un nombre, appliqué à
+#'   toutes les essences, ou un vecteur **nommé par essence** (une essence absente du
+#'   vecteur reçoit `NA` et un avertissement). Défaut provisoire : 50 ans, à fixer
+#'   avec un sylviculteur ; il est repris dans la colonne `age_ref` du résultat et de
+#'   l'attribut `plots`, pour que chaque indice reste lié à son âge de référence.
 #' @param n_dom Nombre d'arbres dominants par placette et essence (3, provisoire).
 #' @param n_min_guide Nombre minimal de placettes pour ajuster la courbe guide (10).
 #' @return Un `data.frame` par essence x type : `species`, `type`, `n_plots`,

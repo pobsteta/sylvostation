@@ -45,3 +45,9 @@ test_that("une clé manquante est refusée", {
   writeLines("ser_code: D11", f)
   expect_error(read_config(f), "manquantes")
 })
+
+test_that("`demo` est facultatif (FALSE par défaut) et doit être booléen", {
+  expect_false(read_config(ecrire_config())$demo)
+  expect_true(read_config(ecrire_config(list(demo = TRUE)))$demo)
+  expect_error(read_config(ecrire_config(list(demo = "oui"))), "demo")
+})
