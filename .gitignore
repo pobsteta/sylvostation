@@ -1,0 +1,10 @@
+.Rproj.user/
+.Rhistory
+.RData
+.Rdata
+*.Rcheck/
+sylvostation_*.tar.gz
+data/
+_targets/
+*.laz
+*.tif
