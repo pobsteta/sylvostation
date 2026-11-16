@@ -42,6 +42,34 @@ Extraits le 2026-11-16, mission 001 (voir `docs/referentiels.md`, § 5 et § 7).
 - **Licence :** Licence Ouverte / Open Licence Etalab Version 2.0. Ces données ne doivent
   pas servir à produire des résultats statistiques d'inventaire.
 
+## `ser_extrait.gpkg` (couche `ser`)
+
+- **Source :** IGN – Inventaire forestier national, sylvoécorégions (SER), fichier
+  `https://inventaire-forestier.ign.fr/IMG/zip/ser_l93.zip` (shapefile `ser_l93.shp`,
+  mise à jour 03/2011, échelle 1/200 000, EPSG:2154), téléchargé le 2026-11-16 (mission 003,
+  voir `docs/referentiels.md`, § 1).
+- **Traitement :** SER `D11` et `D12` seulement, polygones réunis par SER, lecture en
+  WINDOWS-1252, `st_simplify(dTolerance = 300)` (**contour simplifié : ne pas s'en servir
+  pour une analyse, seulement pour les tests**). Champs `codeser`, `NomSER`. 110 Ko.
+  Script : `inst/scripts/extdata_mission003.R`.
+- **Licence :** IGN : « téléchargeables gratuitement et […] réutilisées, y compris à des fins
+  commerciales, sans licence et sans versement de redevance » (page `rubrique267` du site
+  de l'inventaire forestier) ; les jeux data.gouv.fr correspondants (WMTS) portent la Licence
+  Ouverte 2.0.
+
+## `LHD_FXX_1015_6794_extrait.laz`
+
+- **Source :** IGN, LiDAR HD, dalle `1015-6794` (mission `22LHDVosgesRF`, vol du 2022-01-13,
+  classement `IGN_AUTO_V5`, édition du 2024-12-20, IGN69, Lambert-93), URL lue dans le champ
+  `url_npl` de la couche `IGNF_LIDAR-HD_METADONNEE:metadata` :
+  `https://data.geopf.fr/telechargement/download/LiDARHD-NUALID/NUALHD_1-0__LAZ_LAMB93_RF_2024-12-20/LHD_FXX_1015_6794_PTS_LAMB93_IGN69.copc.laz`,
+  téléchargée le 2026-11-16.
+- **Traitement :** carré de 80 m x 80 m, x de 1015500 à 1015580, y de 6793500 à 6793580
+  (EPSG:2154), découpé par `lasR::reader_rectangles()` puis écrit en LAZ (`lasR::write_las()`) ;
+  environ 0,3 million de points (classes 1 à 5 ; ni classe 9 ni classe 66 dans cet extrait). 1,6 Mo.
+  Script : `inst/scripts/extdata_mission003.R`.
+- **Licence :** Licence Ouverte / Open Licence Etalab 2.0 (LiDAR HD, IGN).
+
 ## `lithologie_regles.csv` et `lithologie_massif_test.csv` (mission 004)
 
 - **Nature :** travail de l'équipe (pas une donnée tierce). `lithologie_regles.csv` :

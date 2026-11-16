@@ -145,8 +145,12 @@ test_that("marqué IFN (attribut) mais loc_precision_m = 10 : erreur", {
   bloque(p, "pente")
 })
 
-test_that("colonne source = 'ifn' mais loc_precision_m = 10 : non tranché", {
-  skip("Question pour Pascal : un point étiqueté 'ifn' dont la précision déclarée est 10 m ? Le Rd dit seulement « marqué IFN (voir mark_ifn) », sans dire si la colonne seule compte.")
+test_that("colonne source = 'ifn' seule (sans attribut), loc_precision_m = 10 : bloque", {
+  p <- pts_precis(3, prec = 10)
+  p$source <- "ifn"
+  expect_null(attr(p, "source", exact = TRUE))
+  bloque(p, "pente")
+  passe(p, "coarse_climat")
 })
 
 # --- noms de variables ---------------------------------------------------------
@@ -170,8 +174,17 @@ test_that("variable inconnue ou suffixée (slope_5m) : traitée comme fine par p
 })
 
 # --- questions ouvertes ---------------------------------------------------------
-test_that("questions ouvertes (non tranchées)", {
-  skip("Pour Pascal : (1) 'COARSE_climat' en majuscules est-il large ? Le Rd ne dit la casse insensible que pour FINE_VARIABLES. (2) variables = character(0) ou NULL : passe ou erreur ? Non documenté.")
+test_that("le préfixe coarse_ est sensible à la casse : COARSE_climat bloque", {
+  bloque(pts_precis(prec = 50), "COARSE_climat")
+  bloque(pts_ifn(), "COARSE_climat")
+  passe(pts_ifn(), "coarse_climat")
+  passe(pts_precis(prec = 10), "COARSE_climat")
+})
+
+test_that("variables = character(0) ou NULL : passe (rien n'est extrait)", {
+  passe(pts_ifn(), character(0))
+  passe(pts_ifn(), NULL)
+  passe(pts_precis(prec = 50), character(0))
 })
 
 test_that("objet sf marqué IFN + variable fine : erreur", {
