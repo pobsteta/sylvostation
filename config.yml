@@ -24,3 +24,7 @@ out_dir: data/sorties
 
 # Précision de localisation des placettes IFN (règle bloquante).
 ifn_precision_m: 700
+
+# Mode démonstration : le pipeline tourne sans réseau sur inst/extdata (jeux synth_*,
+# synthetic = TRUE) ; sorties sous data/. Les résultats ne valent RIEN sur données réelles.
+demo: true

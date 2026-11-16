@@ -12,7 +12,8 @@ read_config(path = "config.yml")
 \value{
 Une liste nommée : \code{ser_code}, \code{emprise_test} (xmin, ymin, xmax, ymax,
 crs), \code{buffer_m}, \code{resolution_m}, \code{crs}, \code{data_dir}, \code{laz_dir}, \code{out_dir},
-\code{ifn_precision_m}.
+\code{ifn_precision_m}, \code{demo} (booléen, \code{FALSE} si la clé est absente : en mode démo,
+le pipeline tourne sans réseau sur les jeux d'essai synthétiques de \code{inst/extdata}).
 }
 \description{
 Lit un fichier \code{config.yml} (paquet \code{yaml}) et vérifie les types, le système de

@@ -12,12 +12,16 @@ fit_gradient(
   weights = NULL,
   points_source = NULL,
   num_trees = 200L,
-  seed = NULL
+  seed = NULL,
+  ifn_precision_m = 700
 )
 }
 \arguments{
-\item{data}{Objet \code{sf} de points en EPSG:2154 (ou tableau avec colonnes \code{x}, \code{y}),
-portant la réponse, les prédicteurs et \code{loc_precision_m}.}
+\item{data}{Objet \code{sf} de points en EPSG:2154, ou tableau avec colonnes \code{x} (est) et
+\code{y} (nord) \strong{supposées en Lambert-93} : il est converti en \code{sf} EPSG:2154 puis
+contrôlé par \code{\link[=assert_crs_2154]{assert_crs_2154()}} (des coordonnées hors de la France métropolitaine,
+par exemple x/y inversés ou degrés, sont refusées). Porte la réponse, les
+prédicteurs et \code{loc_precision_m}.}
 
 \item{response}{Nom de la colonne réponse (numérique).}
 
@@ -34,6 +38,10 @@ marqués par \code{\link[=mark_ifn]{mark_ifn()}} avant la règle bloquante.}
 \item{num_trees}{Nombre d'arbres de la forêt (200 par défaut).}
 
 \item{seed}{Graine du générateur (\code{NULL} : pas de graine).}
+
+\item{ifn_precision_m}{Précision de localisation posée par \code{\link[=mark_ifn]{mark_ifn()}} quand
+\code{points_source = "ifn"} (700 m par défaut ; dans le pipeline, la valeur vient de
+\code{read_config()$ifn_precision_m}).}
 }
 \value{
 Un objet de classe \code{sylvo_gradient} (liste).
@@ -46,7 +54,8 @@ précision de localisation (\code{loc_precision_m}) est absente ou supérieure �
 }
 \examples{
 set.seed(1)
-d <- data.frame(x = 1:40, y = 1, loc_precision_m = 10, coarse_a = rnorm(40))
+d <- data.frame(x = 1007000 + 100 * (1:40), y = 6790000, loc_precision_m = 10,
+                coarse_a = rnorm(40))
 d$g <- d$coarse_a + rnorm(40, sd = 0.1)
 if (requireNamespace("ranger", quietly = TRUE)) {
   m <- fit_gradient(d, "g", "coarse_a", num_trees = 50)

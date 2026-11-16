@@ -4,7 +4,7 @@
 \alias{predict_raster}
 \title{Prédire un gradient sur un raster, avec incertitude et zone d'applicabilité}
 \usage{
-predict_raster(model, predictors, aoa = TRUE, use_cast = TRUE)
+predict_raster(model, predictors, aoa = TRUE, use_cast = TRUE, cv = NULL)
 }
 \arguments{
 \item{model}{Objet de \code{\link[=fit_gradient]{fit_gradient()}}.}
@@ -17,19 +17,29 @@ installé, sinon un calcul maison équivalent simplifié (même principe : indic
 dissimilarité, seuil des moustaches ; sans validation croisée des DI).}
 
 \item{use_cast}{\code{FALSE} pour forcer le repli maison même si CAST est installé.}
+
+\item{cv}{Résultat de \code{\link[=spatial_cv]{spatial_cv()}} sur \strong{les mêmes données} que le modèle
+(\code{NULL} : sans). S'il est fourni : (1) ses plis spatiaux sont transmis à
+\code{CAST::aoa()} (argument \code{CVtest}), ce qui calcule le seuil de la zone
+d'applicabilité sur des indices de dissimilarité de validation croisée
+(méthode de Meyer et Pebesma) ; (2) la couche \code{sd_cv} est calculée.}
 }
 \value{
 Un \code{SpatRaster} avec les couches \code{pred}, \code{sd} (écart-type : quantiles
 de la forêt ou erreur-type du GAM, \strong{pas} l'erreur de validation croisée),
-et si \code{aoa} : \code{di} et \code{aoa} (1 = dans la zone d'applicabilité, 0 = hors zone : à
-ne pas interpréter). Une balise \code{synthetic} est posée (\code{terra::metags}) si le
-modèle vient de données synthétiques.
+si \code{cv} : \code{sd_cv} (= \code{sd} multiplié par RMSE de validation croisée / racine de la
+moyenne des \code{sd^2} hors pli : l'écart-type est recalé pour que son niveau moyen
+égale l'erreur mesurée hors blocs ; le \strong{motif} spatial reste celui de \code{sd}, le
+niveau est global, pas local), et si \code{aoa} : \code{di} et \code{aoa} (1 = dans la zone
+d'applicabilité, 0 = hors zone : à ne pas interpréter). Une balise \code{synthetic}
+est posée (\code{terra::metags}) si le modèle vient de données synthétiques.
 }
 \description{
 Prédire un gradient sur un raster, avec incertitude et zone d'applicabilité
 }
 \examples{
 \dontrun{
-r <- predict_raster(modele, pile_predicteurs)
+cv <- spatial_cv(donnees, "g", predicteurs)
+r <- predict_raster(modele, pile_predicteurs, cv = cv)
 }
 }

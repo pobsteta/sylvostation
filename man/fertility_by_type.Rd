@@ -23,8 +23,12 @@ placette.}
 \item{cols}{Noms des colonnes de \code{arbres}, vecteur nommé \code{plot}, \code{species},
 \code{height}, \code{age}.}
 
-\item{age_ref}{Âge de référence en années : un nombre, ou un vecteur nommé par
-essence (défaut provisoire : 50).}
+\item{age_ref}{Âge de référence en années (hauteur dominante attendue à cet âge :
+c'est l'âge auquel l'indice de fertilité est exprimé). Un nombre, appliqué à
+toutes les essences, ou un vecteur \strong{nommé par essence} (une essence absente du
+vecteur reçoit \code{NA} et un avertissement). Défaut provisoire : 50 ans, à fixer
+avec un sylviculteur ; il est repris dans la colonne \code{age_ref} du résultat et de
+l'attribut \code{plots}, pour que chaque indice reste lié à son âge de référence.}
 
 \item{n_dom}{Nombre d'arbres dominants par placette et essence (3, provisoire).}
 

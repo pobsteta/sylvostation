@@ -1,0 +1,221 @@
+---
+title: "Catalogue de stations forestières — rapport par sylvoécorégion"
+lang: fr
+format:
+  html:
+    embed-resources: true
+    toc: true
+    code-fold: true
+params:
+  dossier: "."
+  prefixe: "synth_"
+  ser_code: "D11"
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+# Gabarit du rapport (mission 010). Il lit uniquement les fichiers écrits par
+# write_outputs() dans `params$dossier` ; il ne dépend pas du paquet sylvostation.
+dossier <- params$dossier
+pre <- params$prefixe
+lire <- function(nom) {
+  f <- file.path(dossier, paste0(pre, nom, ".csv"))
+  if (file.exists(f)) utils::read.delim(f, sep = ";", dec = ".", check.names = FALSE,
+                                        fileEncoding = "UTF-8") else NULL
+}
+tab <- function(x, ...) if (is.null(x)) cat("(table absente)\n") else
+  knitr::kable(x, digits = 2, row.names = FALSE, ...)
+synth <- identical(pre, "synth_")
+```
+
+```{r}
+#| results: asis
+if (synth) cat(paste0(
+  "::: {.callout-warning}\n## DONNÉES SYNTHÉTIQUES\n",
+  "Ce rapport a été produit par le **mode démonstration** : les gradients, points ",
+  "d'ancrage, relevés de terrain et la carte de référence sont **fabriqués** ",
+  "(fichiers `synth_*`, `synthetic = TRUE`). Aucun résultat ci-dessous n'est un résultat ",
+  "sur données réelles ; aucun ne doit être cité ni utilisé pour décider sur le terrain.\n:::\n"))
+```
+
+Sylvoécorégion : **`r params$ser_code`**.
+
+## État de preuve
+
+Pour chaque étape : ce qui a tourné sur données **réelles**, **réel réduit** (extrait réel
+de petite taille) ou **synthétique** (jeu fabriqué).
+
+```{r}
+tab(lire("etat_de_preuve"))
+```
+
+## Gradients
+
+Gradients prédits (unités arbitraires des jeux synthétiques), puis incertitude : écart-type
+recalé sur l'erreur de validation croisée (`sd_cv`) et zone d'applicabilité (`aoa` : 1 =
+dans la zone ; 0 = hors zone, **à ne pas interpréter**).
+
+```{r}
+#| fig-height: 4
+g <- terra::rast(file.path(dossier, paste0(pre, "gradients.tif")))
+terra::plot(g, main = names(g), nc = 3)
+```
+
+```{r}
+#| fig-height: 6
+u <- terra::rast(file.path(dossier, paste0(pre, "incertitude.tif")))
+terra::plot(u, main = names(u), nc = 3)
+```
+
+## Types de stations
+
+Types obtenus par croisement de classes aux **seuils provisoires** (quantiles, non
+validés par un écologue), les types rares étant fusionnés avec le plus proche.
+
+```{r}
+#| fig-height: 5
+tp <- terra::rast(file.path(dossier, paste0(pre, "types.tif")))
+leg <- lire("legende_types")
+tp_f <- terra::as.factor(tp)
+levels(tp_f) <- data.frame(id = leg$id, type = leg$type)
+terra::plot(tp_f, main = "Carte des types", col = grDevices::hcl.colors(nrow(leg), "Dark 3"))
+```
+
+```{r}
+tab(lire("types"))
+```
+
+Géologie dominante dans un rayon égal à la précision des placettes IFN (extrait réel de
+la BD Charm-50, recodage lithologique provisoire) :
+
+```{r}
+tab(lire("geologie_dominante"))
+```
+
+## Fiches par type
+
+Espèces indicatrices (IndVal) et fertilité (hauteur dominante ramenée à l'âge de
+référence ; essence fictive en démo) par type.
+
+```{r}
+#| results: asis
+types <- lire("types")
+ind <- lire("especes_indicatrices")
+fert <- lire("fertilite")
+for (k in seq_len(nrow(types))) {
+  t <- types$type[k]
+  cat("\n### Type ", t, "\n\n", sep = "")
+  cat("Surface : ", round(types$area_ha[k], 1), " ha (", round(100 * types$part_surface[k], 1),
+      " % de la zone) ; ", types$n_ancrages[k], " points d'ancrage.\n\n", sep = "")
+  i <- ind[ind$type == t, , drop = FALSE]
+  cat("Espèces indicatrices : ", if (nrow(i)) paste0(utils::head(i$species, 5), collapse = ", ") else "aucune",
+      ".\n\n", sep = "")
+  f <- fert[fert$type == t, , drop = FALSE]
+  if (nrow(f)) cat("Fertilité (", f$species[1], ") : ", round(f$fertilite_moy[1], 1),
+                   " m à ", f$age_ref[1], " ans.\n\n", sep = "")
+}
+```
+
+## Clé de détermination terrain
+
+```{r}
+#| results: asis
+k <- lire("cle_terrain")
+cat("```\n", paste(k$ligne, collapse = "\n"), "\n```\n", sep = "")
+```
+
+```{r}
+tab(lire("cle_resume"))
+```
+
+## Validation
+
+### Statistique : validation croisée spatiale par blocs
+
+R² et RMSE de chaque gradient, comparés aux repères publiés (0,36 trophique, 0,52
+bioclimat, 0,43 réserve utile ; associée ici au gradient hydrique, lecture à confirmer).
+Sur des données synthétiques, un R² supérieur au repère **ne prouve rien**.
+
+```{r}
+tab(lire("validation_stats"))
+```
+
+Modèle régional sur les placettes IFN (maille large seulement ; gradient issu de valeurs
+indicatrices synthétiques) :
+
+```{r}
+tab(lire("validation_regional_ifn"))
+```
+
+### Thématique : types prédits contre types de « terrain » (synthétiques)
+
+```{r}
+tab(lire("validation_cartes"))
+```
+
+Accord par axe (1 = trophique, 2 = hydrique, 3 = bioclimat, dans l'ordre des types) :
+
+```{r}
+tab(lire("validation_par_axe"))
+```
+
+### Comparaison à la carte de référence (protocole du brief, § 9)
+
+Référence **synthétique** (les rasters d'AgroParisTech n'ont pas été obtenus).
+**La référence synthétique est fabriquée à partir de la même vérité synthétique que nos gradients : un rho élevé est forcé par construction et ne mesure aucune performance.** Corrélation de rang à 50 m, puis accord des codes à trois chiffres (seuils de la
+référence synthétiques ; ordre des chiffres à vérifier).
+
+```{r}
+tab(lire("comparaison_gradients"))
+tab(lire("comparaison_types_3chiffres"))
+```
+
+## Limites
+
+::: {.callout-important}
+**Les critères d'acceptation du § 7 du brief technique sont « non atteints »** : aucun n'a
+tourné sur données réelles. Une exécution de démonstration qui réussit prouve que la
+chaîne s'enchaîne (contrat d'interface), pas qu'elle est juste.
+:::
+
+| Critère du § 7 | Statut | Pourquoi |
+|---|---|---|
+| Le pipeline s'exécute de bout en bout sur une SER pilote à partir du seul code SER | **non atteint** | La démo tourne sur jeux d'essai ; le mode réel n'est pas branché (téléchargements SER, LiDAR HD, ancrage GBIF : fonctions intégrées au paquet (mission 007), non branchées au pipeline démo). |
+| Performances issues d'une validation croisée spatiale **et** de relevés GNSS indépendants | **non atteint** | Validation croisée sur points synthétiques ; aucun relevé GNSS réel. |
+| Aucune variable fine extraite aux coordonnées des placettes IGN | **non atteint** (vérifié par test, pas sur un run réel) | La règle est codée et testée ; dans la démo, les placettes IFN ne reçoivent que des couches à maille large. |
+| Chaque type couvre au moins 1 % de la surface forestière ou est justifié azonal | **non atteint** | Surfaces calculées sur une zone synthétique de 6,25 km² ; aucune station azonale traitée ; pas de masque forestier. |
+| La clé reclasse correctement au moins 70 % des placettes | **non atteint** | Résultat de la démo : voir le tableau de la clé ci-dessus (observables synthétiques). |
+| Le rapport liste les limites | cette section | — |
+
+Limites propres à cette version :
+
+- **Stations marginales et azonales** (alluviales, tourbeuses, éboulis) : non traitées.
+- **Zones hors domaine d'applicabilité** : signalées par la couche `aoa` ; les prédictions
+  y sont à ne pas interpréter. `sd_cv` est un niveau d'erreur *global* recalé sur la
+  validation croisée (motif spatial de l'écart-type du modèle), pas une erreur locale.
+- **Précision à l'échelle de la parcelle** : la carte oriente le diagnostic et ne remplace
+  pas le sondage à la tarière. Cartes à 25 m (valeur provisoire, ADR 0004).
+- **Valeurs provisoires** : seuils de discrétisation (quantiles), seuil de fusion des types
+  rares (1 % ou 15 placettes), profondeur de la clé, âge de référence de la fertilité,
+  coefficients de réserve utile (à vérifier), recodage lithologique (non validé).
+- **Placettes IFN** localisées à 700 m près : aucune variable fine ne leur est croisée ;
+  les 100 placettes de l'extrait ne suffisent pas à calibrer un modèle régional fiable.
+- **Référence** : rasters AgroParisTech et seuils de Gégout et al. (2008) non obtenus ; leur
+  format réel (noms de couches, codage des 59 types) est **à vérifier**.
+- **LiDAR HD** : vols d'hiver (hauteurs de feuillus sous-estimées) ; l'incrément 1 réel
+  (4 dalles) est traité hors de ce pipeline.
+- **Types sans réalité de terrain** : aucune confrontation aux catalogues existants ni à un
+  forestier local n'a eu lieu.
+
+## Reproductibilité
+
+```{r}
+#| results: asis
+cat("R ", R.version.string, " ; terra ", as.character(utils::packageVersion("terra")),
+    " ; sf ", as.character(utils::packageVersion("sf")), ".\n", sep = "")
+```

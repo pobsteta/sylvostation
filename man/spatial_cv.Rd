@@ -17,8 +17,11 @@ spatial_cv(
 )
 }
 \arguments{
-\item{data}{Objet \code{sf} de points en EPSG:2154 (ou tableau avec colonnes \code{x}, \code{y}),
-portant la réponse, les prédicteurs et \code{loc_precision_m}.}
+\item{data}{Objet \code{sf} de points en EPSG:2154, ou tableau avec colonnes \code{x} (est) et
+\code{y} (nord) \strong{supposées en Lambert-93} : il est converti en \code{sf} EPSG:2154 puis
+contrôlé par \code{\link[=assert_crs_2154]{assert_crs_2154()}} (des coordonnées hors de la France métropolitaine,
+par exemple x/y inversés ou degrés, sont refusées). Porte la réponse, les
+prédicteurs et \code{loc_precision_m}.}
 
 \item{response}{Nom de la colonne réponse (numérique).}
 
@@ -41,7 +44,8 @@ exemple un tirage aléatoire pour mesurer l'optimisme d'une CV non spatiale) ;
 }
 \value{
 Une liste : \code{par_pli} (pli, n, r2, rmse), \code{global} (r2, rmse sur toutes les
-prédictions hors pli), \code{predictions}, \code{block_size}, \code{k}, \code{plis}.
+prédictions hors pli), \code{predictions} (observé, prédit, écart-type prédit \code{sd}, pli),
+\code{block_size}, \code{k}, \code{plis}.
 R² = 1 - SCR/SCT par rapport à la moyenne observée ; il peut être négatif.
 }
 \description{

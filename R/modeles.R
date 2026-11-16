@@ -3,21 +3,33 @@
 
 utils::globalVariables(".poids")
 
-.coords_xy <- function(data) {
+# Un tableau x/y est converti en sf EPSG:2154 (x = est, y = nord) puis passe par
+# assert_crs_2154() (emprise plausible en Lambert-93) ; sans colonnes x/y, refus.
+.as_points_2154 <- function(data) {
   if (inherits(data, "sf")) {
     assert_crs_2154(data)
-    if (any(!as.character(sf::st_geometry_type(data)) %in% "POINT")) {
-      stop("`data` doit contenir des points.", call. = FALSE)
-    }
-    m <- sf::st_coordinates(data)
-    return(cbind(x = unname(m[, 1]), y = unname(m[, 2])))
+    return(data)
   }
   if (is.data.frame(data) && all(c("x", "y") %in% names(data))) {
-    # x = est, y = nord, supposés en Lambert-93 (EPSG:2154), non vérifiable ici.
-    return(cbind(x = as.numeric(data$x), y = as.numeric(data$y)))
+    if (!is.numeric(data$x) || !is.numeric(data$y) || anyNA(data$x) || anyNA(data$y)) {
+      stop("Les colonnes x (est) et y (nord) doivent \u00eatre num\u00e9riques, sans NA.",
+           call. = FALSE)
+    }
+    data <- sf::st_as_sf(data, coords = c("x", "y"), crs = 2154, remove = FALSE)
+    assert_crs_2154(data)
+    return(data)
   }
-  stop("`data` doit \u00eatre un objet sf (EPSG:2154) ou un tableau avec colonnes x (est) et y (nord).",
+  stop("`data` doit \u00eatre un objet sf (EPSG:2154) ou un tableau avec colonnes x (est) et y (nord, Lambert-93).",
        call. = FALSE)
+}
+
+.coords_xy <- function(data) {
+  data <- .as_points_2154(data)
+  if (any(!as.character(sf::st_geometry_type(data)) %in% "POINT")) {
+    stop("`data` doit contenir des points.", call. = FALSE)
+  }
+  m <- sf::st_coordinates(data)
+  cbind(x = unname(m[, 1]), y = unname(m[, 2]))
 }
 
 .drop_geom <- function(data) {
@@ -41,8 +53,11 @@ utils::globalVariables(".poids")
 #' prédicteurs fins sont refusés si les points sont des placettes IFN ou si leur
 #' précision de localisation (`loc_precision_m`) est absente ou supérieure à 25 m.
 #'
-#' @param data Objet `sf` de points en EPSG:2154 (ou tableau avec colonnes `x`, `y`),
-#'   portant la réponse, les prédicteurs et `loc_precision_m`.
+#' @param data Objet `sf` de points en EPSG:2154, ou tableau avec colonnes `x` (est) et
+#'   `y` (nord) **supposées en Lambert-93** : il est converti en `sf` EPSG:2154 puis
+#'   contrôlé par [assert_crs_2154()] (des coordonnées hors de la France métropolitaine,
+#'   par exemple x/y inversés ou degrés, sont refusées). Porte la réponse, les
+#'   prédicteurs et `loc_precision_m`.
 #' @param response Nom de la colonne réponse (numérique).
 #' @param predictors Noms des colonnes prédictrices.
 #' @param method `"ranger"` (forêt aléatoire, écart-type par quantiles) ou `"gam"`
@@ -52,10 +67,14 @@ utils::globalVariables(".poids")
 #'   marqués par [mark_ifn()] avant la règle bloquante.
 #' @param num_trees Nombre d'arbres de la forêt (200 par défaut).
 #' @param seed Graine du générateur (`NULL` : pas de graine).
+#' @param ifn_precision_m Précision de localisation posée par [mark_ifn()] quand
+#'   `points_source = "ifn"` (700 m par défaut ; dans le pipeline, la valeur vient de
+#'   `read_config()$ifn_precision_m`).
 #' @return Un objet de classe `sylvo_gradient` (liste).
 #' @examples
 #' set.seed(1)
-#' d <- data.frame(x = 1:40, y = 1, loc_precision_m = 10, coarse_a = rnorm(40))
+#' d <- data.frame(x = 1007000 + 100 * (1:40), y = 6790000, loc_precision_m = 10,
+#'                 coarse_a = rnorm(40))
 #' d$g <- d$coarse_a + rnorm(40, sd = 0.1)
 #' if (requireNamespace("ranger", quietly = TRUE)) {
 #'   m <- fit_gradient(d, "g", "coarse_a", num_trees = 50)
@@ -64,13 +83,14 @@ utils::globalVariables(".poids")
 #' @export
 fit_gradient <- function(data, response, predictors, method = c("ranger", "gam"),
                          weights = NULL, points_source = NULL, num_trees = 200L,
-                         seed = NULL) {
+                         seed = NULL, ifn_precision_m = 700) {
   method <- match.arg(method)
+  data <- .as_points_2154(data)
   if (!is.null(points_source)) {
     if (!identical(points_source, "ifn")) {
       stop("`points_source` doit \u00eatre NULL ou \"ifn\".", call. = FALSE)
     }
-    data <- mark_ifn(data)
+    data <- mark_ifn(data, ifn_precision_m)
   }
   # Règle bloquante : avant toute autre chose.
   assert_no_fine_extract_on_ifn(data, predictors)
@@ -116,7 +136,7 @@ fit_gradient <- function(data, response, predictors, method = c("ranger", "gam")
   structure(list(
     fit = fit, method = method, response = response, predictors = predictors,
     train = train[, predictors, drop = FALSE], weight_var = weight_var,
-    n = nrow(train), points_source = points_source,
+    n = nrow(train), n_input = nrow(df), rows = which(ok), points_source = points_source,
     synthetic = isTRUE(any(as.logical(df[["synthetic"]])))
   ), class = "sylvo_gradient")
 }
@@ -218,7 +238,8 @@ print.sylvo_gradient <- function(x, ...) {
 #'   `NULL` : blocs spatiaux.
 #' @param ... Transmis à [fit_gradient()] (`num_trees`, `seed`, `points_source`).
 #' @return Une liste : `par_pli` (pli, n, r2, rmse), `global` (r2, rmse sur toutes les
-#'   prédictions hors pli), `predictions`, `block_size`, `k`, `plis`.
+#'   prédictions hors pli), `predictions` (observé, prédit, écart-type prédit `sd`, pli),
+#'   `block_size`, `k`, `plis`.
 #'   R² = 1 - SCR/SCT par rapport à la moyenne observée ; il peut être négatif.
 #' @examples
 #' set.seed(1)
@@ -232,6 +253,7 @@ print.sylvo_gradient <- function(x, ...) {
 spatial_cv <- function(data, response, predictors, method = c("ranger", "gam"),
                        block_size = NULL, k = 5L, weights = NULL, folds = NULL, ...) {
   method <- match.arg(method)
+  data <- .as_points_2154(data)
   xy <- .coords_xy(data)
   df <- .drop_geom(data)
   if (!response %in% names(df)) stop("R\u00e9ponse absente de `data`.", call. = FALSE)
@@ -250,13 +272,16 @@ spatial_cv <- function(data, response, predictors, method = c("ranger", "gam"),
   ids <- sort(unique(folds))
   if (length(ids) < 2L) stop("Au moins deux plis sont n\u00e9cessaires.", call. = FALSE)
   pred <- rep(NA_real_, nrow(df))
+  pred_sd <- rep(NA_real_, nrow(df))
   met <- lapply(ids, function(f) {
     te <- which(folds == f)
     tr <- which(folds != f)
     m <- fit_gradient(data[tr, , drop = FALSE], response, predictors, method = method,
                       weights = if (is.null(weights)) NULL else weights[tr], ...)
-    p <- .predict_df(m, df[te, , drop = FALSE])$pred
+    pp <- .predict_df(m, df[te, , drop = FALSE])
+    p <- pp$pred
     pred[te] <<- p
+    pred_sd[te] <<- pp$sd
     obs <- df[[response]][te]
     c(pli = f, n = length(te), r2 = .r2(obs, p), rmse = .rmse(obs, p))
   })
@@ -264,7 +289,7 @@ spatial_cv <- function(data, response, predictors, method = c("ranger", "gam"),
   list(
     par_pli = as.data.frame(do.call(rbind, met)),
     global = c(r2 = .r2(obs, pred), rmse = .rmse(obs, pred)),
-    predictions = data.frame(observe = obs, predit = pred, pli = folds),
+    predictions = data.frame(observe = obs, predit = pred, sd = pred_sd, pli = folds),
     block_size = block_size, k = length(ids), plis = folds
   )
 }
@@ -312,17 +337,26 @@ spatial_cv <- function(data, response, predictors, method = c("ranger", "gam"),
 #'   installé, sinon un calcul maison équivalent simplifié (même principe : indice de
 #'   dissimilarité, seuil des moustaches ; sans validation croisée des DI).
 #' @param use_cast `FALSE` pour forcer le repli maison même si CAST est installé.
+#' @param cv Résultat de [spatial_cv()] sur **les mêmes données** que le modèle
+#'   (`NULL` : sans). S'il est fourni : (1) ses plis spatiaux sont transmis à
+#'   `CAST::aoa()` (argument `CVtest`), ce qui calcule le seuil de la zone
+#'   d'applicabilité sur des indices de dissimilarité de validation croisée
+#'   (méthode de Meyer et Pebesma) ; (2) la couche `sd_cv` est calculée.
 #' @return Un `SpatRaster` avec les couches `pred`, `sd` (écart-type : quantiles
 #'   de la forêt ou erreur-type du GAM, **pas** l'erreur de validation croisée),
-#'   et si `aoa` : `di` et `aoa` (1 = dans la zone d'applicabilité, 0 = hors zone : à
-#'   ne pas interpréter). Une balise `synthetic` est posée (`terra::metags`) si le
-#'   modèle vient de données synthétiques.
+#'   si `cv` : `sd_cv` (= `sd` multiplié par RMSE de validation croisée / racine de la
+#'   moyenne des `sd^2` hors pli : l'écart-type est recalé pour que son niveau moyen
+#'   égale l'erreur mesurée hors blocs ; le **motif** spatial reste celui de `sd`, le
+#'   niveau est global, pas local), et si `aoa` : `di` et `aoa` (1 = dans la zone
+#'   d'applicabilité, 0 = hors zone : à ne pas interpréter). Une balise `synthetic`
+#'   est posée (`terra::metags`) si le modèle vient de données synthétiques.
 #' @examples
 #' \dontrun{
-#' r <- predict_raster(modele, pile_predicteurs)
+#' cv <- spatial_cv(donnees, "g", predicteurs)
+#' r <- predict_raster(modele, pile_predicteurs, cv = cv)
 #' }
 #' @export
-predict_raster <- function(model, predictors, aoa = TRUE, use_cast = TRUE) {
+predict_raster <- function(model, predictors, aoa = TRUE, use_cast = TRUE, cv = NULL) {
   if (!inherits(model, "sylvo_gradient")) {
     stop("`model` doit venir de fit_gradient().", call. = FALSE)
   }
@@ -330,6 +364,17 @@ predict_raster <- function(model, predictors, aoa = TRUE, use_cast = TRUE) {
   assert_crs_2154(predictors)
   manq <- setdiff(model$predictors, names(predictors))
   if (length(manq)) stop("Couches absentes du raster : ", paste(manq, collapse = ", "), ".", call. = FALSE)
+  folds <- NULL
+  if (!is.null(cv)) {
+    if (!is.list(cv) || is.null(cv$plis) || is.null(cv$global) || is.null(cv$predictions$sd)) {
+      stop("`cv` doit venir de spatial_cv().", call. = FALSE)
+    }
+    if (length(cv$plis) != model$n_input) {
+      stop("`cv` ne porte pas sur les m\u00eames donn\u00e9es que le mod\u00e8le (", length(cv$plis),
+           " plis pour ", model$n_input, " observations).", call. = FALSE)
+    }
+    folds <- cv$plis[model$rows]
+  }
   pr <- predictors[[model$predictors]]
   nd <- terra::as.data.frame(pr, cells = TRUE, na.rm = TRUE)
   cells <- nd$cell
@@ -343,11 +388,23 @@ predict_raster <- function(model, predictors, aoa = TRUE, use_cast = TRUE) {
   }
   p <- .predict_df(model, nd)
   out <- c(fill(p$pred, "pred"), fill(p$sd, "sd"))
+  if (!is.null(cv)) {
+    rm_cv <- cv$global[["rmse"]]
+    sd_hp <- sqrt(mean(cv$predictions$sd^2, na.rm = TRUE))
+    if (is.finite(rm_cv) && is.finite(sd_hp) && sd_hp > 0) {
+      out <- c(out, fill(p$sd * rm_cv / sd_hp, "sd_cv"))
+    } else {
+      warning("`sd_cv` non calcul\u00e9e : RMSE de validation crois\u00e9e ou \u00e9cart-type hors pli ",
+              "inutilisable.", call. = FALSE)
+    }
+  }
   if (aoa) {
     w <- model$weight_var
     if (use_cast && requireNamespace("CAST", quietly = TRUE)) {
+      # Plis spatiaux de spatial_cv() : seuil de l'AOA sur les DI de validation croisee.
       res <- CAST::aoa(newdata = pr, train = model$train, variables = model$predictors,
-                       weight = as.data.frame(as.list(w)), verbose = FALSE)
+                       weight = as.data.frame(as.list(w)), CVtest = folds,
+                       verbose = FALSE)
       di <- res$DI
       names(di) <- "di"
       a <- res$AOA
