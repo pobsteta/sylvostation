@@ -41,3 +41,16 @@ Extraits le 2026-11-16, mission 001 (voir `docs/referentiels.md`, § 5 et § 7).
   `espar-cdref13.csv` de l'archive (non copiés ici).
 - **Licence :** Licence Ouverte / Open Licence Etalab Version 2.0. Ces données ne doivent
   pas servir à produire des résultats statistiques d'inventaire.
+
+## `synth_indicateurs.csv` (SYNTHÉTIQUE)
+
+- **Nature :** valeurs indicatrices **fabriquées** (tirage uniforme, graine 2026), colonne
+  `synthetic = TRUE` ; Baseflor n'était pas joignable (docs/referentiels.md § 9). Ne
+  représente aucune mesure écologique : sert uniquement à tester `compute_gradients()`.
+- **Format** (séparateur `;`, décimale `.`, UTF-8) : `cd_ref` (TAXREF v13.0, comme
+  `FLORE.CD_REF`), `nom` (libellé du `CD_REF` dans `metadonnees.csv` de l'IFN), `ph`,
+  `azote`, `humidite` (échelle 1 à 9 fictive), `synthetic`. Les 269 `CD_REF` de
+  `ifn_flore.csv` y figurent. Pour brancher Baseflor ou EcoPlant : fournir un fichier de
+  mêmes colonnes `cd_ref`, `ph`, `azote` (ajouter la jointure `CD_NOM` vers `CD_REF`).
+- **Licence :** sans objet (données fabriquées) ; les libellés viennent de l'IFN
+  (Licence Ouverte Etalab 2.0).

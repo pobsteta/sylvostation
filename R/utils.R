@@ -27,19 +27,25 @@ COARSE_VARIABLES <- c("climat_km", "pedopaysage", "geologie_700m")
 #' Marquer des points comme placettes IFN
 #'
 #' Pose `attr(x, "source") <- "ifn"` et, pour un tableau, deux colonnes :
-#' `source = "ifn"` et `loc_precision_m = 700`. Les colonnes survivent aux
+#' `source = "ifn"` et `loc_precision_m` (700 m par défaut ; dans le pipeline, la
+#' valeur vient de `read_config()$ifn_precision_m`). Les colonnes survivent aux
 #' sous-ensembles, à `rbind` et aux jointures, l'attribut non toujours.
 #'
 #' @param x Un objet (`data.frame`, `sf`, ...).
+#' @param precision_m Précision de localisation, en mètres (nombre positif).
 #' @return `x`, marqué.
 #' @examples
 #' p <- mark_ifn(data.frame(x = 1, y = 2))
 #' p$loc_precision_m
 #' @export
-mark_ifn <- function(x) {
+mark_ifn <- function(x, precision_m = 700) {
+  if (!is.numeric(precision_m) || length(precision_m) != 1L ||
+      !is.finite(precision_m) || precision_m <= 0) {
+    stop("`precision_m` doit \u00eatre un nombre positif.", call. = FALSE)
+  }
   if (is.data.frame(x)) {
     x[["source"]] <- "ifn"
-    x[["loc_precision_m"]] <- 700
+    x[["loc_precision_m"]] <- precision_m
   }
   attr(x, "source") <- "ifn"
   x
