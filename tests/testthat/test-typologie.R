@@ -69,6 +69,7 @@ test_that("merge_rare sans type rare ne change rien", {
 })
 
 test_that("cluster_check retrouve 3 groupes nets et compare à la typologie", {
+  skip_if_not_installed("cluster")
   s <- synth_typologie(n = 240)
   r <- cluster_check(s$gradients[, c("trophic", "hydric", "bioclim")], k = 2:6,
                      types = s$grp)

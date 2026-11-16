@@ -30,6 +30,7 @@ Suggests:
     lasR,
     lidR,
     mgcv,
+    permute,
     quarto,
     ranger,
     rgbif,

@@ -168,8 +168,16 @@ fertility_by_type <- function(arbres, types,
   guide <- list()
   for (sp in unique(pl$species)) {
     i <- pl$species == sp
-    ar <- if (length(age_ref) > 1L || !is.null(names(age_ref))) age_ref[[sp]] else age_ref
-    if (is.null(ar) || is.na(ar)) ar <- NA_real_
+    if (length(age_ref) > 1L || !is.null(names(age_ref))) {
+      if (sp %in% names(age_ref)) {
+        ar <- age_ref[[sp]]
+      } else {
+        warning("Essence `", sp, "` absente de `age_ref` : fertilite NA.", call. = FALSE)
+        ar <- NA_real_
+      }
+    } else {
+      ar <- age_ref
+    }
     d <- pl[i, , drop = FALSE]
     pente <- NA_real_
     if (nrow(d) >= n_min_guide && stats::sd(log(d$age)) > 0) {

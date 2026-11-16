@@ -11,6 +11,7 @@ test_that("indicator_species retrouve les espèces indicatrices connues", {
 
 test_that("indicator_species coïncide avec indicspecies::multipatt (IndVal.g)", {
   skip_if_not_installed("indicspecies")
+  skip_if_not_installed("permute")
   s <- synth_typologie(n = 150)
   r <- indicator_species(s$flore, s$grp, nperm = 0)
   mp <- suppressMessages(indicspecies::multipatt(
@@ -57,4 +58,17 @@ test_that("fertility_by_type : âge de référence par essence, peu de placettes
   f1 <- fertility_by_type(s$arbres, s$plot_types)
   expect_equal(f2$fertilite_moy, f1$fertilite_moy)
   expect_error(fertility_by_type(s$arbres, s$plot_types, cols = c(plot = "zz")), "cols")
+})
+
+test_that("fertility_by_type : essence absente de age_ref -> NA et avertissement", {
+  s <- synth_typologie()
+  a2 <- rbind(s$arbres, transform(s$arbres, species = "hetre"))
+  expect_warning(
+    f <- fertility_by_type(a2, s$plot_types, age_ref = c(chene = 50)),
+    "hetre")
+  expect_true(all(f$species == "chene"))
+  expect_equal(nrow(f), 3)
+  pl <- attr(f, "plots")
+  expect_true(all(is.na(pl$fertilite[pl$species == "hetre"])))
+  expect_true(all(is.na(pl$age_ref[pl$species == "hetre"])))
 })
