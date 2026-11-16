@@ -3,25 +3,36 @@
 > Cinq colonnes (fiche n° 8). Chaque carte renvoie à sa fiche dans `pilotage/missions/`.
 > **Une carte qui ne bouge pas est souvent la mauvaise nouvelle à dire tout de suite.**
 
-**Dernier cycle :** 0
+**Dernier cycle :** 4 (2026-11-16, délégation totale)
 
 ## Bac à sable
 
-## Validé
+- Mode réel du pipeline (`demo: false`) : SER entière, LiDAR HD sur 225 dalles, ancrage GBIF branché, sols réels
+- Valeurs indicatrices réelles (Baseflor / EcoPlant), coefficients de pédotransfert publiés
+- Rasters de référence AgroParisTech, relevés GNSS de terrain (30 à 50)
+- MRVBF (WhiteboxTools) et hauteur au-dessus du réseau (BD TOPAGE)
 
-- [000-critique-brief](missions/000-critique-brief.md) · depuis le cycle 0
-  - Homme : contradicteur · Mission : critique du brief, de la spec, des ADR · Moyens : lecture, web
-- [001-referentiels](missions/001-referentiels.md) · depuis le cycle 0
-  - Homme : acquereur · Mission : URL, couches, colonnes vérifiées · Moyens : réseau ouvert, R
-- [002-squelette](missions/002-squelette.md) · depuis le cycle 0
-  - Homme : dev · Mission : squelette du package, règle bloquante · Moyens : R, devtools
+## Validé
 
 ## Planifié
 
-- 003-emprise-lidar · 004-geologie · 005-terrain · 006-placettes-sols · 007-ancrage · 008-modeles · 009-typologie-cle · 010-pipeline-sorties · depuis le cycle 0
-
 ## Terminé
+
+- [000-critique-brief](missions/000-critique-brief.md) · cycle 1 · contradicteur
+- [001-referentiels](missions/001-referentiels.md) · cycle 1 · acquereur (fini par un agent généraliste)
+- [002-squelette](missions/002-squelette.md) · cycle 1 · dev
+- [003-emprise-lidar](missions/003-emprise-lidar.md) · cycle 2 · dev · incrément 1 sur 4 dalles **réelles**
+- [004-geologie](missions/004-geologie.md) · cycle 2 · dev · BD Charm-50 **réelle** (extrait)
+- [005-terrain](missions/005-terrain.md) · cycle 2 · dev · contrôlé sur MNT **réel**
+- [011-tests-regle-bloquante](missions/011-tests-regle-bloquante.md) · cycle 2 · testeur
+- [006-placettes-sols](missions/006-placettes-sols.md) · cycle 3 · dev · 100 placettes IFN **réelles**, sols synthétiques
+- [007-ancrage](missions/007-ancrage.md) · cycle 3 · dev · mesure GBIF **réelle** (API publique), indicateurs synthétiques
+- [008-modeles](missions/008-modeles.md) · cycle 3 · dev · synthétique
+- [009-typologie-cle](missions/009-typologie-cle.md) · cycle 4 · dev · synthétique
+- [010-pipeline-sorties](missions/010-pipeline-sorties.md) · cycle 4 · dev · pipeline démo de bout en bout (contrat d'interface)
 
 ## Abandonné
 
 ## Livraisons
+
+- Branche `claude/admiring-cerf-hq7t8l` : 981 tests verts, `R CMD check` sans erreur ni warning ; pipeline démo 47 cibles en ≈ 23 s ; PR brouillon impossible tant que le dépôt n'a pas de branche `main` (journal).
