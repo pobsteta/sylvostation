@@ -75,3 +75,10 @@ Dans `tests/testthat/test-acceptation-regle-700m.R`, remplacer les deux `skip()`
 1. Une colonne `source = "ifn"` seule (sans attribut, même avec `loc_precision_m = 10`) **bloque** (comportement actuel, à figer par un test).
 2. Le préfixe large est **sensible à la casse** : seul `coarse_` en minuscules déclare une variable large ; `COARSE_climat` est traité comme fin et **bloque** sur des points imprécis (changement de `R/utils.R` nécessaire : aujourd'hui il passe).
 3. `variables = character(0)` **passe** (rien n'est extrait) ; `NULL` aussi.
+
+## Compléments (mission 001, docs/referentiels.md)
+
+- SER : pas de WFS ; source vecteur `ser_l93.zip` (86 SER) et `ser_ar_l93.zip` (5 SER d'alluvions, couche superposée) sur inventaire-forestier.ign.fr (URL exactes au § 1 de docs/referentiels.md), champs `codeser`, `NomSER`, encodage WINDOWS-1252. `get_ser()` lit le fichier (téléchargé une fois dans `data_dir`), avec option `alluvial = TRUE` pour la seconde couche. Test avec un extrait réduit (une ou deux SER simplifiées, ≤ 200 Ko, licence au § 11).
+- LiDAR HD : couche `IGNF_LIDAR-HD_METADONNEE:metadata`, identifiant `coordonnees_nw`, URL dans `url_npl`, filtrer avec `CQL_FILTER=WITHIN(...)` (le BBOX déborde) ; dates de vol 2022-01-12 à 2022-04-21 ; 225 dalles dans l'emprise, 45,7 Go en tout, environ 200 Mo par dalle : l'incrément 1 sur 4 dalles télécharge environ 1 Go, en flux, LAZ supprimés après calcul.
+- MNT IGN de contrôle : champ `url_mnt` de la métadonnée.
+- Signatures lasR 0.21.4 et lidR 4.3.3 relevées au § 10.

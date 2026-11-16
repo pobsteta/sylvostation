@@ -66,3 +66,8 @@ Conventions : `CLAUDE.md` (EPSG:2154, `snake_case`, roxygen2 en français, une f
 ## Comment saura-t-on que ça marche ?
 
 Les tests passent, et le rendu dit ce qui a tourné sur données réelles et ce qui ne l'a pas fait.
+
+## Compléments (mission 001, docs/referentiels.md)
+
+- Extrait réel : `inst/extdata/bdcharm50_emprise_test.gpkg` (couche `s_fgeol`, 661 polygones, départements 67, 68, 88), champs `CARTE`, `CODE`, `CODE_LEG`, `NOTATION`, `DESCR`. **Joindre par `NOTATION`, pas par `CODE`** (non comparable d'un département à l'autre). `.prj` à reposer en EPSG:2154. Contrôle des raccords : champ `dep`.
+- 94 notations dans l'emprise ; grès du Buntsandstein et roches cristallines présents.

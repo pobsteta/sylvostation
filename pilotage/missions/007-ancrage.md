@@ -72,3 +72,10 @@ Les tests passent, et le rendu dit ce qui a tourné sur données réelles et ce 
 - Filtre GBIF en trois catégories : incertitude ≤ 25 m (gardée), incertitude absente et données généralisées (`dataGeneralizations`, `informationWithheld`) : `loc_precision_m = NA`, donc refusées pour toute extraction fine par la règle bloquante.
 - `load_gnss()` exige une colonne de précision horizontale (`loc_precision_m`).
 - Licence de chaque jeu GBIF conservée ; pas d'extrait CC BY-NC dans `inst/extdata`.
+
+## Compléments (mission 001, docs/referentiels.md)
+
+- Jeu IFN dans GBIF : `datasetKey = e5f16d86-e225-4822-97be-a64ce17079c7` (2 150 occurrences dans l'emprise, dont 1 800 déclarées à 1 m alors que l'IGN les publie à 700 m) : **exclu par `clean_occ()`** quelle que soit l'incertitude déclarée, et `loc_precision_m = 700` si on le garde pour une autre raison.
+- Comptes réels de l'emprise (depuis 2000) : 18 538 occurrences, 4 440 à ≤ 25 m, 2 932 sans incertitude ; 30 jeux, dont 4 en CC BY-NC (2 588 occurrences) : ces jeux sont exclus de tout extrait versionné.
+- Clé Tracheophyta : 7707728 (référentiel GBIF) ; avec rgbif 3.9.0 et le référentiel par défaut, vérifier la clé (écart au § 8 de docs/referentiels.md).
+- Mesure à faire dans la mission : avec l'API publique `occurrence/search` (sans compte), le nombre de mailles de 50 m exploitables (≥ 5 espèces) dans l'emprise, hors jeu IFN — écrit dans `docs/ancrage-massif-test.md`.

@@ -73,3 +73,8 @@ Les tests passent, et le rendu dit ce qui a tourné sur données réelles et ce 
 - Toute table de points porte `loc_precision_m` ; `load_ifn()` appelle `mark_ifn()`.
 
 - `mark_ifn()` doit lire la précision IFN dans la config (`ifn_precision_m`) au lieu de la valeur 700 en dur (relecture 002, point 1) : ajouter un argument `precision_m = 700` alimenté par `read_config()` dans le pipeline.
+
+## Compléments (mission 001, docs/referentiels.md)
+
+- Extraits réels : `inst/extdata/ifn_placette.csv`, `ifn_ecologie.csv`, `ifn_flore.csv`, `ifn_arbre.csv` (100 placettes de l'emprise test, séparateur `;`, colonnes d'origine ; `ifn_arbre.csv` garde le `;` final). Coordonnées `XL`, `YL` (Lambert-93, centre de maille, 700 m). Jointure par (`CAMPAGNE`, `IDP`). Colonnes complètes au § 7 de docs/referentiels.md.
+- FLORE : `CD_REF` en TAXREF v13.0 ; Baseflor non joignable dans la session → `synth_indicateurs.csv` marqué synthétique, format documenté pour brancher Baseflor ou EcoPlant plus tard.
