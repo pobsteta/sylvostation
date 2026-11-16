@@ -65,8 +65,9 @@ mark_ifn <- function(x) {
 }
 
 .is_coarse <- function(v) {
-  l <- tolower(v)
-  l %in% tolower(COARSE_VARIABLES) || startsWith(l, "coarse_")
+  # Le préfixe `coarse_` est sensible à la casse (décision mission 011) :
+  # `COARSE_climat` est traité comme fin ; COARSE_VARIABLES reste insensible à la casse.
+  tolower(v) %in% tolower(COARSE_VARIABLES) || startsWith(v, "coarse_")
 }
 
 .is_fine <- function(v) {
@@ -84,7 +85,10 @@ mark_ifn <- function(x) {
 #' `loc_precision_m` absente, `NA`, ou supérieure à `max_precision_m`. Ainsi le
 #' blocage survit à un `rbind` ou à une jointure qui perdrait le marquage, et un
 #' mélange de placettes IFN et de points précis est refusé en entier. Par prudence,
-#' une variable ni connue comme large ni préfixée `coarse_` est traitée comme fine.
+#' une variable ni connue comme large ni préfixée `coarse_` est traitée comme fine ; le
+#' préfixe est **sensible à la casse** (`COARSE_climat` est traité comme fin). Une colonne
+#' `source = "ifn"` seule suffit à bloquer. `variables = character(0)` ou `NULL` passe (rien
+#' n'est extrait).
 #' Toute fonction d'extraction doit l'appeler en premier.
 #'
 #' @param points Points à échantillonner (tableau avec colonne `loc_precision_m`).
@@ -97,6 +101,7 @@ mark_ifn <- function(x) {
 #' try(assert_no_fine_extract_on_ifn(p, "pente"))
 #' @export
 assert_no_fine_extract_on_ifn <- function(points, variables, max_precision_m = 25) {
+  if (is.null(variables)) variables <- character(0)
   if (!is.character(variables) || anyNA(variables)) {
     stop("`variables` doit \u00eatre un vecteur de caract\u00e8res sans NA.", call. = FALSE)
   }

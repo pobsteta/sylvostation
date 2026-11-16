@@ -24,7 +24,10 @@ Les placettes de l'IFN sont localisées à 700 m près : y extraire une variable
 \code{loc_precision_m} absente, \code{NA}, ou supérieure à \code{max_precision_m}. Ainsi le
 blocage survit à un \code{rbind} ou à une jointure qui perdrait le marquage, et un
 mélange de placettes IFN et de points précis est refusé en entier. Par prudence,
-une variable ni connue comme large ni préfixée \code{coarse_} est traitée comme fine.
+une variable ni connue comme large ni préfixée \code{coarse_} est traitée comme fine ; le
+préfixe est \strong{sensible à la casse} (\code{COARSE_climat} est traité comme fin). Une colonne
+\code{source = "ifn"} seule suffit à bloquer. \code{variables = character(0)} ou \code{NULL} passe (rien
+n'est extrait).
 Toute fonction d'extraction doit l'appeler en premier.
 }
 \examples{
