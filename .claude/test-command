@@ -1,0 +1,1 @@
+LC_ALL=C.UTF-8 Rscript -e 'devtools::test(stop_on_failure = TRUE)'

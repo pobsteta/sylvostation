@@ -1,0 +1,17 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^LICENSE\.md$
+^config\.yml$
+^_targets\.R$
+^_targets$
+^data$
+^docs$
+^pilotage$
+^CLAUDE\.md$
+^\.claude$
+^\.github$
+^README\.md$
+^sylvostation_.*\.tar\.gz$
+^sylvostation\.Rcheck$
+^\.git$
+^inst/extdata/\.gitkeep$
