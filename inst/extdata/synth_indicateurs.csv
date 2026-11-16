@@ -1,0 +1,270 @@
+cd_ref;nom;ph;azote;humidite;synthetic
+3853;Atrichum undulatum (Atrichie ondulée);6.5;7;3.6;TRUE
+3864;Polytrichum commune (Polytric commun);5.8;4.7;3.1;TRUE
+3865;Polytrichum formosum (Polytric élégant);3.7;4.8;6.5;TRUE
+3867;Polytrichum juniperinum (Polytric genévrier);4.4;2.1;7.4;TRUE
+4446;Dicranella heteromalla (Dicranelle plurilatérale);5.8;2.8;4.8;TRUE
+4754;Dicranum scoparium (Dicrane en balai);3.1;6.5;7.8;TRUE
+4770;Leucobryum glaucum (Leucobryum glauque);5.3;5.7;5;TRUE
+4917;Mnium hornum (Mnie annuelle);7.3;7.6;3.7;TRUE
+4932;Plagiomnium affine (Mnie apparentée);4.3;6.6;7.7;TRUE
+4946;Plagiomnium undulatum (Mnie ondulée);5.9;6.2;4;TRUE
+4952;Rhizomnium punctatum (Mnie ponctuée);3;1.2;7.1;TRUE
+5132;Hookeria lucens (Hookérie luisante);6.5;6.2;2.3;TRUE
+5426;Thuidium tamariscinum (Thuidie à feuilles de tamaris);4.2;7.1;7.8;TRUE
+5873;Eurhynchium striatum (Eurhynchie striée);7.2;5.5;2.8;TRUE
+5922;Pseudoscleropodium purum (Hypne pur);3.8;6.2;6.7;TRUE
+5980;Plagiothecium undulatum (Plagiothécie ondulée);4.8;7.4;2.3;TRUE
+6013;Hylocomium splendens (Hylocomie brillante);5.7;5.3;3.5;TRUE
+6058;Hypnum jutlandicum (Hypne des bruyères);3;1.8;4.6;TRUE
+6101;Pleurozium schreberi (Hypne de Schreber);4.6;1.6;4.2;TRUE
+6111;Rhytidiadelphus loreus (Hypne courroie);3.1;8;8.3;TRUE
+6115;Rhytidiadelphus squarrosus (Hypne squarreux);4.7;7.1;2.8;TRUE
+6468;Plagiochila asplenioides (Plagiochile faux asplénium);4.7;2.5;4.2;TRUE
+6611;Bazzania trilobata (Bazzanie à trois lobes);4.2;8.1;7.1;TRUE
+79319;Abies alba (Sapin pectiné);3.3;6;7.7;TRUE
+79734;Acer campestre (Érable champêtre);5.1;8;8.4;TRUE
+79779;Acer platanoides (Érable plane);3.9;7.2;4.8;TRUE
+79783;Acer pseudoplatanus (Érable sycomore);5.1;6.2;2.4;TRUE
+80183;Adenostyles alliariae (Adénostyle à feuilles d’alliaire);3.7;5.7;4.7;TRUE
+80990;Ajuga reptans (Bugle rampante);3;5.1;5.7;TRUE
+81295;Alliaria petiolata (Alliaire);6;1.5;6.2;TRUE
+81569;Alnus glutinosa (Aulne glutineux);7.6;4.5;6.9;TRUE
+82637;Anemone nemorosa (Anémone des bois);3.9;5.1;2.2;TRUE
+82922;Anthoxanthum odoratum (Flouve odorante);6.7;5;4.9;TRUE
+84112;Arum maculatum (Gouet tacheté);3.1;6;7.1;TRUE
+84534;Asplenium trichomanes (Capillaire);5.9;3.7;3.4;TRUE
+84999;Athyrium filix-femina (Fougère femelle);5.1;7.7;2.4;TRUE
+85152;Atropa belladonna (Belladone);4.1;1.9;3.1;TRUE
+85903;Betula pendula (Bouleau verruqueux);5.4;6.5;2.6;TRUE
+86101;Blechnum spicant (Blechnum en épi);6.8;3.2;8.3;TRUE
+86305;Brachypodium sylvaticum (Brachypode des bois);5.2;6.7;5.5;TRUE
+86511;Bromopsis benekenii (Brome de Beneken);4.9;7.6;4.9;TRUE
+87501;Calluna vulgaris (Callune);7.4;8;6.3;TRUE
+87915;Cardamine flexuosa (Cardamine flexueuse);5.2;7;8.2;TRUE
+87925;Cardamine heptaphylla (Dentaire pennée);5.2;2.9;6.6;TRUE
+88395;Carex brizoides (Laîche fausse brize);3.4;7.2;3.8;TRUE
+88483;Carex divulsa;3.2;3.1;3.2;TRUE
+88493;Carex elongata (Laîche allongée);7.6;7.7;8.3;TRUE
+88766;Carex pendula (Laîche pendante);4.5;5;2.3;TRUE
+88819;Carex remota (Laîche espacée);5.6;4.6;6.9;TRUE
+89200;Carpinus betulus (Charme);4.2;6.1;7.3;TRUE
+89304;Castanea sativa (Châtaignier);7.9;5.9;5.6;TRUE
+91120;Chrysosplenium oppositifolium (Dorine à feuilles opposées);6.2;8.4;5.6;TRUE
+91258;Circaea lutetiana (Circée de Paris);7.8;4.5;8.1;TRUE
+91289;Cirsium arvense (Cirse des champs);7.4;2.5;4;TRUE
+91886;Clematis vitalba (Clématite vigne blanche);5.6;8.6;4.5;TRUE
+91912;Clinopodium vulgare (Calament clinopode);6.6;2.5;4.7;TRUE
+92282;Convallaria majalis (Muguet);6.7;6.5;4.5;TRUE
+92353;Convolvulus sepium (Liseron des haies);3.2;7.2;2.5;TRUE
+92606;Corylus avellana (Noisetier coudrier);7.8;6.1;5.5;TRUE
+92864;Crataegus laevigata (Aubépine épineuse);4;3.8;8.9;TRUE
+92876;Crataegus monogyna (Aubépine monogyne);4.5;7;5.2;TRUE
+94945;Digitalis lutea (Digitale jaune);7.5;4.3;8.6;TRUE
+94995;Digitaria sanguinalis;5.8;6.6;5.1;TRUE
+95463;Drymochloa sylvatica (Grande fétuque);5.3;6.8;6.3;TRUE
+95558;Dryopteris carthusiana (Polystic spinuleux);5;7.9;5;TRUE
+95563;Dryopteris dilatata (Polystic dilaté);3.4;3.2;6.9;TRUE
+95567;Dryopteris filix-mas (Fougère mâle);6.2;7.7;3.4;TRUE
+95992;Elymus caninus (Chiendent des chiens);5.3;2.9;3.2;TRUE
+96208;Epilobium montanum (Épilobe des montagnes);5.9;5.3;7.8;TRUE
+97947;Fagus sylvatica (Hêtre);6.3;4.2;6.4;TRUE
+98651;Ficaria verna (Ficaire fausse renoncule);7.4;5.9;3.4;TRUE
+98717;Filipendula ulmaria (Reine des prés);4.9;3.8;8;TRUE
+98865;Fragaria vesca (Fraisier sauvage);6.6;5.4;3.6;TRUE
+98921;Fraxinus excelsior (Frêne commun);7.3;3;5.6;TRUE
+99334;Galeopsis tetrahit (Galéopsis tétrahit);3.9;1.8;3.4;TRUE
+99373;Galium aparine (Gaillet gratteron);6.2;7.5;6.5;TRUE
+99473;Galium mollugo (Gaillet mollugine);6.6;1.5;8.7;TRUE
+99488;Galium odoratum (Aspérule odorante);5.7;3.5;6.3;TRUE
+99518;Galium rotundifolium (Gaillet à feuilles rondes);4;3.5;7;TRUE
+99529;Galium saxatile (Gaillet du Harz);7.5;5.2;6.2;TRUE
+99552;Galium sylvaticum (Gaillet des bois);3.6;3.4;7.1;TRUE
+100142;Geranium robertianum (Géranium herbe à Robert);7.8;5.4;2.1;TRUE
+100225;Geum urbanum (Benoîte commune);6.9;8.9;2.2;TRUE
+100310;Glechoma hederacea (Lierre terrestre);7.8;1.3;5.6;TRUE
+100787;Hedera helix (Lierre);3.6;1.4;4.5;TRUE
+102106;Hieracium lachenalii;7.9;6.1;6.7;TRUE
+102115;Hieracium laevigatum (Épervière lisse);6.1;8.2;8.1;TRUE
+102235;Hieracium murorum (Épervière des murs);7.6;8.5;4.5;TRUE
+102483;Hieracium sabaudum (Épervière de Savoie);4;1.4;8.4;TRUE
+103287;Hypericum hirsutum (Millepertuis velu);4.1;5;8.3;TRUE
+103301;Hypericum montanum (Millepertuis des montagnes);7.6;7;2.2;TRUE
+103320;Hypericum pulchrum (Millepertuis élégant);6.6;2.8;8.7;TRUE
+103514;Ilex aquifolium (Houx);6.8;3.1;2.1;TRUE
+103553;Impatiens noli-tangere (Impatiente);4.4;8.2;5.2;TRUE
+103557;Impatiens parviflora (Balsamine à petites fleurs);4.7;2.3;2.6;TRUE
+104076;Juglans regia (Noyer commun);4.7;5.8;8.1;TRUE
+104160;Juncus conglomeratus (Jonc aggloméré);6.9;2.8;2.6;TRUE
+104173;Juncus effusus (Jonc épars);4.8;7.8;7.3;TRUE
+104528;Knautia dipsacifolia (Knautie des bois);6.3;8.4;7.4;TRUE
+104876;Lamium galeobdolon (Lamier jaune);4.9;5.7;6.5;TRUE
+105214;Lathyrus linifolius (Gesse des montagnes);3.6;8.3;6.7;TRUE
+105966;Ligustrum vulgare (Troène);7.2;6.8;5.7;TRUE
+106595;Lonicera xylosteum (Camérisier à balais);5.1;5.4;8.7;TRUE
+106761;Lunaria rediviva (Lunaire vivace);3.4;8.4;6.6;TRUE
+106854;Luzula pilosa (Luzule poilue);3.9;5;6;TRUE
+106863;Luzula sylvatica;3.9;7;5.5;TRUE
+107072;Lysimachia nemorum (Lysimaque des bois);6.4;2.1;4.6;TRUE
+107085;Lysimachia tenella (Mouron délicat);6;6.2;8.5;TRUE
+107795;Melampyrum pratense (Mélampyre des prés);4.3;1.7;8.6;TRUE
+107880;Melica uniflora (Mélique uniflore);6;3;5.5;TRUE
+108027;Mentha aquatica (Menthe aquatique);5;2.6;7.5;TRUE
+108361;Mercurialis perennis (Mercuriale pérenne);7.3;6.8;4.4;TRUE
+108537;Milium effusum (Millet diffus);3.5;8.2;7.3;TRUE
+108698;Moehringia trinervia (Moehringie à trois nervures);4.6;3.7;6.8;TRUE
+108996;Myosotis arvensis;3.8;5.2;8;TRUE
+109506;Neottia nidus-avis (Néottie nid-d’oiseau);3.3;8.9;2;TRUE
+110064;Omalotheca sylvatica (Gnaphale des bois);5.8;6.5;4.9;TRUE
+111859;Oxalis acetosella (Oxalis petite oseille);3.7;6.1;2.2;TRUE
+112421;Paris quadrifolia (Parisette);3.8;2.8;6.5;TRUE
+112745;Persicaria maculosa (Renouée persicaire);6.9;2.7;5.8;TRUE
+113703;Pinus sylvestris (Pin sylvestre);5.2;5.1;8;TRUE
+113893;Plantago lanceolata (Plantain lancéolé);3.7;8.6;8.8;TRUE
+114114;Poa annua;5.8;7.2;2.2;TRUE
+114153;Poa chaixii (Pâturin de Chaix);6.9;3.6;4.5;TRUE
+114611;Polygonatum multiflorum (Sceau de Salomon multiflore);5.1;1.2;5.5;TRUE
+114616;Polygonatum verticillatum (Sceau de Salomon à feuilles verticillées);3.3;1.5;3.3;TRUE
+115016;Polypodium vulgare (Polypode vulgaire);4.9;6.4;3.3;TRUE
+115041;Polystichum aculeatum (Aspidium lobé);5.3;2.2;4.9;TRUE
+115076;Polystichum setiferum (Aspidium à cils raides);3.2;7.4;3.3;TRUE
+115156;Populus tremula (Tremble);5.1;5.1;8.4;TRUE
+115655;Potentilla sterilis (Potentille faux fraisier);5;1.2;3.5;TRUE
+115813;Prenanthes purpurea (Prénanthe poupre);6.2;3.7;7.4;TRUE
+116012;Prunella vulgaris (Brunelle commune);3.2;4.3;6.5;TRUE
+116043;Prunus avium (Merisier);3.5;6.4;7.8;TRUE
+116142;Prunus spinosa (Prunellier);7.4;2.2;5.5;TRUE
+116216;Pseudotsuga menziesii (Douglas);3;4.3;5.4;TRUE
+116265;Pteridium aquilinum (Fougère aigle);3.8;1.7;2.9;TRUE
+116422;Pulmonaria officinalis (Pulmonaire à fleurs sombres);5.5;1.3;7.4;TRUE
+116952;Ranunculus bulbosus (Renoncule bulbeuse);5.8;4.6;7;TRUE
+117201;Ranunculus repens (Renoncule rampante);4.7;4.1;8.3;TRUE
+117774;Ribes rubrum (Groseillier rouge);6.5;7;6.8;TRUE
+117860;Robinia pseudoacacia (Robinier faux acacia);4.4;8.7;9;TRUE
+118016;Rosa arvensis (Rosier des champs);5.5;4.9;6.8;TRUE
+118073;Rosa canina (Rosier des chiens);6.2;3.6;3.1;TRUE
+119097;Rubus fruticosus (Ronce des bois);7.6;6.3;6.5;TRUE
+119977;Salix caprea (Saule marsault);3.4;3.2;4.7;TRUE
+119991;Salix cinerea (Saule cendré);4;2.8;8.2;TRUE
+120717;Sambucus nigra (Sureau noir);6.2;4.6;5.2;TRUE
+121471;Schedonorus giganteus (Fétuque géante);6.4;3.2;3.8;TRUE
+121606;Scilla bifolia (Scille à deux feuilles);3.3;8.6;4.2;TRUE
+122028;Scrophularia nodosa (Scrofulaire noueuse);3.8;4.1;3.9;TRUE
+122726;Senecio sylvaticus (Séneçon sylvatique);3.2;2.5;2.9;TRUE
+123471;Silene dioica;7.9;1.4;7.4;TRUE
+124306;Sorbus aria (Alisier blanc);5.7;7.3;4.7;TRUE
+124329;Sorbus mougeotii (Alisier de Mougeot);6.8;4.4;7.1;TRUE
+124346;Sorbus torminalis (Alisier torminal);6.7;3.2;4.2;TRUE
+124814;Stachys sylvatica (Epiaire des bois);4.8;3.3;8.1;TRUE
+125000;Stellaria graminea (Stellaire à feuilles de graminée);6.5;4;7;TRUE
+125006;Stellaria holostea (Stellaire holostée);6.9;3.9;5.5;TRUE
+125014;Stellaria media (Mouron des oiseaux);3.1;3.9;3.1;TRUE
+125816;Taxus baccata (If);3.6;7.2;7.1;TRUE
+126035;Teucrium scorodonia (Germandrée scorodoine);5.5;7.3;4.3;TRUE
+128268;Urtica dioica (Ortie dioïque);7.7;3.8;8.1;TRUE
+128345;Vaccinium myrtillus (Myrtille);3.6;6.8;5.4;TRUE
+128355;Vaccinium vitis-idaea (Airelle rouge);3.6;3.6;3.7;TRUE
+128924;Veronica montana (Véronique des montagnes);4.9;7.9;3.4;TRUE
+128938;Veronica officinalis (Véronique officinale);3.3;4.7;8.7;TRUE
+129305;Vicia sepium (Vesce des haies);5.2;7.9;5.4;TRUE
+129470;Vinca minor (Petite pervenche);5.4;4.1;3.6;TRUE
+129586;Viola hirta (Violette hérissée);3.5;8.9;6.7;TRUE
+129666;Viola reichenbachiana (Violette de Reichenbach);7;3.1;2.4;TRUE
+129669;Viola riviniana (Violette de Rivin);6.6;5.2;5.1;TRUE
+130953;Agrostis capillaris var. capillaris (Agrostide vulgaire);5.5;3.4;5.2;TRUE
+132529;Campanula trachelium subsp. trachelium (Campanule gantelée);6.9;1;7;TRUE
+132790;Carex pilulifera subsp. pilulifera (Laîche à pilules);4.1;2.6;6.1;TRUE
+132818;Carex sylvatica subsp. sylvatica (Laîche des bois);5.9;3.4;2.8;TRUE
+133432;Cornus sanguinea subsp. sanguinea (Cornouiller sanguin);7.4;6.1;3.7;TRUE
+133646;Cytisus scoparius subsp. scoparius (Genêt à balais);7.7;2.8;8.4;TRUE
+133652;Dactylis glomerata subsp. glomerata (Dactyle aggloméré);8;5.5;3.1;TRUE
+133787;Deschampsia cespitosa subsp. cespitosa (Canche cespiteuse);5.6;4.1;4.4;TRUE
+133968;Dryopteris affinis subsp. affinis (Dryoptéris voisin);3.1;1.2;3.8;TRUE
+134108;Epilobium angustifolium subsp. angustifolium (Épilobe en épi);4.4;8;6.8;TRUE
+134346;Eupatorium cannabinum subsp. cannabinum (Eupatoire chanvrine);7.6;5.2;8.1;TRUE
+135306;Heracleum sphondylium subsp. sphondylium (Berce sphondyle);6.1;3.3;5.3;TRUE
+136654;Holcus mollis subsp. mollis (Houlque molle);4.6;6.7;2.1;TRUE
+137096;Lapsana communis subsp. communis (Lampsane commune);4.3;2.7;6;TRUE
+137099;Larix decidua subsp. decidua (Mélèze d’Europe);7.2;4.7;2.1;TRUE
+137432;Lonicera periclymenum subsp. periclymenum (Chèvrefeuille des bois);3.7;6.5;7.9;TRUE
+137522;Luzula sylvatica subsp. sylvatica (Luzule des bois);3.2;6.7;2.7;TRUE
+137742;Melittis melissophyllum subsp. melissophyllum (Mélitte à feuilles de mélisse);5.1;7.1;3.5;TRUE
+138682;Phalaris arundinacea subsp. arundinacea (Baldingère faux-roseau);5;7.6;8;TRUE
+138781;Picea abies subsp. abies (Épicéa commun);3.5;4.2;4.3;TRUE
+138901;Plantago major subsp. major (Plantain majeur);3.8;7.8;7.7;TRUE
+138998;Poa nemoralis subsp. nemoralis (Pâturin des bois);7.6;6.3;4.2;TRUE
+139545;Pyrus communis subsp. pyraster (Poirier commun);4.6;1.2;3.4;TRUE
+139584;Quercus petraea subsp. petraea (Chêne sessile);4.5;6.5;2.9;TRUE
+139596;Quercus robur var. robur (Chêne pédonculé);3.7;4.5;5.6;TRUE
+140321;Rumex acetosa subsp. acetosa (Rumex oseille);5.8;6.1;7.3;TRUE
+140338;Rumex acetosella subsp. acetosella (Rumex petite oseille);6.2;2.5;7.1;TRUE
+140371;Rumex obtusifolius subsp. obtusifolius (Patience à feuilles obtuses);4;3.3;2.4;TRUE
+140539;Sambucus racemosa subsp. racemosa (Sureau à grappes);7.4;5.2;6.8;TRUE
+140980;Senecio ovatus subsp. ovatus (Séneçon de Fuchs);6.2;7.2;6.6;TRUE
+141299;Solidago virgaurea subsp. virgaurea (Solidage verge d’or);4.6;4.1;6.9;TRUE
+141317;Sorbus aucuparia subsp. aucuparia (Sorbier des oiseleurs);7.8;1.1;3.1;TRUE
+141462;Stellaria nemorum subsp. nemorum (Stellaire des bois);5;3.8;6;TRUE
+141768;Tilia platyphyllos subsp. platyphyllos (Tilleul à grandes feuilles);6.7;6.8;3.1;TRUE
+142440;Viscum album subsp. album (Gui);3.7;8.1;6.4;TRUE
+147897;Juncus bufonius var. bufonius (Jonc des crapauds);7.8;6.3;5.6;TRUE
+148222;Linaria repens var. repens (Linaire rampante);7.2;1.3;2.5;TRUE
+151786;Silene dioica var. dioica (Silène dioïque);5.9;8.8;8.6;TRUE
+187105;Bryophyta;6.6;7.4;8.9;TRUE
+187226;Apiaceae;3.7;5.8;8.1;TRUE
+187227;Asteraceae;3.3;5.1;5;TRUE
+187444;Poaceae (Graminées diverses);3.4;5.4;3.1;TRUE
+188909;Agrostis (Agrostide (Genre));7.7;4.5;6.8;TRUE
+190272;Campanula (Campanule (Genre));5.8;8.1;6;TRUE
+190341;Cardamine (Cardamine (Genre));3.6;8;2.6;TRUE
+190355;Carex (Laîche (genre));3.7;7.1;5.6;TRUE
+190854;Cirsium (Cirse (Genre));3.7;5.6;4.5;TRUE
+191107;Convolvulus (Liseron (Genre));4.7;5;2.5;TRUE
+191232;Crataegus (Aubépine (Genre));3.4;6.8;7.4;TRUE
+191731;Dicranella (Dicranelle (Genre));6.1;4.9;3.7;TRUE
+192232;Epilobium (Epilobe (Genre));3.6;5.8;5.9;TRUE
+192576;Fissidens;6.7;5.4;4.1;TRUE
+192690;Galium (Gaillet (Genre));4.8;6.8;6.2;TRUE
+192847;Glyceria;7.3;2.1;8.5;TRUE
+193276;Hieracium (Epervière (Genre));6.5;3.7;2.7;TRUE
+193498;Hypericum (Millepertuis (Genre));3.7;8.1;4;TRUE
+193689;Juncus (jonc (Genre));4.2;8.2;6.8;TRUE
+193884;Lathyrus (Gesse (Genre));3.9;3.4;8;TRUE
+194322;Luzula (Luzule (Genre));5.1;8.3;4.1;TRUE
+195001;Myosotis (Myosotis (Genre));4;4.1;3.3;TRUE
+196530;Polygonatum (Polygonatum (Genre));4.9;6.6;2.3;TRUE
+196545;Polypodium (Polypode (Genre));5.5;7;8.5;TRUE
+196554;Polystichum (Aspidium (Genre));7.4;2.4;7.1;TRUE
+196936;Pulmonaria (Pulmonaire (Genre));6.6;3.8;3.1;TRUE
+197047;Ranunculus (Renoncule (genre));7.9;1.5;5.5;TRUE
+197264;Rosa (Rosier (genre));3.4;4.7;3.7;TRUE
+197281;Rubus (Ronce (Genre));3.7;6.3;3.6;TRUE
+197284;Rumex (Rumex (Genre));7.5;8.5;7;TRUE
+197652;Silene (Cucubale (Genre));7.9;5.7;6.3;TRUE
+197825;Sphagnum (Sphaigne (Genre));5.7;3.1;6.8;TRUE
+198226;Taraxacum (Pissenlit (genre));7.9;5.1;2.2;TRUE
+198343;Teucrium (Germandrée (genre));7.1;4.3;8;TRUE
+198631;Trifolium (Trèfle (Genre));6;4.7;8.9;TRUE
+198842;Vaccinium (Myrtille (Genre));5.6;8.5;2.2;TRUE
+198879;Verbascum (Molène (genre));7.1;3.4;2.1;TRUE
+198883;Veronica (Véronique (Genre));4.6;3.9;7.8;TRUE
+198902;Vicia (Vesce (genre));3.2;7.4;6.4;TRUE
+198911;Viola (Violette (genre));3.4;3.3;4.2;TRUE
+434442;Kindbergia praelonga (Eurhynchie de Stokes);6.4;5.7;4.9;TRUE
+434662;Hypnum cupressiforme var. cupressiforme (Hypne cyprès);4.8;5.8;5;TRUE
+445553;Sambucus;4.5;9;2.8;TRUE
+609982;Euonymus europaeus (Fusain d’Europe);6.5;6.8;2.9;TRUE
+610995;Lactuca muralis (Laitue des murailles);5.2;7.3;6.4;TRUE
+611163;Haplophyllum tuberculatum;3.8;3.1;2.8;TRUE
+612142;Juncus tenuis subsp. tenuis (Jonc grêle);6.5;6.9;4.4;TRUE
+612655;Jacobaea vulgaris subsp. vulgaris (Séneçon jacobée);7.5;4.6;7.1;TRUE
+613128;Veronica chamaedrys var. chamaedrys (Véronique petit chêne);7.2;3.1;8.6;TRUE
+613134;Hypericum perforatum var. perforatum (Millepertuis commun);6.2;4.6;6.2;TRUE
+613135;Luzula luzuloides var. luzuloides (Luzule blanche);5.4;4.5;2.9;TRUE
+717630;Taraxacum officinale (Pissenlit officinal);5.9;2.3;4.4;TRUE
+718314;Avenella flexuosa subsp. flexuosa (Canche flexueuse);8;2.9;8.4;TRUE
+718362;Holcus lanatus subsp. lanatus (Houlque laineuse);4.3;5.1;4.3;TRUE
+718404;Rubus idaeus subsp. idaeus (Framboisier);6.6;1.6;7;TRUE
+762153;Digitalis purpurea subsp. purpurea (Digitale pourpre);4;8.6;7.6;TRUE
+788972;Equisetum hyemale subsp. hyemale (Prêle d’hiver);5.1;2.3;3;TRUE
+789136;Pilosella officinarum (Épervière piloselle);6;7.5;8.5;TRUE
+931317;Hylocomiadelphus triquetrus (Hypne triquètre);6.4;4.1;5;TRUE

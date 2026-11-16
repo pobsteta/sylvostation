@@ -4,17 +4,20 @@
 \alias{mark_ifn}
 \title{Marquer des points comme placettes IFN}
 \usage{
-mark_ifn(x)
+mark_ifn(x, precision_m = 700)
 }
 \arguments{
 \item{x}{Un objet (\code{data.frame}, \code{sf}, ...).}
+
+\item{precision_m}{Précision de localisation, en mètres (nombre positif).}
 }
 \value{
 \code{x}, marqué.
 }
 \description{
 Pose \code{attr(x, "source") <- "ifn"} et, pour un tableau, deux colonnes :
-\code{source = "ifn"} et \code{loc_precision_m = 700}. Les colonnes survivent aux
+\code{source = "ifn"} et \code{loc_precision_m} (700 m par défaut ; dans le pipeline, la
+valeur vient de \code{read_config()$ifn_precision_m}). Les colonnes survivent aux
 sous-ensembles, à \code{rbind} et aux jointures, l'attribut non toujours.
 }
 \examples{
