@@ -9,3 +9,5 @@ _targets/
 *.laz
 *.tif
 .claude/worktrees/
+!inst/extdata/*.tif
+!inst/extdata/*.laz

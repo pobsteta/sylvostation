@@ -71,3 +71,5 @@ Les tests passent, et le rendu dit ce qui a tourné sur données réelles et ce 
 
 - Jointure des noms d'espèces (IFN, Baseflor, GBIF) par TAXREF `CD_NOM` → `CD_REF`, version de TAXREF dans `config.yml` ; `unmatched_taxa()` renvoie les noms non appariés (publiés dans le rapport).
 - Toute table de points porte `loc_precision_m` ; `load_ifn()` appelle `mark_ifn()`.
+
+- `mark_ifn()` doit lire la précision IFN dans la config (`ifn_precision_m`) au lieu de la valeur 700 en dur (relecture 002, point 1) : ajouter un argument `precision_m = 700` alimenté par `read_config()` dans le pipeline.
