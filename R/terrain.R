@@ -77,9 +77,11 @@ aggregate_dtm <- function(dtm, res = c(5, 25)) {
 #'   **sans remplissage des cuvettes** (elles retiennent l'eau). Sur un MNT réel,
 #'   prétraitement hydrologique **à vérifier** ;
 #' * `mrvbf` : **non calculé** (`NA` et avertissement de classe
-#'   `sylvostation_non_calcule`) : demande WhiteboxTools, binaire absent ;
+#'   `sylvostation_non_calcule`) : MRVBF reste `NA` tant qu'aucune branche whitebox
+#'   n'est écrite (binaire WhiteboxTools absent de l'environnement) ;
 #' * `hauteur_reseau` (m) : altitude moins celle de la cellule de cours d'eau la plus
-#'   proche (distance horizontale) ; `NA` avec avertissement si `streams` est `NULL` ;
+#'   proche à vol d'oiseau (différence d'altitude, pas un HAND le long de
+#'   l'écoulement) ; `NA` avec avertissement si `streams` est `NULL` ;
 #' * `rayonnement` (kWh/m2/an) : rayonnement direct potentiel **hors atmosphère et sans
 #'   ombres portées**, 12 jours types (Klein 1977), pas de 30 min, formules d'incidence
 #'   de Duffie et Beckman (*Solar Engineering of Thermal Processes*, éq. 1.6.2 et
@@ -136,6 +138,8 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL) {
 
   ray <- .radiation_layer(dtm, slope, asp)
 
+  # terra renvoie 90 degres sur terrain plat : exposition indefinie => NA
+  asp <- terra::ifel(slope == 0, NA, asp)
   out <- c(slope, cos(asp), sin(asp), curv, terra::rast(tpis), twi, acc * L^2,
            mrvbf, hand, ray)
   names(out) <- c("pente", "exposition_cos", "exposition_sin", "courbure",

@@ -43,9 +43,11 @@ de 0,1 degré pour éviter les infinis ;
 \strong{sans remplissage des cuvettes} (elles retiennent l'eau). Sur un MNT réel,
 prétraitement hydrologique \strong{à vérifier} ;
 \item \code{mrvbf} : \strong{non calculé} (\code{NA} et avertissement de classe
-\code{sylvostation_non_calcule}) : demande WhiteboxTools, binaire absent ;
+\code{sylvostation_non_calcule}) : MRVBF reste \code{NA} tant qu'aucune branche whitebox
+n'est écrite (binaire WhiteboxTools absent de l'environnement) ;
 \item \code{hauteur_reseau} (m) : altitude moins celle de la cellule de cours d'eau la plus
-proche (distance horizontale) ; \code{NA} avec avertissement si \code{streams} est \code{NULL} ;
+proche à vol d'oiseau (différence d'altitude, pas un HAND le long de
+l'écoulement) ; \code{NA} avec avertissement si \code{streams} est \code{NULL} ;
 \item \code{rayonnement} (kWh/m2/an) : rayonnement direct potentiel \strong{hors atmosphère et sans
 ombres portées}, 12 jours types (Klein 1977), pas de 30 min, formules d'incidence
 de Duffie et Beckman (\emph{Solar Engineering of Thermal Processes}, éq. 1.6.2 et

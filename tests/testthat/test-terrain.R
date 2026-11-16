@@ -180,3 +180,12 @@ test_that("aggregate_dtm : moyenne, alignement, erreurs", {
   expect_error(aggregate_dtm(fine, res = 12), "multiple")
   expect_error(aggregate_dtm(fine, res = -1), "positives")
 })
+
+test_that("terrain plat : exposition NA, pente nulle", {
+  d <- make_synth_dtm(nc = 30, res = 10, fun = function(x, y) rep(700, length(x)))
+  out <- dt(d, tpi_radii = 50)
+  i <- inner(out)
+  expect_true(all(terra::values(i$pente) == 0))
+  expect_true(all(is.na(terra::values(i$exposition_cos))))
+  expect_true(all(is.na(terra::values(i$exposition_sin))))
+})
