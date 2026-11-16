@@ -41,3 +41,12 @@ Extraits le 2026-11-16, mission 001 (voir `docs/referentiels.md`, § 5 et § 7).
   `espar-cdref13.csv` de l'archive (non copiés ici).
 - **Licence :** Licence Ouverte / Open Licence Etalab Version 2.0. Ces données ne doivent
   pas servir à produire des résultats statistiques d'inventaire.
+
+## `lithologie_regles.csv` et `lithologie_massif_test.csv` (mission 004)
+
+- **Nature :** travail de l'équipe (pas une donnée tierce). `lithologie_regles.csv` :
+  règles provisoires mots-clés (expressions régulières sur `DESCR`, sans accents) vers
+  classes lithologiques, par priorité. `lithologie_massif_test.csv` : les 94 `NOTATION` de
+  `bdcharm50_emprise_test.gpkg`, recodées par ces règles (`statut` = `regle` ou
+  `non_classe`, `validated = FALSE` jusqu'à relecture de Pascal). Les classes ne sont pas
+  une nomenclature du BRGM.
