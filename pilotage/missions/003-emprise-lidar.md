@@ -68,3 +68,10 @@ Conventions : `CLAUDE.md` (EPSG:2154, `snake_case`, roxygen2 en français, une f
 ## Comment saura-t-on que ça marche ?
 
 Les tests passent, et le rendu dit ce qui a tourné sur données réelles et ce qui ne l'a pas fait.
+
+## Compléments (mission 011, questions tranchées par délégation)
+
+Dans `tests/testthat/test-acceptation-regle-700m.R`, remplacer les deux `skip()` par les décisions suivantes, et adapter `R/utils.R` si besoin :
+1. Une colonne `source = "ifn"` seule (sans attribut, même avec `loc_precision_m = 10`) **bloque** (comportement actuel, à figer par un test).
+2. Le préfixe large est **sensible à la casse** : seul `coarse_` en minuscules déclare une variable large ; `COARSE_climat` est traité comme fin et **bloque** sur des points imprécis (changement de `R/utils.R` nécessaire : aujourd'hui il passe).
+3. `variables = character(0)` **passe** (rien n'est extrait) ; `NULL` aussi.
