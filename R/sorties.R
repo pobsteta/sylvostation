@@ -10,21 +10,25 @@
 #' atteints » tant qu'ils n'ont pas tourné sur données réelles.
 #'
 #' @param n_ifn Nombre de placettes IFN lues (pour le détail ; `NA` si inconnu).
-#' @return Un `data.frame` : `etape`, `etat`, `detail`.
+#' @return Un `data.frame` : `etape`, `etat`, `dans_ce_run` (`oui` si l'étape a
+#'   tourné dans le pipeline démo, `non` sinon : une ligne réelle non exécutée ici
+#'   reste réelle mais hors de ce run), `detail`.
 #' @examples
 #' evidence_table()
 #' @export
 evidence_table <- function(n_ifn = NA_integer_) {
   ifn <- if (is.na(n_ifn)) "placettes IFN de inst/extdata" else
     paste0(n_ifn, " placettes IFN de inst/extdata")
-  e <- function(etape, etat, detail) {
-    data.frame(etape = etape, etat = etat, detail = detail, stringsAsFactors = FALSE)
+  e <- function(etape, etat, detail, dans_ce_run = "oui") {
+    data.frame(etape = etape, etat = etat, dans_ce_run = dans_ce_run, detail = detail,
+               stringsAsFactors = FALSE)
   }
   out <- rbind(
     e("1. Emprise et grille", "r\u00e9el r\u00e9duit",
       "Contour SER simplifi\u00e9 (ser_extrait.gpkg) ; grille de 25 m calcul\u00e9e sur l'emprise de d\u00e9monstration."),
     e("2. LiDAR HD et MNT (incr\u00e9ment 1)", "r\u00e9el r\u00e9duit",
-      "4 dalles r\u00e9elles trait\u00e9es lors de la mission 003, hors pipeline d\u00e9mo ; la d\u00e9mo utilise un MNT synth\u00e9tique (synth_dtm.tif)."),
+      "4 dalles r\u00e9elles trait\u00e9es lors de la mission 003, hors pipeline d\u00e9mo ; la d\u00e9mo utilise un MNT synth\u00e9tique (synth_dtm.tif).",
+      dans_ce_run = "non"),
     e("3. D\u00e9riv\u00e9s du terrain", "synth\u00e9tique",
       "Calcul\u00e9s sur le MNT synth\u00e9tique ; MRVBF et hauteur au r\u00e9seau non calcul\u00e9s (WhiteboxTools/TOPAGE absents)."),
     e("4. G\u00e9ologie", "r\u00e9el r\u00e9duit",
@@ -33,8 +37,8 @@ evidence_table <- function(n_ifn = NA_integer_) {
     e("6. Gradients des placettes", "synth\u00e9tique",
       "Valeurs indicatrices et climat synth\u00e9tiques sur des placettes r\u00e9elles : r\u00e9sultat synth\u00e9tique."),
     e("7. Points d'ancrage (GBIF) et relev\u00e9s GNSS", "synth\u00e9tique",
-      "Points fabriqu\u00e9s ; mission 007 (ancrage) non int\u00e9gr\u00e9e, aucun relev\u00e9 GNSS r\u00e9el."),
-    e("8. Sols (GlobalSoilMap)", "non ex\u00e9cut\u00e9", "Couches de sols absentes de la d\u00e9mo."),
+      "Points fabriqu\u00e9s ; fonctions d'ancrage int\u00e9gr\u00e9es au paquet (mission 007), non branch\u00e9es au pipeline d\u00e9mo ; aucun relev\u00e9 GNSS r\u00e9el."),
+    e("8. Sols (GlobalSoilMap)", "non ex\u00e9cut\u00e9", "Couches de sols absentes de la d\u00e9mo.", dans_ce_run = "non"),
     e("9. Mod\u00e8les, validation crois\u00e9e spatiale, zone d'applicabilit\u00e9", "synth\u00e9tique",
       "Ajust\u00e9s sur les points synth\u00e9tiques ; le mod\u00e8le r\u00e9gional IFN utilise des gradients synth\u00e9tiques."),
     e("10. Typologie (seuils, fusion des types rares)", "synth\u00e9tique",

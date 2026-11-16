@@ -7,7 +7,13 @@
 .with_seed <- function(seed, expr) {
   has_seed <- exists(".Random.seed", envir = globalenv())
   old <- if (has_seed) get(".Random.seed", envir = globalenv())
-  on.exit(if (has_seed) assign(".Random.seed", old, envir = globalenv()), add = TRUE)
+  on.exit({
+    if (has_seed) {
+      assign(".Random.seed", old, envir = globalenv())
+    } else if (exists(".Random.seed", envir = globalenv())) {
+      rm(".Random.seed", envir = globalenv())
+    }
+  }, add = TRUE)
   set.seed(seed)
   force(expr)
 }

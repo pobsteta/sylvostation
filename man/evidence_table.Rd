@@ -10,7 +10,9 @@ evidence_table(n_ifn = NA_integer_)
 \item{n_ifn}{Nombre de placettes IFN lues (pour le détail ; \code{NA} si inconnu).}
 }
 \value{
-Un \code{data.frame} : \code{etape}, \code{etat}, \code{detail}.
+Un \code{data.frame} : \code{etape}, \code{etat}, \code{dans_ce_run} (\code{oui} si l'étape a
+tourné dans le pipeline démo, \code{non} sinon : une ligne réelle non exécutée ici
+reste réelle mais hors de ce run), \code{detail}.
 }
 \description{
 Pour chaque étape du brief technique : ce qui a tourné sur données \code{réel}, \verb{réel réduit} (extrait réel de \code{inst/extdata}) ou \code{synthétique} (jeu fabriqué, préfixe

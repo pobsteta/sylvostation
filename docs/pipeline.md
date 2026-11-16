@@ -24,7 +24,7 @@ Choix de conception :
   synthétiques ; un modèle régional sur les placettes IFN (couches à maille large
   seulement) est validé à part ;
 - le bloc « ancrage » (mission 007 : `get_gbif`, `clean_occ`, `grid_bioindication`,
-  `load_gnss`) n'est pas dans cette base : `synth_demo_points()` le remplace.
+  `load_gnss`) est intégré au paquet (`R/ancrage.R`) mais non branché au pipeline démo : `synth_demo_points()` le remplace.
 
 ## Mode réel (`demo: false`)
 

@@ -5,7 +5,7 @@
 # dit (tableau « etat de preuve » et section « Limites »). Sorties : out_dir/<ser_code>/
 # (sous data/, ignore par git).
 # Mode reel (demo: false) : NON BRANCHE dans cette mission (telechargements SER/LiDAR/
-# BD Charm-50, ancrage de la mission 007 non integre) : le script s'arrete avec un message.
+# BD Charm-50, ancrage de la mission 007 integre au paquet mais non branche) : le script s'arrete avec un message.
 #
 # Les fonctions sont appelees avec le prefixe `sylvostation::` (paquet installe ou
 # charge par devtools::load_all()).
@@ -85,7 +85,20 @@ pipeline <- list(
   # --- emprise, terrain, climat (synthetiques sauf le contour SER) -------------------
   tar_target(ser, sylvostation::get_ser(cfg$ser_code, buffer_m = cfg$buffer_m,
                                         source = "file", path = extdata("ser_extrait.gpkg"))),
-  tar_target(grid, sylvostation::build_grid(demo_emprise, cfg$resolution_m)),
+  # controle d'emprise : l'emprise test doit intersecter la SER du config
+  tar_target(ser_check, {
+    box <- sf::st_as_sfc(sf::st_bbox(c(xmin = emprise_test[1], ymin = emprise_test[2],
+                                       xmax = emprise_test[3], ymax = emprise_test[4]),
+                                     crs = sf::st_crs(2154)))
+    if (!any(sf::st_intersects(box, ser, sparse = FALSE))) {
+      stop("L'emprise test n'intersecte pas la SER ", cfg$ser_code, ".", call. = FALSE)
+    }
+    TRUE
+  }),
+  tar_target(grid, {
+    ser_check
+    sylvostation::build_grid(demo_emprise, cfg$resolution_m)
+  }),
   tar_target(dtm, sylvostation::synth_demo_dtm(grid)),
   tar_target(terrain, suppressWarnings(sylvostation::derive_terrain(dtm, tpi_radii = c(100, 300)))),
   tar_target(climat, sylvostation::synth_demo_climat(emprise_test)),
@@ -119,7 +132,7 @@ pipeline <- list(
     num_trees = 200, seed = 1)),
 
   # --- points d'ancrage et releves de terrain (synthetiques) -------------------------
-  # ancrage : mission 007 (get_gbif, clean_occ, grid_bioindication, load_gnss) non integree.
+  # ancrage : mission 007 (get_gbif, clean_occ, grid_bioindication, load_gnss) integrees au paquet, non branchees au pipeline demo.
   tar_target(anchors, sylvostation::synth_demo_points(predictors, truth, n = 300, seed = 11)),
   tar_target(field, sylvostation::synth_demo_points(predictors, truth, n = 40, noise_sd = 0.3,
                                                     seed = 12)),
@@ -142,8 +155,9 @@ pipeline <- list(
   }),
   tar_target(uncertainty, {
     r <- do.call(c, lapply(grad, function(g) {
-      x <- maps[[g]][[c("sd_cv", "aoa")]]
-      names(x) <- paste0(c("sd_cv_", "aoa_"), g)
+      nm <- intersect(c("sd_cv", "aoa"), names(maps[[g]]))
+      x <- maps[[g]][[nm]]
+      names(x) <- paste0(nm, "_", g)
       x
     }))
     r

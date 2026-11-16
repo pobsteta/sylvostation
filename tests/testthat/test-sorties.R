@@ -85,7 +85,10 @@ test_that("write_outputs refuse les entrées invalides sans rien écrire", {
 
 test_that("evidence_table : trois états de preuve, géologie et IFN en réel réduit", {
   e <- evidence_table(n_ifn = 100)
-  expect_named(e, c("etape", "etat", "detail"))
+  expect_named(e, c("etape", "etat", "dans_ce_run", "detail"))
+  expect_equal(e$dans_ce_run[grepl("MNT", e$etape)], "non")
+  expect_equal(e$dans_ce_run[grepl("Sols", e$etape)], "non")
+  expect_equal(e$dans_ce_run[grepl("G\u00e9ologie", e$etape)], "oui")
   expect_true(all(e$etat %in% c("réel", "réel réduit", "synthétique",
                                 "non exécuté")))
   expect_equal(e$etat[grepl("MNT", e$etape)], "réel réduit")

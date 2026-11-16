@@ -167,7 +167,7 @@ tab(lire("validation_par_axe"))
 ### Comparaison à la carte de référence (protocole du brief, § 9)
 
 Référence **synthétique** (les rasters d'AgroParisTech n'ont pas été obtenus).
-Corrélation de rang à 50 m, puis accord des codes à trois chiffres (seuils de la
+**La référence synthétique est fabriquée à partir de la même vérité synthétique que nos gradients : un rho élevé est forcé par construction et ne mesure aucune performance.** Corrélation de rang à 50 m, puis accord des codes à trois chiffres (seuils de la
 référence synthétiques ; ordre des chiffres à vérifier).
 
 ```{r}
@@ -185,7 +185,7 @@ chaîne s'enchaîne (contrat d'interface), pas qu'elle est juste.
 
 | Critère du § 7 | Statut | Pourquoi |
 |---|---|---|
-| Le pipeline s'exécute de bout en bout sur une SER pilote à partir du seul code SER | **non atteint** | La démo tourne sur jeux d'essai ; le mode réel n'est pas branché (téléchargements SER, LiDAR HD, ancrage GBIF de la mission 007 non intégré). |
+| Le pipeline s'exécute de bout en bout sur une SER pilote à partir du seul code SER | **non atteint** | La démo tourne sur jeux d'essai ; le mode réel n'est pas branché (téléchargements SER, LiDAR HD, ancrage GBIF : fonctions intégrées au paquet (mission 007), non branchées au pipeline démo). |
 | Performances issues d'une validation croisée spatiale **et** de relevés GNSS indépendants | **non atteint** | Validation croisée sur points synthétiques ; aucun relevé GNSS réel. |
 | Aucune variable fine extraite aux coordonnées des placettes IGN | **non atteint** (vérifié par test, pas sur un run réel) | La règle est codée et testée ; dans la démo, les placettes IFN ne reçoivent que des couches à maille large. |
 | Chaque type couvre au moins 1 % de la surface forestière ou est justifié azonal | **non atteint** | Surfaces calculées sur une zone synthétique de 6,25 km² ; aucune station azonale traitée ; pas de masque forestier. |
