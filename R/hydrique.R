@@ -165,10 +165,23 @@ texture_to_psd <- function(code, dictionnaire = read_texture_dictionary()) {
     stringsAsFactors = FALSE)
 }
 
-# Eau disponible (cm3/cm3) par euptf2 pour des (code, profondeur moyenne cm).
+# Paquet disponible ? (enveloppe de requireNamespace, remplacable dans les tests)
+.has_pkg <- function(pkg) requireNamespace(pkg, quietly = TRUE)
+
+# Prediction ponctuelle euptf2 d'une cible (FC_2, FC, WP) ; les objets ranger sont lus
+# par utils::data(package =) : euptfFun() exige le paquet attache et ecrit dans
+# l'environnement global.
+.euptf_pred <- function(cible, ptf, df) {
+  e <- new.env(parent = emptyenv())
+  nom <- paste(cible, ptf, sep = "_")
+  utils::data(list = nom, package = "euptf2", envir = e)
+  suppressWarnings(euptf2::ptfFun.pred(e[[nom]], df))
+}
+
+# Eau disponible (cm3/cm3) par euptf2 pour des (code, profondeur moyenne cm), calculee
+# comme difference de fonctions ponctuelles (README d'euptf2) : AWC_2 = FC_2 - WP
+# (pF 2,0 - 4,2), AWC = FC - WP (pF 2,5 - 4,2).
 # PTF01 : predicteurs USSAND, USSILT, USCLAY, DEPTH_M (which_PTF(), verifie le 2026-11-17).
-# Les objets ranger sont lus par utils::data(package =) : euptfFun() exige le paquet
-# attache et ecrit dans l'environnement global.
 .euptf_awc <- function(code, z, cible, ptf, psd) {
   out <- rep(NA_real_, length(code))
   zero <- code %in% "0"
@@ -176,12 +189,10 @@ texture_to_psd <- function(code, dictionnaire = read_texture_dictionary()) {
   i <- match(code, psd$code)
   ok <- !is.na(i) & !is.na(psd$argile[i]) & !is.na(z)
   if (!any(ok)) return(out)
-  e <- new.env(parent = emptyenv())
-  nom <- paste(cible, ptf, sep = "_")
-  utils::data(list = nom, package = "euptf2", envir = e)
   df <- data.frame(USSAND = psd$sable[i[ok]], USSILT = psd$limon[i[ok]],
                    USCLAY = psd$argile[i[ok]], DEPTH_M = z[ok])
-  out[ok] <- suppressWarnings(euptf2::ptfFun.pred(e[[nom]], df))
+  fc <- if (cible == "AWC_2") "FC_2" else "FC"
+  out[ok] <- .euptf_pred(fc, ptf, df) - .euptf_pred("WP", ptf, df)
   out
 }
 
@@ -196,7 +207,9 @@ texture_to_psd <- function(code, dictionnaire = read_texture_dictionary()) {
 #'
 #' * **Eau disponible** : `cible = "AWC_2"` (défaut) = θ à -100 cm (pF 2,0) moins θ à
 #'   -15 000 cm (pF 4,2), comme la colonne « défaut » de Bruand et al. ; `"AWC"` :
-#'   capacité au champ à -330 cm (pF 2,5). Profondeur `DEPTH_M` : milieu de l'horizon.
+#'   capacité au champ à -330 cm (pF 2,5). Calculée comme **différence des fonctions
+#'   ponctuelles** `FC_2` (ou `FC`) et `WP`, comme le recommande le README d'`euptf2`,
+#'   et non par la fonction `AWC_2` directe. Profondeur `DEPTH_M` : milieu de l'horizon.
 #' * **Horizons** : `PROF1` (horizon supérieur, dm) et `PROF2` (profondeur de sondage,
 #'   dm) ; sol homogène (`TEXT1` 0 ou vide, `PROF1` vide) : un seul horizon `TEXT2`.
 #' * **Cailloux** : `CAILLOUX` en dixièmes du volume, pris au centre de la classe IFN
@@ -205,10 +218,13 @@ texture_to_psd <- function(code, dictionnaire = read_texture_dictionary()) {
 #'   horizon organique (`H`) : `NA` (non modélisé) ; `OBSPEDO` R (horizon entièrement
 #'   caillouteux) : 0 ; code `0` (absence de terre fine) : 0 pour l'horizon.
 #'
-#' **Contre-vérification** : `ru_bruand_mm` est calculée avec les mêmes épaisseurs et
-#' cailloux et les coefficients de [ru_coefficients()] (Bruand et al. 2004, colonne
-#' défaut, horizon A pour `TEXT1`, horizons E, B, C pour `TEXT2`) ; `ecart_mm` =
-#' `ru_mm` - `ru_bruand_mm`.
+#' **Deux sources** : `ru_euptf2_mm` (chaîne ci-dessus) et `ru_bruand_mm`, calculée avec
+#' les mêmes épaisseurs et cailloux et les coefficients de [ru_coefficients()] (Bruand
+#' et al. 2004, colonne défaut, horizon A pour `TEXT1`, horizons E, B, C pour `TEXT2`).
+#' `ru_mm` reprend celle de `ru_source` (`"euptf2"` par défaut, décision de
+#' l'orchestrateur du 2026-11-17) ; `ecart_mm` = `ru_euptf2_mm` - `ru_bruand_mm`. Avec
+#' `ru_source = "bruand2004"`, `euptf2` et `soiltexture` ne sont pas requis (colonnes
+#' `euptf2` à `NA` s'ils manquent).
 #'
 #' `ru_verifie` (attribut) vaut `TRUE` seulement si la chaîne est entièrement sourcée :
 #' dictionnaire IFN lu, classes identifiées dans le triangle de l'Aisne, `euptf2`
@@ -217,13 +233,14 @@ texture_to_psd <- function(code, dictionnaire = read_texture_dictionary()) {
 #'
 #' @param pl Tableau des placettes (`ifn$placettes` de [load_ifn()], `sf` accepté) avec
 #'   `PROF1`, `PROF2`, `TEXT1`, `TEXT2`, `CAILLOUX`, `OBSPEDO` (en caractères).
+#' @param ru_source Source de `ru_mm` : `"euptf2"` (défaut) ou `"bruand2004"`.
 #' @param cible `"AWC_2"` (pF 2,0, défaut) ou `"AWC"` (pF 2,5).
 #' @param ptf Fonction de pédotransfert `euptf2` (`"PTF01"` : granulométrie et profondeur).
 #' @param dictionnaire Résultat de [read_texture_dictionary()].
 #' @return Un `data.frame` (une ligne par placette, `id_placette` si présent) :
 #'   `ep_haut_cm`, `ep_bas_cm`, `code_haut`, `code_bas`, `cailloux`, `awc_haut`,
-#'   `awc_bas` (cm3/cm3), `ru_mm`, `ru_bruand_mm`, `ecart_mm`, `texture_partielle`.
-#'   Attributs `ru_verifie`, `source`, `cible`, `ptf`.
+#'   `awc_bas` (cm3/cm3), `ru_euptf2_mm`, `ru_bruand_mm`, `ru_mm`, `ecart_mm`,
+#'   `texture_partielle`. Attributs `ru_verifie`, `ru_source`, `source`, `cible`, `ptf`.
 #' @examples
 #' \donttest{
 #' ifn <- load_ifn(system.file("extdata", package = "sylvostation"), files = c("PLACETTE", "ECOLOGIE"))
@@ -231,26 +248,32 @@ texture_to_psd <- function(code, dictionnaire = read_texture_dictionary()) {
 #' summary(ru$ru_mm)
 #' }
 #' @export
-ru_from_texture <- function(pl, cible = c("AWC_2", "AWC"), ptf = "PTF01",
+ru_from_texture <- function(pl, ru_source = c("euptf2", "bruand2004"),
+                            cible = c("AWC_2", "AWC"), ptf = "PTF01",
                             dictionnaire = read_texture_dictionary()) {
+  ru_source <- match.arg(ru_source)
   cible <- match.arg(cible)
   if (!is.data.frame(pl)) stop("`pl` doit être un tableau de placettes.", call. = FALSE)
-  for (p in c("euptf2", "ranger")) {
-    if (!requireNamespace(p, quietly = TRUE)) {
-      stop("Le paquet `", p, "` est requis (euptf2 : remotes::install_github(\"tkdweber/euptf2\")).",
-           call. = FALSE)
-    }
+  paquets <- c("euptf2", "ranger", "soiltexture")
+  manque <- paquets[!vapply(paquets, .has_pkg, logical(1))]
+  if (ru_source == "euptf2" && length(manque)) {
+    stop("Paquet(s) requis : ", paste(manque, collapse = ", "),
+         " (euptf2 : remotes::install_github(\"tkdweber/euptf2\")).", call. = FALSE)
   }
+  avec_euptf <- !length(manque)
   if (!is.character(ptf) || length(ptf) != 1L || !grepl("^PTF[0-9]{2}$", ptf)) {
     stop("`ptf` doit être de la forme \"PTF01\".", call. = FALSE)
   }
   if (inherits(pl, "sf")) pl <- sf::st_drop_geometry(pl)
   c0 <- .couches_sol(pl)
   codes <- unique(stats::na.omit(c(c0$code_haut, c0$code_bas)))
-  psd <- texture_to_psd(codes, dictionnaire)
-
-  awc_h <- .euptf_awc(c0$code_haut, c0$z_haut, cible, ptf, psd)
-  awc_b <- .euptf_awc(c0$code_bas, c0$z_bas, cible, ptf, psd)
+  if (avec_euptf) {
+    psd <- texture_to_psd(codes, dictionnaire)
+    awc_h <- .euptf_awc(c0$code_haut, c0$z_haut, cible, ptf, psd)
+    awc_b <- .euptf_awc(c0$code_bas, c0$z_bas, cible, ptf, psd)
+  } else {
+    awc_h <- awc_b <- rep(NA_real_, nrow(c0))
+  }
   awc_h[c0$ep_haut == 0] <- 0
   ru <- (c0$ep_haut * awc_h + c0$ep_bas * awc_b) * 10 * (1 - c0$cail)  # cm x cm3/cm3 x 10 = mm
 
@@ -266,12 +289,13 @@ ru_from_texture <- function(pl, cible = c("AWC_2", "AWC"), ptf = "PTF01",
   ru[c0$caillouteux] <- 0
   rub[c0$caillouteux] <- 0
 
-  hors <- psd$code[!is.na(psd$hors_triangle) & nzchar(psd$hors_triangle)]
+  hors <- dictionnaire$code[nzchar(dictionnaire$hors_triangle)]
   out <- data.frame(
     ep_haut_cm = c0$ep_haut, ep_bas_cm = c0$ep_bas,
     code_haut = c0$code_haut, code_bas = c0$code_bas, cailloux = c0$cail,
     awc_haut = ifelse(c0$ep_haut == 0, NA_real_, awc_h), awc_bas = awc_b,
-    ru_mm = ru, ru_bruand_mm = rub, ecart_mm = ru - rub,
+    ru_euptf2_mm = ru, ru_bruand_mm = rub,
+    ru_mm = if (ru_source == "euptf2") ru else rub, ecart_mm = ru - rub,
     texture_partielle = c0$code_haut %in% hors | c0$code_bas %in% hors,
     stringsAsFactors = FALSE)
   if ("id_placette" %in% names(pl)) out <- cbind(id_placette = pl$id_placette, out)
@@ -279,12 +303,14 @@ ru_from_texture <- function(pl, cible = c("AWC_2", "AWC"), ptf = "PTF01",
     setequal(unlist(strsplit(dictionnaire$classes_aisne[nzchar(dictionnaire$classes_aisne)], ",")),
              .AISNE_CLASSES)
   attr(out, "ru_verifie") <- isTRUE(dico_ok)
+  attr(out, "ru_source") <- ru_source
   attr(out, "cible") <- cible
   attr(out, "ptf") <- ptf
   attr(out, "source") <- paste0(
     "Dictionnaire IFN (metadonnees.csv) ; triangle de l'Aisne (soiltexture, FR.AISNE.TT), ",
-    "centre de gravite des classes ; euptf2 ", ptf, " ", cible,
-    " (Szabo et al. 2021) ; contre-verification Bruand et al. 2004")
+    "centre de gravite des classes ; euptf2 ", ptf, " ", cible, " = ",
+    if (cible == "AWC_2") "FC_2" else "FC", " - WP (Szabo et al. 2021) ; ",
+    "Bruand et al. 2004 ; ru_mm = ", ru_source)
   out
 }
 
@@ -323,6 +349,8 @@ ru_from_texture <- function(pl, cible = c("AWC_2", "AWC"), ptf = "PTF01",
   }, numeric(3)))
 }
 
+.SENS_HYDRIQUE <- "plus haut = plus humide"
+
 #' Gradient hydrique : indice de contrainte hydrique BILJOU sur climat SAFRAN
 #'
 #' Calcule, avec le modèle de bilan hydrique journalier BILJOU (paquet `biljouR`,
@@ -341,6 +369,8 @@ ru_from_texture <- function(pl, cible = c("AWC_2", "AWC"), ptf = "PTF01",
 #'   maille SAFRAN, l'indice est calculé sur une suite de réserves utiles (pas `pas_ru`)
 #'   puis interpolé linéairement pour chaque pixel (descente d'échelle par la réserve
 #'   utile).
+#' * **Sens** : `grad_hydrique` est orienté « plus haut = plus humide » dans les deux
+#'   modes (attribut `sens`) : `-is_biljou` en mode nominal, la réserve utile en repli.
 #' * **Repli** : sans `safran` ou sans le paquet `biljouR`, l'indice vaut `NA` et
 #'   `grad_hydrique` reprend la réserve utile ; l'attribut `methode` vaut `"repli_ru"`
 #'   et la raison est dans l'attribut `repli` (avertissement émis).
@@ -361,9 +391,9 @@ ru_from_texture <- function(pl, cible = c("AWC_2", "AWC"), ptf = "PTF01",
 #' @param lai_max,forest_type,budburst,leaf_fall Paramètres de [biljouR::biljou_run()].
 #' @param pas_ru Pas (mm) de la suite de réserves utiles pour une grille.
 #' @return Points : `x` avec `maille_safran`, `is_biljou`, `nj_stress`, `n_annees`,
-#'   `grad_hydrique` (= `is_biljou`, ou la réserve utile en repli). Grille :
-#'   `SpatRaster` à deux couches `is_biljou`, `nj_stress`. Attributs `methode`
-#'   (`"biljou"` ou `"repli_ru"`), `parametres`.
+#'   `grad_hydrique` (= `-is_biljou`, ou la réserve utile en repli). Grille :
+#'   `SpatRaster` à trois couches `is_biljou`, `nj_stress`, `grad_hydrique`. Attributs
+#'   `methode` (`"biljou"` ou `"repli_ru"`), `sens`, `parametres`.
 #' @examples
 #' \donttest{
 #' s <- utils::read.csv2(system.file("extdata", "safran_sim2_extrait.csv",
@@ -393,12 +423,12 @@ hydric_stress <- function(x, safran = NULL, ru_col = "ru_mm", annees = NULL,
 
   raison <- NULL
   if (is.null(safran)) raison <- "climat SAFRAN absent"
-  else if (!requireNamespace("biljouR", quietly = TRUE)) raison <- "paquet biljouR absent"
+  else if (!.has_pkg("biljouR")) raison <- "paquet biljouR absent"
   if (!is.null(raison)) {
     warning("Gradient hydrique en repli sur la réserve utile : ", raison, ".", call. = FALSE)
     if (grille) {
-      out <- c(x * NA, x * NA)
-      names(out) <- c("is_biljou", "nj_stress")
+      out <- c(x * NA, x * NA, x)
+      names(out) <- c("is_biljou", "nj_stress", "grad_hydrique")
     } else {
       out <- x
       out$maille_safran <- NA_character_
@@ -408,6 +438,7 @@ hydric_stress <- function(x, safran = NULL, ru_col = "ru_mm", annees = NULL,
       out$grad_hydrique <- x[[ru_col]]
     }
     attr(out, "methode") <- "repli_ru"
+    attr(out, "sens") <- .SENS_HYDRIQUE
     attr(out, "repli") <- raison
     attr(out, "parametres") <- param
     return(out)
@@ -457,7 +488,7 @@ hydric_stress <- function(x, safran = NULL, ru_col = "ru_mm", annees = NULL,
     out$is_biljou <- res[, "is"]
     out$nj_stress <- res[, "nj"]
     out$n_annees <- res[, "n"]
-    out$grad_hydrique <- out$is_biljou
+    out$grad_hydrique <- -out$is_biljou   # plus haut = plus humide
   } else {
     xy <- terra::xyFromCell(x, seq_len(terra::ncell(x)))
     v <- terra::values(x)[, 1]
@@ -471,11 +502,12 @@ hydric_stress <- function(x, safran = NULL, ru_col = "ru_mm", annees = NULL,
       is[i] <- stats::approx(seq_ru, r[, "is"], xout = v[i], rule = 2)$y
       nj[i] <- stats::approx(seq_ru, r[, "nj"], xout = v[i], rule = 2)$y
     }
-    out <- c(x, x)
-    terra::values(out) <- cbind(is, nj)
-    names(out) <- c("is_biljou", "nj_stress")
+    out <- c(x, x, x)
+    terra::values(out) <- cbind(is, nj, -is)
+    names(out) <- c("is_biljou", "nj_stress", "grad_hydrique")
   }
   attr(out, "methode") <- "biljou"
+  attr(out, "sens") <- .SENS_HYDRIQUE
   attr(out, "parametres") <- param
   out
 }

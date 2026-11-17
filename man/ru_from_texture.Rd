@@ -6,6 +6,7 @@
 \usage{
 ru_from_texture(
   pl,
+  ru_source = c("euptf2", "bruand2004"),
   cible = c("AWC_2", "AWC"),
   ptf = "PTF01",
   dictionnaire = read_texture_dictionary()
@@ -14,6 +15,8 @@ ru_from_texture(
 \arguments{
 \item{pl}{Tableau des placettes (\code{ifn$placettes} de \code{\link[=load_ifn]{load_ifn()}}, \code{sf} accepté) avec
 \code{PROF1}, \code{PROF2}, \code{TEXT1}, \code{TEXT2}, \code{CAILLOUX}, \code{OBSPEDO} (en caractères).}
+
+\item{ru_source}{Source de \code{ru_mm} : \code{"euptf2"} (défaut) ou \code{"bruand2004"}.}
 
 \item{cible}{\code{"AWC_2"} (pF 2,0, défaut) ou \code{"AWC"} (pF 2,5).}
 
@@ -24,8 +27,8 @@ ru_from_texture(
 \value{
 Un \code{data.frame} (une ligne par placette, \code{id_placette} si présent) :
 \code{ep_haut_cm}, \code{ep_bas_cm}, \code{code_haut}, \code{code_bas}, \code{cailloux}, \code{awc_haut},
-\code{awc_bas} (cm3/cm3), \code{ru_mm}, \code{ru_bruand_mm}, \code{ecart_mm}, \code{texture_partielle}.
-Attributs \code{ru_verifie}, \code{source}, \code{cible}, \code{ptf}.
+\code{awc_bas} (cm3/cm3), \code{ru_euptf2_mm}, \code{ru_bruand_mm}, \code{ru_mm}, \code{ecart_mm},
+\code{texture_partielle}. Attributs \code{ru_verifie}, \code{ru_source}, \code{source}, \code{cible}, \code{ptf}.
 }
 \description{
 Chaîne de l'ADR 0006 : code de texture IFN (\code{\link[=read_texture_dictionary]{read_texture_dictionary()}}) →
@@ -39,7 +42,9 @@ réduite par la charge en éléments grossiers.
 \itemize{
 \item \strong{Eau disponible} : \code{cible = "AWC_2"} (défaut) = θ à -100 cm (pF 2,0) moins θ à
 -15 000 cm (pF 4,2), comme la colonne « défaut » de Bruand et al. ; \code{"AWC"} :
-capacité au champ à -330 cm (pF 2,5). Profondeur \code{DEPTH_M} : milieu de l'horizon.
+capacité au champ à -330 cm (pF 2,5). Calculée comme \strong{différence des fonctions
+ponctuelles} \code{FC_2} (ou \code{FC}) et \code{WP}, comme le recommande le README d'\code{euptf2},
+et non par la fonction \code{AWC_2} directe. Profondeur \code{DEPTH_M} : milieu de l'horizon.
 \item \strong{Horizons} : \code{PROF1} (horizon supérieur, dm) et \code{PROF2} (profondeur de sondage,
 dm) ; sol homogène (\code{TEXT1} 0 ou vide, \code{PROF1} vide) : un seul horizon \code{TEXT2}.
 \item \strong{Cailloux} : \code{CAILLOUX} en dixièmes du volume, pris au centre de la classe IFN
@@ -49,10 +54,13 @@ horizon organique (\code{H}) : \code{NA} (non modélisé) ; \code{OBSPEDO} R (ho
 caillouteux) : 0 ; code \code{0} (absence de terre fine) : 0 pour l'horizon.
 }
 
-\strong{Contre-vérification} : \code{ru_bruand_mm} est calculée avec les mêmes épaisseurs et
-cailloux et les coefficients de \code{\link[=ru_coefficients]{ru_coefficients()}} (Bruand et al. 2004, colonne
-défaut, horizon A pour \code{TEXT1}, horizons E, B, C pour \code{TEXT2}) ; \code{ecart_mm} =
-\code{ru_mm} - \code{ru_bruand_mm}.
+\strong{Deux sources} : \code{ru_euptf2_mm} (chaîne ci-dessus) et \code{ru_bruand_mm}, calculée avec
+les mêmes épaisseurs et cailloux et les coefficients de \code{\link[=ru_coefficients]{ru_coefficients()}} (Bruand
+et al. 2004, colonne défaut, horizon A pour \code{TEXT1}, horizons E, B, C pour \code{TEXT2}).
+\code{ru_mm} reprend celle de \code{ru_source} (\code{"euptf2"} par défaut, décision de
+l'orchestrateur du 2026-11-17) ; \code{ecart_mm} = \code{ru_euptf2_mm} - \code{ru_bruand_mm}. Avec
+\code{ru_source = "bruand2004"}, \code{euptf2} et \code{soiltexture} ne sont pas requis (colonnes
+\code{euptf2} à \code{NA} s'ils manquent).
 
 \code{ru_verifie} (attribut) vaut \code{TRUE} seulement si la chaîne est entièrement sourcée :
 dictionnaire IFN lu, classes identifiées dans le triangle de l'Aisne, \code{euptf2}

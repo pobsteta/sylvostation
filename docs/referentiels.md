@@ -535,7 +535,24 @@ mention « à vérifier » (docs/pipeline.md l. 38-39) jusqu'à la réponse d'Ag
 | **Modalités** | **vérifié** | `metadonnees.csv`, bloc « Définition des modalités pour chaque unité », lignes 5845-5865 | `0` absence de terre fine ; `1` sable « S : sable dominant » ; `2` sable limoneux « Sl » ; `3` sable argileux « Sa » ; `4` limon sableux « **Ls, Lsa, Lms, Lls** : limon dominant + sable » ; `5` limon argileux « **La, Las** » ; `6` limon « **Lm, Ll** » ; `7` argile limoneuse « Al » ; `8` argile sablo-limoneuse « **As, Als** » ; `9` argile « **A, Alo** : argile et argile lourde » ; `H` texture organique (unité `TEXT1` seulement). Codes 0 à 9 identiques dans les deux unités. Un **espace insécable** (U+00A0) précède chaque « : ». |
 | Triangle de référence | **déduit des abréviations** (l'IFN ne nomme pas le triangle) | `soiltexture::TT.get("FR.AISNE.TT")` | Les abréviations des codes 1 à 9 contiennent **les 15 classes du triangle de l'Aisne** (ALO, A, AL, AS, LA, LAS, LSA, SA, LM, LMS, LS, SL, S, LL, LLS), **chacune une fois** : les codes en forment une partition. Le triangle du GEPPA (`FR.GEPPA.TT`, 17 classes) n'a ni Lms, ni Lls, ni Lm, ni Alo. **Une abréviation est hors du triangle de l'Aisne : `Als`** (code 8), classe « argile limono-sableuse » du GEPPA. |
 | Documentation | **vérifié** | `IGN_DB_doc_ecologie.pdf` (version 2.3, 14/10/2025), p. 6 | Texture appréciée **au toucher**. « Dans le cas d'un sol à texture homogène, TEXT1 = 0, et TEXT2 est renseigné. » Non renseignées sans fosse (`OBSPEDO` = 5). L'annexe `IGN_DB_doc_ecologie_annexes.pdf` (25 p.) ne contient pas de triangle. |
-| Extrait déposé | **fait** | script de l'agent (lecture des deux blocs de `metadonnees.csv`) | `inst/extdata/ifn_texture_dictionnaire.csv` : colonnes `unite;campagnes;code;libelle;definition`, 21 lignes, texte d'origine (Licence Ouverte 2.0). |
+| Extrait déposé | **fait** | commande ci-dessous (lecture des deux blocs de `metadonnees.csv`) | `inst/extdata/ifn_texture_dictionnaire.csv` : colonnes `unite;campagnes;code;libelle;definition`, 21 lignes, texte d'origine (Licence Ouverte 2.0). |
+| `TEXT1 = 0` avec `PROF1` renseigné | **vérifié** (décompte sur `ECOLOGIE.csv` complet, 131 704 lignes) | `e <- read.delim("ECOLOGIE.csv", sep = ";", colClasses = "character", na.strings = "", fileEncoding = "UTF-8-BOM"); sum(e$TEXT1 %in% "0" & !is.na(e$PROF1))` | `TEXT1 = 0` : 54 250 lignes, dont **54 193 avec `PROF1` vide** (sol homogène, lecture de la documentation) et **57 avec `PROF1` renseigné** (campagnes 2005 à 2015 ; `PROF1` de 0 à 8 dm ; `TEXT2` de 0 à 9). Ces 57 cas sont lus comme le dictionnaire le dit : **horizon supérieur sans terre fine** (« absence »), d'épaisseur `PROF1`, qui compte 0 mm de réserve utile ; l'horizon `TEXT2` couvre `PROF2 - PROF1`. Lecture du code (`ru_from_texture()`, `compute_gradients()`), non confirmée par l'IGN : **à vérifier**. Aucun de ces 57 cas dans les 100 placettes de `inst/extdata`. |
+
+Commande d'extraction du dictionnaire (R, depuis `data/cache/ifn/`, après
+`unzip export_dataifn_2005_2025.zip metadonnees.csv`) :
+
+```r
+l <- readLines("metadonnees.csv", encoding = "UTF-8"); l[1] <- sub("^﻿", "", l[1])
+du <- grep("^// Définition des unités", l); dm <- grep("^// Définition des modalités", l)
+sp <- function(x) do.call(rbind, strsplit(sub(";$", "", x), ";", fixed = TRUE))
+u <- sp(grep("^TEXT[12];", l[(du + 2):(dm - 1)], value = TRUE))    # TEXTi;unite;campagnes;...
+m <- sp(grep("^TEXT1?;", l[(dm + 2):length(l)], value = TRUE))     # unite;code;libelle;definition
+per <- tapply(u[, 3], u[, 2], function(z) z[1])
+out <- data.frame(unite = m[, 1], campagnes = trimws(per[m[, 1]]), code = m[, 2],
+                  libelle = m[, 3], definition = m[, 4])
+write.table(out, "ifn_texture_dictionnaire.csv", sep = ";", quote = TRUE, row.names = FALSE,
+            fileEncoding = "UTF-8")
+```
 | Charge en cailloux | **vérifié** | `metadonnees.csv`, lignes 441-463 | `k` = 1 à 9 : de (10k - 5) % à (10k + 5) % ; `0` : moins de 5 % ; `10` : plus de 95 % ; `X` : absence (2017-). Le code prend le centre de la classe (2,5 %, 10k %, 97,5 %). |
 
 ## 23. Climat SAFRAN (SIM2 quotidien, Météo-France) : vérifié
@@ -614,13 +631,15 @@ mention « à vérifier » (docs/pipeline.md l. 38-39) jusqu'à la réponse d'Ag
 18. Texture IFN : le dictionnaire (`metadonnees.csv`) donne au code `0` le sens « absence de
     terre fine », la documentation (`IGN_DB_doc_ecologie.pdf`, p. 6) écrit « TEXT1 = 0 » pour un
     sol homogène ; sur l'extrait, `TEXT1 = 0` va avec `PROF1` vide (36 placettes) : sol homogène.
+    Sur toute l'archive, 57 lignes ont `TEXT1 = 0` **et** `PROF1` renseigné : lues comme un
+    horizon supérieur sans terre fine (§ 22, à vérifier).
     Le code 8 cite `Als`, classe du triangle du GEPPA, absente du triangle de l'Aisne (§ 22). La
     correspondance provisoire de la mission 015 (5 = LA, LAS, **LSA** ; 6 = LL, LM, **LMS**) était
     fausse : LSA et LMS sont au code 4.
 19. SAFRAN : les CSV de meteo.data.gouv.fr nomment `PRELIQ`, `PRENEI`, `ETP` ; `biljouR`
     attend par défaut `PRELIQ_Q`, `PRENEI_Q`, `ETP_Q`. Le miroir NetCDF de l'INRAE (DOI
     `10.57745/BAZ12C`) cité par `biljouR` ne contient plus que la grille (§ 23).
-20. Réserve utile : sur les 97 placettes calculables, `euptf2` (AWC_2) donne en moyenne
+20. Réserve utile : sur les 97 placettes calculables, `euptf2` (FC_2 - WP) donne en moyenne
     **plus** que Bruand et al. 2004 (colonne défaut) ; les deux sont très corrélées (chiffres au
     rendu de la mission 019).
 

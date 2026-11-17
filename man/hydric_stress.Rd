@@ -33,9 +33,9 @@ de meteo.data.gouv.fr ; suffixe \verb{_Q} accepté) ou \code{NULL}.}
 }
 \value{
 Points : \code{x} avec \code{maille_safran}, \code{is_biljou}, \code{nj_stress}, \code{n_annees},
-\code{grad_hydrique} (= \code{is_biljou}, ou la réserve utile en repli). Grille :
-\code{SpatRaster} à deux couches \code{is_biljou}, \code{nj_stress}. Attributs \code{methode}
-(\code{"biljou"} ou \code{"repli_ru"}), \code{parametres}.
+\code{grad_hydrique} (= \code{-is_biljou}, ou la réserve utile en repli). Grille :
+\code{SpatRaster} à trois couches \code{is_biljou}, \code{nj_stress}, \code{grad_hydrique}. Attributs
+\code{methode} (\code{"biljou"} ou \code{"repli_ru"}), \code{sens}, \code{parametres}.
 }
 \description{
 Calcule, avec le modèle de bilan hydrique journalier BILJOU (paquet \code{biljouR},
@@ -56,6 +56,8 @@ BILJOU par couple (maille, réserve utile).
 maille SAFRAN, l'indice est calculé sur une suite de réserves utiles (pas \code{pas_ru})
 puis interpolé linéairement pour chaque pixel (descente d'échelle par la réserve
 utile).
+\item \strong{Sens} : \code{grad_hydrique} est orienté « plus haut = plus humide » dans les deux
+modes (attribut \code{sens}) : \code{-is_biljou} en mode nominal, la réserve utile en repli.
 \item \strong{Repli} : sans \code{safran} ou sans le paquet \code{biljouR}, l'indice vaut \code{NA} et
 \code{grad_hydrique} reprend la réserve utile ; l'attribut \code{methode} vaut \code{"repli_ru"}
 et la raison est dans l'attribut \code{repli} (avertissement émis).

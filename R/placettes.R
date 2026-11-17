@@ -260,9 +260,10 @@ unmatched_taxa <- function(flore, indicateurs) {
 #' 6 = LM, LL, 7 = AL, 8 = AS (et `Als`, hors du triangle de l'Aisne, sans valeur
 #' chez Bruand), 9 = A, ALO. Attribut `correspondance_verifiee = TRUE`. Un code qui
 #' couvre plusieurs classes prend la **moyenne simple** des classes qui ont une valeur
-#' (choix du code, non publié). Deux hypothèses restent du code : (1) `TEXT1` est pris
-#' pour un horizon A, `TEXT2` pour un horizon E, B ou C ; (2) une case « - » d'un type
-#' d'horizon prend la valeur de l'autre type (repli). Les écarts types de l'article
+#' (choix du code, non publié) ; avec cette correspondance, chaque code 1 à 9 a au moins
+#' une classe renseignée pour chaque type d'horizon (l'ancien repli d'un type d'horizon
+#' sur l'autre est retiré ; un code sans valeur rendrait `NA`). Une hypothèse reste du
+#' code : `TEXT1` est pris pour un horizon A, `TEXT2` pour un horizon E, B ou C. Les écarts types de l'article
 #' (0,14 à 0,53 mm/cm) ne sont pas propagés. `H` vaut `NA` (la couche organique n'est
 #' pas comptée), `0` vaut 0. La réserve utile de référence est désormais celle de
 #' [ru_from_texture()] (euptf2) ; cette table sert de contre-vérification.
@@ -309,10 +310,8 @@ ru_coefficients <- function(source = c("bruand2004", "provisoire")) {
   }
   haut <- vapply(corr, moy, numeric(1), col = "haut")
   bas  <- vapply(corr, moy, numeric(1), col = "bas")
-  haut2 <- ifelse(is.na(haut), bas, haut)   # repli : valeur de l'autre type d'horizon
-  bas2  <- ifelse(is.na(bas), haut, bas)    # (code 4, LS en horizons E, B, C : valeur de A)
-  haut <- stats::setNames(c(0, haut2, NA_real_), c("0", names(corr), "H"))
-  bas  <- stats::setNames(c(0, bas2,  NA_real_), c("0", names(corr), "H"))
+  haut <- stats::setNames(c(0, haut, NA_real_), c("0", names(corr), "H"))
+  bas  <- stats::setNames(c(0, bas,  NA_real_), c("0", names(corr), "H"))
   structure(list(haut = haut, bas = bas), verifie = TRUE, correspondance_verifiee = TRUE,
             source = paste("Bruand, Duval et Cousin (2004), Etude et Gestion des Sols 11(3),",
                            "323-332, tableau 2 p. 328, colonne defaut, sans Da"),

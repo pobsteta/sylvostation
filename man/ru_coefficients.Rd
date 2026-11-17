@@ -42,9 +42,10 @@ triangle de l'Aisne : 1 = S, 2 = SL, 3 = SA, 4 = LS, LSA, LMS, LLS, 5 = LA, LAS,
 6 = LM, LL, 7 = AL, 8 = AS (et \code{Als}, hors du triangle de l'Aisne, sans valeur
 chez Bruand), 9 = A, ALO. Attribut \code{correspondance_verifiee = TRUE}. Un code qui
 couvre plusieurs classes prend la \strong{moyenne simple} des classes qui ont une valeur
-(choix du code, non publié). Deux hypothèses restent du code : (1) \code{TEXT1} est pris
-pour un horizon A, \code{TEXT2} pour un horizon E, B ou C ; (2) une case « - » d'un type
-d'horizon prend la valeur de l'autre type (repli). Les écarts types de l'article
+(choix du code, non publié) ; avec cette correspondance, chaque code 1 à 9 a au moins
+une classe renseignée pour chaque type d'horizon (l'ancien repli d'un type d'horizon
+sur l'autre est retiré ; un code sans valeur rendrait \code{NA}). Une hypothèse reste du
+code : \code{TEXT1} est pris pour un horizon A, \code{TEXT2} pour un horizon E, B ou C. Les écarts types de l'article
 (0,14 à 0,53 mm/cm) ne sont pas propagés. \code{H} vaut \code{NA} (la couche organique n'est
 pas comptée), \code{0} vaut 0. La réserve utile de référence est désormais celle de
 \code{\link[=ru_from_texture]{ru_from_texture()}} (euptf2) ; cette table sert de contre-vérification.

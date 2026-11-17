@@ -92,12 +92,13 @@ test_that("texture_to_psd : centre de gravite des classes, dans la bonne classe"
 
 # ---- ru_from_texture --------------------------------------------------------
 
+# AWC_2 = FC_2 - WP, fonctions ponctuelles d'euptf2 (README d'euptf2), calcul independant
 awc_euptf <- function(code, z) {
   p <- texture_to_psd(code)
+  df <- data.frame(USSAND = p$sable, USSILT = p$limon, USCLAY = p$argile, DEPTH_M = z)
   e <- new.env()
-  utils::data(list = "AWC_2_PTF01", package = "euptf2", envir = e)
-  suppressWarnings(euptf2::ptfFun.pred(e$AWC_2_PTF01,
-    data.frame(USSAND = p$sable, USSILT = p$limon, USCLAY = p$argile, DEPTH_M = z)))
+  utils::data(list = c("FC_2_PTF01", "WP_PTF01"), package = "euptf2", envir = e)
+  suppressWarnings(euptf2::ptfFun.pred(e$FC_2_PTF01, df) - euptf2::ptfFun.pred(e$WP_PTF01, df))
 }
 
 test_that("ru_from_texture : euptf2 par couche, cailloux au centre de classe, Bruand en regard", {
@@ -151,6 +152,38 @@ test_that("ru_from_texture : cas particuliers H, R, 0, code 8, erreurs", {
   expect_error(ru_from_texture(1), "tableau")
 })
 
+test_that("ru_from_texture : ru_source euptf2 (defaut) ou bruand2004", {
+  skip_if_not_installed("soiltexture")
+  skip_if_not_installed("euptf2")
+  skip_if_not_installed("ranger")
+  ifn <- make_synth_ifn()   # synthetique
+  e <- ru_from_texture(ifn$placettes)
+  b <- ru_from_texture(ifn$placettes, ru_source = "bruand2004")
+  expect_equal(attr(e, "ru_source"), "euptf2")
+  expect_equal(attr(b, "ru_source"), "bruand2004")
+  expect_equal(e$ru_mm, e$ru_euptf2_mm)
+  expect_equal(b$ru_mm, b$ru_bruand_mm)
+  expect_equal(b$ru_euptf2_mm, e$ru_euptf2_mm)    # les deux colonnes restent rendues
+  expect_equal(e$ecart_mm, e$ru_euptf2_mm - e$ru_bruand_mm)
+  expect_match(attr(e, "source"), "FC_2 - WP")
+  expect_error(ru_from_texture(ifn$placettes, ru_source = "autre"))
+})
+
+test_that("ru_from_texture : sans euptf2, Bruand seul possible, euptf2 refuse", {
+  local_mocked_bindings(.has_pkg = function(pkg) FALSE)
+  ifn <- make_synth_ifn()   # synthetique
+  expect_error(ru_from_texture(ifn$placettes), "euptf2")
+  b <- ru_from_texture(ifn$placettes, ru_source = "bruand2004")
+  expect_true(all(is.na(b$ru_euptf2_mm)))
+  expect_equal(b$ru_mm[1], (20 * 2.13 + 40 * 1.16) * 0.8)
+})
+
+test_that("ru_coefficients : chaque code 1 a 9 a une valeur par type d'horizon (sans repli)", {
+  ru <- ru_coefficients()
+  expect_false(anyNA(ru$haut[as.character(1:9)]))
+  expect_false(anyNA(ru$bas[as.character(1:9)]))
+})
+
 # ---- hydric_stress ----------------------------------------------------------
 
 test_that("hydric_stress : un point connu tombe dans la bonne maille SAFRAN (Lambert-93)", {
@@ -178,7 +211,8 @@ test_that("hydric_stress : Is et jours de stress BILJOU par placette, decroissan
   expect_gte(h$nj_stress[1], h$nj_stress[2])
   expect_true(is.na(h$is_biljou[3]))              # RU nulle : BILJOU ne tourne pas
   expect_true(is.na(h$is_biljou[4]))              # hors grille
-  expect_equal(h$grad_hydrique, h$is_biljou)
+  expect_equal(h$grad_hydrique, -h$is_biljou)    # plus haut = plus humide
+  expect_equal(attr(h, "sens"), "plus haut = plus humide")
   # meme chiffre qu'un appel direct a biljouR
   met <- biljouR::safran_to_meteo(s, cols = list(date = "DATE", rain_liq = "PRELIQ",
                                                  rain_sol = "PRENEI", pet = "ETP"))
@@ -201,6 +235,31 @@ test_that("hydric_stress : repli sur la RU, signale, si SAFRAN absent", {
   expect_equal(attr(h, "repli"), "climat SAFRAN absent")
   expect_equal(h$grad_hydrique, 80)
   expect_true(is.na(h$is_biljou))
+  expect_equal(attr(h, "sens"), "plus haut = plus humide")
+})
+
+test_that("hydric_stress : repli sur la RU, signale, si biljouR absent", {
+  local_mocked_bindings(.has_pkg = function(pkg) pkg != "biljouR")
+  c0 <- centre_maille_l93(9640, 23690)
+  p <- points_l93(c0[1], c0[2], c(80, 30))
+  expect_warning(h <- hydric_stress(p, safran_extrait()), "biljouR absent")
+  expect_equal(attr(h, "methode"), "repli_ru")
+  expect_equal(attr(h, "repli"), "paquet biljouR absent")
+  expect_equal(h$grad_hydrique, c(80, 30))
+  expect_true(all(is.na(h$is_biljou)))
+})
+
+test_that("hydric_stress : grad_hydrique va dans le meme sens en mode nominal et en repli", {
+  skip_if_not_installed("biljouR")
+  c0 <- centre_maille_l93(9640, 23690)
+  p <- points_l93(c0[1] + c(0, 200, 400), c0[2], c(40, 90, 160))   # RU croissante
+  nominal <- hydric_stress(p, safran_extrait())
+  expect_warning(repli <- hydric_stress(p, NULL), "repli")
+  expect_equal(attr(nominal, "sens"), attr(repli, "sens"))
+  # plus de reserve utile = plus humide, dans les deux modes
+  expect_true(all(diff(nominal$grad_hydrique) > 0))
+  expect_true(all(diff(repli$grad_hydrique) > 0))
+  expect_equal(rank(nominal$grad_hydrique), rank(repli$grad_hydrique))
 })
 
 test_that("hydric_stress : controles (Lambert-93, colonnes, regle 700 m)", {
@@ -224,13 +283,17 @@ test_that("hydric_stress : grille de RU, interpolation par maille SAFRAN", {
   terra::values(r) <- c(60, 150, 0, 65)
   g <- hydric_stress(r, s)
   expect_s4_class(g, "SpatRaster")
-  expect_equal(names(g), c("is_biljou", "nj_stress"))
+  expect_equal(names(g), c("is_biljou", "nj_stress", "grad_hydrique"))
+  expect_equal(attr(g, "sens"), "plus haut = plus humide")
   v <- terra::values(g)
   p <- points_l93(c0[1], c0[2], c(60, 150, 70))
   h <- hydric_stress(p, s)
   expect_equal(v[1:2, "is_biljou"], h$is_biljou[1:2])      # RU multiples du pas : exact
   expect_true(is.na(v[3, "is_biljou"]))
   expect_true(v[4, "is_biljou"] <= h$is_biljou[1] && v[4, "is_biljou"] >= h$is_biljou[3])
+  expect_equal(v[, "grad_hydrique"], -v[, "is_biljou"])
   expect_warning(g0 <- hydric_stress(r, NULL), "repli")
-  expect_true(all(is.na(terra::values(g0))))
+  v0 <- terra::values(g0)
+  expect_true(all(is.na(v0[, c("is_biljou", "nj_stress")])))
+  expect_equal(v0[, "grad_hydrique"], c(60, 150, 0, 65))   # repli : la RU
 })
