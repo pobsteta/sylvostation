@@ -41,7 +41,8 @@ Suggests:
     targets,
     testthat (>= 3.0.0),
     vegan,
-    whitebox
+    whitebox,
+    withr
 Additional_repositories: https://r-lidar.r-universe.dev
 Config/testthat/edition: 3
 VignetteBuilder: knitr
