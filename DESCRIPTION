@@ -1,0 +1,47 @@
+Package: sylvostation
+Type: Package
+Title: Catalogue de Stations Forestières par Sylvoécorégion
+Version: 0.0.0.9000
+Authors@R: person("Équipe", "sylvostation", role = c("aut", "cre"),
+    email = "contact@example.org")
+Description: Fonctions et pipeline pour produire, à partir du seul code d'une
+    sylvoécorégion, une typologie de stations forestières, une carte prédictive
+    et son incertitude. Le paquet impose le système de coordonnées Lambert-93
+    (EPSG:2154) et interdit toute extraction de variable fine aux coordonnées
+    des placettes de l'Inventaire forestier national, localisées à 700 m près.
+License: GPL (>= 3)
+Encoding: UTF-8
+Language: fr
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Imports:
+    sf,
+    stats,
+    terra,
+    tools,
+    utils,
+    yaml
+Suggests:
+    ade4,
+    blockCV,
+    CAST,
+    cluster,
+    happign,
+    indicspecies,
+    knitr,
+    lasR,
+    lidR,
+    mgcv,
+    permute,
+    quarto,
+    ranger,
+    rgbif,
+    rmarkdown,
+    rpart,
+    targets,
+    testthat (>= 3.0.0),
+    vegan,
+    whitebox
+Additional_repositories: https://r-lidar.r-universe.dev
+Config/testthat/edition: 3
+VignetteBuilder: knitr

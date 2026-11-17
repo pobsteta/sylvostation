@@ -52,7 +52,10 @@ portes sont franchies par l'orchestrateur et tracées au journal.
 - **Règle bloquante : aucune variable fine (LiDAR, pente, position topographique,
   courbure, TWI…) extraite aux coordonnées des placettes IGN**, localisées à 700 m près.
   Toute fonction d'extraction appelle `assert_no_fine_extract_on_ifn()` ; un test le
-  vérifie. Seuls les prédicteurs à maille large (climat kilométrique, pédopaysage,
+  vérifie. La règle se fonde aussi sur la **précision de localisation** : toute table de
+  points porte `loc_precision_m` ; une extraction fine refuse les points dont la précision
+  est absente ou supérieure à 25 m (relevés IFN republiés dans GBIF, données SINP floutées,
+  SOPHY). `mark_ifn()` pose `source = "ifn"` et `loc_precision_m = 700`. Seuls les prédicteurs à maille large (climat kilométrique, pédopaysage,
   géologie dominante dans un rayon de 700 m) peuvent être croisés avec ces placettes.
 - **Système de coordonnées : EPSG:2154 (Lambert-93) partout.** Toute fonction qui reçoit
   des coordonnées vérifie leur système ; GBIF (WGS84, EPSG:4326) est reprojeté dès
@@ -75,6 +78,12 @@ portes sont franchies par l'orchestrateur et tracées au journal.
 - **Pas de code sans tests.** Commande de tests : `.claude/test-command`.
 - **Formats ouverts, logiciels libres** de préférence (test du successeur).
 - **Jamais de push direct sur `main`.** Tout passe par une PR. En délégation, seule la
-  branche `claude/admiring-cerf-hq7t8l` est poussée (ADR 0002).
+  branche de la session cloud `claude/admiring-cerf-hq7t8l` est poussée (nom
+  circonstanciel, propre à la session du 2026-11-16 ; ADR 0002).
+- **Noms d'espèces** : jointures sur TAXREF `CD_NOM` puis `CD_REF` (version figée dans
+  `config.yml`) ; les noms non appariés sont listés dans le rapport, jamais supprimés en silence.
+- **Licences** : le dépôt GitHub est public ; aucun extrait de données sous licence non
+  ouverte (CC BY-NC, données AgroParisTech) n'entre dans `inst/extdata`. Chaque extrait
+  réel a sa source, sa licence et, pour GBIF, son DOI dans `inst/extdata/SOURCES.md`.
 - Noms de fonctions en anglais `snake_case`, documentation `roxygen2` en français, pas
   d'effet de bord hors des fonctions d'écriture (`write_*`).

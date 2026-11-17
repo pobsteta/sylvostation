@@ -1,0 +1,30 @@
+# Paramètres d'exécution de sylvostation (lus par read_config()).
+# Toutes les coordonnées sont en Lambert-93 (EPSG:2154), x = est, y = nord.
+
+# Code de la sylvoécorégion. À vérifier (mission 001) : valeur d'essai.
+ser_code: "D11"  # vérifié (mission 001) : SER « Massif vosgien central », couche ser_l93.zip, champ codeser
+
+# Emprise de test (phase 0), en mètres.
+emprise_test:
+  xmin: 1007000
+  ymin: 6790000
+  xmax: 1022000
+  ymax: 6805000
+  crs: 2154
+
+# Valeurs provisoires (brief : 10-25 m et 5-10 km), à geler avant la phase 1.
+buffer_m: 5000
+resolution_m: 25
+
+crs: 2154
+
+data_dir: data
+laz_dir: data/laz
+out_dir: data/sorties
+
+# Précision de localisation des placettes IFN (règle bloquante).
+ifn_precision_m: 700
+
+# Mode démonstration : le pipeline tourne sans réseau sur inst/extdata (jeux synth_*,
+# synthetic = TRUE) ; sorties sous data/. Les résultats ne valent RIEN sur données réelles.
+demo: true

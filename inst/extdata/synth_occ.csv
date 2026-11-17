@@ -1,0 +1,22 @@
+"gbifID","species","decimalLongitude","decimalLatitude","coordinateUncertaintyInMeters","datasetKey","license","year","dataGeneralizations","informationWithheld","synthetic"
+"S001","Synthia alpha",7.1730258,48.181714,10,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S002","Synthia beta",7.1731107,48.181765,10,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S003","Synthia gamma",7.1731956,48.1818161,10,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S004","Synthia delta",7.1732805,48.1818672,10,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S005","Synthia epsilon",7.1733654,48.1819182,10,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S006","Synthia zeta",7.1734502,48.1819693,10,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S007","Synthia alpha",7.173521,48.1820118,10,"synth-dataset-1","CC_BY_NC_4_0",2020,"","",TRUE
+"S008","Synthia alpha",7.1737507,48.1816793,5,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S009","Synthia beta",7.173885,48.1816746,5,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S010","Synthia gamma",7.1740194,48.1816698,5,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S011","Synthia alpha",7.1744098,48.1818362,20,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S012","Synthia beta",7.1745173,48.1818324,20,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S013","Synthia gamma",7.1746248,48.1818286,20,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S014","Synthia delta",7.1747323,48.1818248,20,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S015","Synthia epsilon",7.1749197,48.1819975,20,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S016","Synthia eta",7.1739063,48.1819441,1,"e5f16d86-e225-4822-97be-a64ce17079c7","CC_BY_4_0",2020,"","",TRUE
+"S017","Synthia theta",7.1739742,48.1819507,1,"e5f16d86-e225-4822-97be-a64ce17079c7","CC_BY_4_0",2020,"","",TRUE
+"S018","Synthia eta",7.1731532,48.1817906,100,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S019","Synthia eta",7.1731673,48.1817991,,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE
+"S020","Synthia eta",7.1731815,48.1818076,10,"synth-dataset-1","CC_BY_4_0",2020,"coordinates rounded to 0.1 degree","",TRUE
+"S099","Synthia alpha",,,10,"synth-dataset-1","CC_BY_4_0",2020,"","",TRUE

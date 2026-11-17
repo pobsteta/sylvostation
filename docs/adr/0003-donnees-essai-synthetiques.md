@@ -22,11 +22,18 @@ sont pas accessibles dans la session (compte GBIF, rasters AgroParisTech, relev�
 | Lettre | Question | Réponse | Ce que ça coûte | Prêts à payer ? |
 |---|---|---|---|---|
 | **F**rugale | Plus simple qui tienne ? | Petits fichiers ouverts (GeoPackage, GeoTIFF, CSV, LAZ) | — | — |
-| **R**esponsable | Qui fait quoi ? | Le `testeur` et le `dev` fabriquent ; le relecteur vérifie le marquage | — | — |
+| **R**esponsable | Qui fait quoi ? | Le `dev` fabrique (correction du 2026-11-16 : il n'y a pas de `testeur` par mission) ; le `testeur` de la mission 011 écrit les tests de la règle bloquante ; le relecteur vérifie le marquage | — | — |
 | **A**nticiper | Si l'imprévu arrive ? | Un test vert sur données synthétiques ne prouve rien sur le réel : dit dans chaque rendu | Fausse confiance possible | oui, avec le marquage |
 | **N**ovateur | Toutes les idées ? | Données réelles téléchargées à la volée écartées (brief) | — | — |
 | **C**oût | Coût complet ? | Dépôt léger | — | — |
 | **É**cologique | Réutilisation ? | Extraits IGN/BRGM sous Licence Ouverte Etalab réutilisables | Citer la source | oui |
+
+## Licence de chaque extrait (ajout du 2026-11-16, objection B3 de la mission 000)
+
+Chaque extrait réel est inscrit dans `inst/extdata/SOURCES.md` avec sa source, sa date,
+sa licence et, pour GBIF, le DOI du téléchargement ou la requête exacte. Le dépôt étant
+public, un extrait sous licence non ouverte (CC BY-NC, conditions particulières) n'entre
+pas : il est remplacé par un jeu synthétique.
 
 ## Valeurs sacrifiées
 
