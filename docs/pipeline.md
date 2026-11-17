@@ -82,6 +82,24 @@ Le tampon de 20 m ne lit que les dalles du bloc : effets de bord entre blocs acc
 mesurés en mission 018. `error = "stop"` : jamais de mosaïque partielle silencieuse
 (`mosaic_tiles()` vérifie que toutes les dalles attendues sont présentes).
 
+### Sources : règles
+
+- **Aucun jeu synthétique en mode réel** : `real_sources()` passe chaque extrait et chaque
+  entrée optionnelle (`gnss_path`, `reference_path`, `soil_paths`, `tichy_path`) par
+  `assert_not_synthetic()` : arrêt si le nom commence par `synth_`, si une colonne
+  `synthetic` vaut `TRUE` (CSV, GeoPackage, classeur) ou si un raster porte la balise
+  `synthetic = TRUE`.
+- **URL IFN et TAXREF** : une seule source, `config.yml` (`ifn_archive_url`, `taxref_url`),
+  exigée en ligne.
+- **SAFRAN en ligne** : chaque fichier annuel (toute la France) est lu par blocs de lignes
+  et filtré à la lecture aux mailles proches de l'emprise ; mesuré sur `QUOT_SIM2_2003.csv.gz`
+  (3 610 580 lignes) : pic de mémoire du processus R 449 Mo (dont 255 Mo pour R et le
+  paquet) contre 1 649 Mo en lecture complète.
+- **Ancrages GBIF** : la précision d'une maille est l'incertitude maximale de ses
+  occurrences (`gbif_anchors()`), contrôlée par la règle bloquante (25 m).
+- **Géologie avec `emprise: ser`** : `geology_coverage()` avertit si plus de 1 % de la SER
+  tombe hors des départements de `bdcharm_departements`.
+
 ### Entrées absentes
 
 `gnss_path` absent : ligne « 15. Validation thématique par relevés GNSS indépendants »

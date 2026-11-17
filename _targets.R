@@ -313,6 +313,10 @@ if (!isTRUE(cfg$demo)) {
       if (hors_ligne) src$geol$paths else
         vapply(src$geol$urls, sylvostation::fetch_cached, "", dir = file.path(cache, "bdcharm")),
       emprise = sf::st_bbox(terra::ext(grid) + 1000, crs = sf::st_crs(2154)))),
+    # emprise: ser : la SER peut deborder des departements BD Charm-50 lus (avertissement)
+    tar_target(geol_coverage, if (identical(cfg$emprise, "ser")) {
+      sylvostation::geology_coverage(geol_sf, emprise, cfg$bdcharm_departements)
+    } else NA_real_),
     tar_target(geol_classes, suppressWarnings(
       sylvostation::recode_lithology(sylvostation::list_formations(geol_sf)))),
     tar_target(geol_rast, sylvostation::rasterize_geol(geol_sf, grid, "classe", table = geol_classes)),
@@ -355,7 +359,8 @@ if (!isTRUE(cfg$demo)) {
         "download" else "search", path = file.path(cache, "gbif"))
       chm <- sylvostation::mosaic_tiles(lidar_files, "mhc", fact = 5)
       cl <- sylvostation::clean_occ(occ, canopy = chm)
-      sylvostation::gbif_anchors(sylvostation::grid_bioindication(cl, indicateurs_noms), predictors)
+      sylvostation::gbif_anchors(sylvostation::grid_bioindication(cl, indicateurs_noms), cl,
+                                 predictors)
     }),
     tar_target(train, stats::setNames(lapply(grad_reg, function(g) {
       d <- ifn_gradients[!is.na(ifn_gradients[[g]]), ]

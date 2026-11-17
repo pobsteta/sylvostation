@@ -15,7 +15,8 @@
 #'   `taxref_version` (`"18"`, figée), `indicator_source` (`"tichy"`), `ru_source`
 #'   (`"euptf2"`), `safran_annees` (1996-2025), `saison_vegetation` (mois 4 à 9),
 #'   `bdcharm_departements`, `gbif_method` (`"search"`), `forest_mask` (`TRUE`),
-#'   `forest_height_m` (5), `cache_dir`, `ifn_archive_url`, `taxref_url`, et les
+#'   `forest_height_m` (5), `cache_dir`, `ifn_archive_url` et `taxref_url` (sans valeur
+#'   par défaut : seule source, config.yml ; exigées en ligne), et les
 #'   entrées optionnelles `gnss_path`, `reference_path`, `soil_paths`, `tichy_path`
 #'   (`NULL` si absentes : jamais remplacées).
 #' @examples
@@ -94,9 +95,7 @@ read_config <- function(path = "config.yml") {
   lidar_ncores = 3, taxref_version = "18", indicator_source = "tichy",
   ru_source = "euptf2", safran_annees = c(1996L, 2025L), saison_vegetation = c(4L, 9L),
   bdcharm_departements = c("067", "068", "088"), gbif_method = "search",
-  forest_mask = TRUE, forest_height_m = 5, cache_dir = "data/cache",
-  ifn_archive_url = "https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip",
-  taxref_url = "https://assets.patrinat.fr/files/referentiel/TAXREF_v18_2025.zip"
+  forest_mask = TRUE, forest_height_m = 5, cache_dir = "data/cache"
 )
 
 .config_reel <- function(cfg) {

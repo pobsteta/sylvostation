@@ -101,7 +101,74 @@ test_that("real_sources : extraits réels hors ligne, jamais synth_, version TAX
   g <- tempfile(fileext = ".csv")
   writeLines("id,x,y,loc_precision_m", g)
   expect_identical(real_sources(cfg_reel(gnss_path = g))$gnss, g)
-  expect_error(real_sources(cfg_reel(offline = FALSE)), "tichy_path")
+  expect_error(real_sources(cfg_reel(offline = FALSE, ifn_archive_url = "https://exemple.invalid/a.zip",
+                                     taxref_url = "https://exemple.invalid/TAXREF_v18.zip")),
+               "tichy_path")
+  # URL IFN et TAXREF : une seule source, config.yml ; exigées en ligne
+  expect_null(cfg_reel()$taxref_url)
+  expect_error(real_sources(cfg_reel(offline = FALSE)), "ifn_archive_url")
+})
+
+# R1 : aucune entrée optionnelle ne peut être un jeu synthétique (un test par entrée)
+synth_csv <- function(nom = "gnss.csv", prefixe = FALSE, colonne = TRUE) {
+  f <- file.path(tempfile("e"), if (prefixe) paste0("synth_", nom) else nom)
+  dir.create(dirname(f))
+  d <- data.frame(id = "G1", x = 1015500, y = 6793500, loc_precision_m = 3)
+  if (colonne) d$synthetic <- TRUE
+  utils::write.csv(d, f, row.names = FALSE)
+  f
+}
+
+test_that("R1 gnss_path : préfixe synth_ et colonne synthetic = TRUE refusés", {
+  expect_error(real_sources(cfg_reel(gnss_path = ex("synth_gnss.csv"))), "gnss_path.*synth")
+  expect_error(real_sources(cfg_reel(gnss_path = synth_csv())), "synthetic = TRUE")
+  ok <- synth_csv(colonne = FALSE)
+  expect_identical(real_sources(cfg_reel(gnss_path = ok))$gnss, ok)
+})
+
+test_that("R1 reference_path : préfixe synth_ et balise synthetic = TRUE refusés", {
+  expect_error(real_sources(cfg_reel(reference_path = ex("synth_reference.tif"))),
+               "reference_path.*synth")
+  r <- terra::rast(nrows = 2, ncols = 2, xmin = 1015500, xmax = 1015550, ymin = 6793500,
+                   ymax = 6793550, crs = "EPSG:2154", vals = 1:4)
+  names(r) <- "trophic"
+  terra::metags(r) <- c(synthetic = "TRUE")
+  f <- tempfile("ref", fileext = ".tif")
+  terra::writeRaster(r, f, filetype = "GTiff")
+  expect_error(real_sources(cfg_reel(reference_path = f)), "balise synthetic")
+})
+
+test_that("R1 soil_paths : un raster synth_ parmi les couches est refusé", {
+  r <- terra::rast(nrows = 2, ncols = 2, xmin = 1015500, xmax = 1015550, ymin = 6793500,
+                   ymax = 6793550, crs = "EPSG:2154", vals = 1:4)
+  d <- tempfile("sols")
+  dir.create(d)
+  f1 <- file.path(d, "ph.tif")
+  f2 <- file.path(d, "synth_ru.tif")
+  terra::writeRaster(r, f1)
+  terra::writeRaster(r, f2)
+  expect_identical(real_sources(cfg_reel(soil_paths = list(f1)))$soils, f1)
+  expect_error(real_sources(cfg_reel(soil_paths = list(f1, f2))), "soil_paths.*synth")
+})
+
+test_that("R1 tichy_path : classeur synthétique refusé en ligne", {
+  en_ligne <- function(p) cfg_reel(offline = FALSE, tichy_path = p,
+                                   ifn_archive_url = "https://exemple.invalid/a.zip",
+                                   taxref_url = "https://exemple.invalid/TAXREF_v18.zip")
+  expect_error(real_sources(en_ligne(synth_csv("tichy.csv", prefixe = TRUE))), "tichy_path.*synth")
+  expect_error(real_sources(en_ligne(synth_csv("tichy.csv"))), "synthetic = TRUE")
+  ok <- ex("tichy_2023_extrait.csv")
+  expect_identical(real_sources(en_ligne(ok))$tichy, ok)
+})
+
+test_that("assert_not_synthetic : nom, colonne (CSV, GeoPackage), sinon rien", {
+  expect_error(assert_not_synthetic(ex("synth_occ.csv"), "x"), "pr\u00e9fixe synth_")
+  expect_silent(assert_not_synthetic(ex("tichy_2023_extrait.csv"), "x"))
+  g <- tempfile(fileext = ".gpkg")
+  sf::st_write(sf::st_sf(synthetic = TRUE, geometry = sf::st_sfc(sf::st_point(c(1015500, 6793500)),
+                                                                 crs = 2154)), g, quiet = TRUE)
+  expect_error(assert_not_synthetic(g, "x"), "colonne synthetic")
+  expect_identical(assert_not_synthetic(ex("ser_extrait.gpkg"), "x"), ex("ser_extrait.gpkg"))
 })
 
 test_that("real_extent : emprise test recoupée avec la SER, ou SER entière", {
@@ -261,10 +328,15 @@ test_that("fetch_safran : téléchargement simulé, filtrage aux mailles de l'em
   }
   expect_error(fetch_safran(2003, c(1014000, 6798000, 1015000, 6799000), d, offline = TRUE),
                "hors ligne")
-  f <- fetch_safran(2003, c(1014000, 6798000, 1015000, 6799000), d, downloader = faux)
+  # lecture par petits blocs : même résultat qu'en un seul bloc
+  f <- fetch_safran(2003, c(1014000, 6798000, 1015000, 6799000), d, downloader = faux,
+                    lignes_par_bloc = 500L)
   r <- read_safran(f)
-  expect_lt(length(unique(paste(r$LAMBX, r$LAMBY))), 12)
-  expect_gt(nrow(r), 0)
+  expect_identical(unique(paste(r$LAMBX, r$LAMBY)), "9640 23690")
+  expect_equal(nrow(r), 365)
+  unlink(f)
+  f2 <- fetch_safran(2003, c(1007000, 6790000, 1022000, 6805000), d, offline = TRUE)
+  expect_equal(length(unique(paste(read_safran(f2)$LAMBX, read_safran(f2)$LAMBY))), 9)
 })
 
 test_that("safran_climate : couches p_sv, etp_sv, t_moy à maille kilométrique en Lambert-93", {
@@ -319,6 +391,17 @@ test_that("filter_greco : GRECO = première lettre du code SER", {
   ifn <- load_ifn(ex(""))
   expect_equal(nrow(filter_greco(ifn, "D")$placettes), nrow(ifn$placettes))
   expect_error(filter_greco(ifn, "K"), "GRECO K")
+})
+
+test_that("geology_coverage : avertit quand l'emprise déborde des départements lus", {
+  g <- read_geology(ex("bdcharm50_emprise_test.gpkg"))
+  dedans <- sf::st_as_sfc(sf::st_bbox(c(xmin = 1010000, ymin = 6795000, xmax = 1015000,
+                                        ymax = 6800000), crs = sf::st_crs(2154)))
+  expect_lt(expect_silent(geology_coverage(g, dedans, "068")), 0.01)
+  deborde <- sf::st_as_sfc(sf::st_bbox(c(xmin = 1017000, ymin = 6795000, xmax = 1027000,
+                                         ymax = 6800000), crs = sf::st_crs(2154)))
+  expect_warning(p <- geology_coverage(g, deborde, c("067", "068", "088")), "bdcharm_departements")
+  expect_equal(p, 0.5, tolerance = 0.02)
 })
 
 test_that("fetch_ifn : archive simulée décompressée dans le cache", {
@@ -410,7 +493,7 @@ test_that("real_fertility : table vide signalée quand aucun arbre n'a d'âge", 
 })
 
 # --- ancrages, GNSS, règle des 700 m -------------------------------------------------------
-test_that("gbif_anchors : extraction aux mailles de 50 m, refusée sur des placettes IFN", {
+test_that("gbif_anchors : précision = incertitude maximale des occurrences de la maille", {
   carre <- function(x, y) sf::st_polygon(list(rbind(c(x, y), c(x + 50, y), c(x + 50, y + 50),
                                                      c(x, y + 50), c(x, y))))
   cel <- sf::st_sf(cell_id = c("a", "b"), ph = c(5, 6), azote = c(4, NA),
@@ -418,13 +501,25 @@ test_that("gbif_anchors : extraction aux mailles de 50 m, refusée sur des place
   r <- terra::rast(xmin = 1015500, xmax = 1015600, ymin = 6793500, ymax = 6793600,
                    resolution = 25, crs = "EPSG:2154", vals = 7)
   names(r) <- "pente"
-  a <- gbif_anchors(cel, r)
+  occ <- sf::st_as_sf(data.frame(x = c(1015510, 1015520, 1015560), y = 6793510,
+                                 loc_precision_m = c(5, 12, 20)),
+                      coords = c("x", "y"), crs = 2154)
+  a <- gbif_anchors(cel, occ, r)
   expect_equal(a$trophic, c(4.5, 6))
-  expect_true(all(a$loc_precision_m == 25))
+  expect_equal(a$loc_precision_m, c(12, 20))
+  expect_equal(a$n_occ_maille, c(2L, 1L))
   expect_equal(a$pente, c(7, 7))
+  # maille sans occurrence : écartée et comptée
+  b <- gbif_anchors(cel, occ[1:2, ], r)
+  expect_equal(nrow(b), 1)
+  expect_equal(attr(b, "n_ecartees"), 1L)
+  # occurrence imprécise (> 25 m) : la règle bloquante arrête l'extraction fine
+  occ$loc_precision_m[3] <- 30
+  expect_error(gbif_anchors(cel, occ, r), "IFN|700|25|pr.cision", ignore.case = TRUE)
   ifn <- mark_ifn(cel)
-  expect_error(gbif_anchors(ifn, r), "IFN|700|pr.cision", ignore.case = TRUE)
-  expect_error(gbif_anchors(data.frame(a = 1), r), "grid_bioindication")
+  expect_error(gbif_anchors(cel, mark_ifn(occ), r), "IFN|700|pr.cision", ignore.case = TRUE)
+  expect_error(gbif_anchors(data.frame(a = 1), occ, r), "grid_bioindication")
+  expect_error(gbif_anchors(cel, data.frame(a = 1), r), "clean_occ")
 })
 
 test_that("gnss_field_gradients : gradients de terrain des relevés GNSS", {

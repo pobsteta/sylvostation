@@ -4,29 +4,38 @@
 \alias{gbif_anchors}
 \title{Points d'ancrage GBIF : mailles de bioindication et prédicteurs}
 \usage{
-gbif_anchors(cells, predictors)
+gbif_anchors(cells, occ, predictors)
 }
 \arguments{
-\item{cells}{\code{sf} de \code{\link[=grid_bioindication]{grid_bioindication()}} (colonnes \code{ph}, \code{azote}).}
+\item{cells}{\code{sf} de \code{\link[=grid_bioindication]{grid_bioindication()}} (colonnes \code{cell_id}, \code{ph}, \code{azote}).}
+
+\item{occ}{\code{sf} de points de \code{\link[=clean_occ]{clean_occ()}} (colonne \code{loc_precision_m}), ceux qui ont
+servi à \code{cells}.}
 
 \item{predictors}{\code{SpatRaster} des prédicteurs (fins et à maille large).}
 }
 \value{
-Un \code{sf} de points : \code{cell_id}, \code{source}, \code{loc_precision_m}, \code{trophic},
-une colonne par couche de \code{predictors}.
+Un \code{sf} de points : \code{cell_id}, \code{source}, \code{loc_precision_m}, \code{n_occ_maille},
+\code{trophic}, une colonne par couche de \code{predictors}. Attribut \code{n_ecartees}.
 }
 \description{
-Centres des mailles de \code{\link[=grid_bioindication]{grid_bioindication()}} (maille de 50 m : précision posée à
-la demi-maille, 25 m, \code{source = "gbif"}), niveau trophique bioindiqué (moyenne de
-\code{ph} et \code{azote}, comme aux placettes) et extraction des prédicteurs. \strong{La règle
-bloquante est appelée avant l'extraction} (\code{\link[=assert_no_fine_extract_on_ifn]{assert_no_fine_extract_on_ifn()}}).
+Centres des mailles de \code{\link[=grid_bioindication]{grid_bioindication()}} (\code{source = "gbif"}), niveau trophique
+bioindiqué (moyenne de \code{ph} et \code{azote}, comme aux placettes) et extraction des
+prédicteurs. La précision de localisation d'une maille (\code{loc_precision_m}) est
+l'\strong{incertitude maximale} des occurrences qu'elle contient (colonne \code{loc_precision_m}
+de \code{\link[=clean_occ]{clean_occ()}}) ; une maille sans occurrence lisible est écartée (et comptée).
+\strong{La règle bloquante est appelée avant l'extraction}
+(\code{\link[=assert_no_fine_extract_on_ifn]{assert_no_fine_extract_on_ifn()}}) : une précision supérieure à 25 m l'arrête.
 }
 \examples{
 cel <- sf::st_sf(cell_id = "a", ph = 5, azote = 4,
   geometry = sf::st_sfc(sf::st_polygon(list(rbind(c(1015500, 6793500), c(1015550, 6793500),
   c(1015550, 6793550), c(1015500, 6793550), c(1015500, 6793500)))), crs = 2154))
+occ <- sf::st_as_sf(data.frame(x = c(1015510, 1015520), y = 6793510,
+                               loc_precision_m = c(5, 12)),
+                    coords = c("x", "y"), crs = 2154)
 r <- terra::rast(xmin = 1015500, xmax = 1015600, ymin = 6793500, ymax = 6793600,
                  resolution = 25, crs = "EPSG:2154", vals = 1)
 names(r) <- "pente"
-gbif_anchors(cel, r)
+gbif_anchors(cel, occ, r)$loc_precision_m
 }

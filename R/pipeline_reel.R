@@ -4,12 +4,11 @@
 # Sources des URL : docs/referentiels.md (§ 1, 2, 5, 7, 15, 23). Une URL non vérifiée
 # n'est jamais codée : le chemin local est alors demandé dans config.yml.
 
-# URL vérifiées (docs/referentiels.md). Le nom de l'archive IFN change à chaque campagne
-# (§ 7) : elle est aussi réglable dans config.yml (`ifn_archive_url`).
-.URL_IFN_ARCHIVE <- "https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip"
+# URL vérifiées (docs/referentiels.md) des sources dont seule l'année ou le département
+# varie. Les URL de l'archive IFN et de TAXREF ont une seule source : config.yml
+# (`ifn_archive_url`, `taxref_url`), lue par read_config().
 .URL_SAFRAN <- "https://meteofrance.s3.sbg.io.cloud.ovh.net/data/REF_CC/SIM/QUOT_SIM2_%d.csv.gz"
 .URL_BDCHARM <- "https://infoterre.brgm.fr/telechargements/BDCharm50/GEO050K_HARM_%s.zip"
-.URL_TAXREF <- "https://assets.patrinat.fr/files/referentiel/TAXREF_v18_2025.zip"
 
 # Gradients du catalogue, dans l'ordre des types (T-H-B).
 .GRADIENTS <- c("trophic", "hydric", "bioclim")
@@ -81,19 +80,16 @@ real_sources <- function(cfg, extdata = system.file("extdata", package = "sylvos
   x <- function(f) {
     p <- file.path(extdata, f)
     if (!file.exists(p)) stop("Extrait absent de inst/extdata : ", f, call. = FALSE)
-    if (startsWith(basename(p), "synth_")) {
-      stop("Un jeu synth\u00e9tique ne peut pas servir en mode r\u00e9el : ", f, call. = FALSE)
-    }
-    p
+    assert_not_synthetic(p, f)
   }
-  opt <- function(p) {
+  opt <- function(p, cle) {
     if (is.null(p) || !length(p) || all(!nzchar(p))) return(NULL)
     manque <- p[!file.exists(p)]
     if (length(manque)) {
       stop("Entr\u00e9e optionnelle introuvable : ", paste(manque, collapse = ", "),
            " (retirer la cl\u00e9 de config.yml si l'entr\u00e9e est absente).", call. = FALSE)
     }
-    p
+    assert_not_synthetic(p, cle)
   }
   if (off) {
     s <- list(
@@ -106,6 +102,12 @@ real_sources <- function(cfg, extdata = system.file("extdata", package = "sylvos
       tichy = x("tichy_2023_extrait.csv"),
       safran = x("safran_sim2_12mailles_extrait.csv"))
   } else {
+    for (k in c("ifn_archive_url", "taxref_url")) {
+      if (is.null(cfg[[k]]) || !nzchar(cfg[[k]])) {
+        stop("Mode r\u00e9el en ligne : la cl\u00e9 `", k, "` de config.yml est requise ",
+             "(docs/referentiels.md \u00a7 7 et \u00a7 15).", call. = FALSE)
+      }
+    }
     if (is.null(cfg$tichy_path) || !file.exists(cfg$tichy_path)) {
       stop("Mode r\u00e9el en ligne : `tichy_path` doit d\u00e9signer le classeur Zenodo ",
            "Indicator.values-tables-2022-11-07-Zenodo.v2.xlsx (DOI 10.5281/zenodo.7427088 ; ",
@@ -120,7 +122,7 @@ real_sources <- function(cfg, extdata = system.file("extdata", package = "sylvos
       ifn_dir = NULL,
       ifn_url = cfg$ifn_archive_url,
       taxref = cfg$taxref_url,
-      tichy = cfg$tichy_path,
+      tichy = assert_not_synthetic(cfg$tichy_path, "tichy_path"),
       safran = NULL)
   }
   tx <- basename(s$taxref)
@@ -129,10 +131,71 @@ real_sources <- function(cfg, extdata = system.file("extdata", package = "sylvos
          ", le fichier est ", tx, ".", call. = FALSE)
   }
   s$offline <- off
-  s$gnss <- opt(cfg$gnss_path)
-  s$reference <- opt(cfg$reference_path)
-  s$soils <- opt(unlist(cfg$soil_paths))
+  s$gnss <- opt(cfg$gnss_path, "gnss_path")
+  s$reference <- opt(cfg$reference_path, "reference_path")
+  s$soils <- opt(unlist(cfg$soil_paths), "soil_paths")
   s
+}
+
+#' Refuser un fichier synthétique en mode réel
+#'
+#' Le mode réel ne remplace jamais une entrée par un jeu fabriqué (CLAUDE.md). Arrêt si
+#' le nom du fichier commence par `synth_`, si une colonne `synthetic` vaut `TRUE`
+#' (CSV, TXT, GeoPackage, classeur `.xlsx` si `readxl` est installé) ou si un raster
+#' porte la balise `synthetic = TRUE` (`terra::metags`).
+#'
+#' @param paths Chemins des fichiers.
+#' @param entree Nom de l'entrée (clé de config.yml), pour le message.
+#' @return `paths`, de façon invisible, si aucun n'est synthétique.
+#' @examples
+#' f <- tempfile("synth_gnss_", fileext = ".csv")
+#' writeLines("id,x,y", f)
+#' try(assert_not_synthetic(f, "gnss_path"))
+#' @export
+assert_not_synthetic <- function(paths, entree = "entr\u00e9e") {
+  arret <- function(p, pourquoi) {
+    stop("Mode r\u00e9el : `", entree, "` d\u00e9signe un jeu synth\u00e9tique (", pourquoi, ") : ",
+         p, ". Une entr\u00e9e absente se d\u00e9clare (retirer la cl\u00e9), elle ne se remplace pas.",
+         call. = FALSE)
+  }
+  vrai <- function(v) any(toupper(trimws(as.character(v))) %in% c("TRUE", "T", "1"), na.rm = TRUE)
+  for (p in paths) {
+    if (startsWith(tolower(basename(p)), "synth_")) arret(p, "pr\u00e9fixe synth_")
+    ext <- tolower(sub("^.*\\.([^.]+)$", "\\1", sub("\\.gz$", "", basename(p), ignore.case = TRUE)))
+    if (ext %in% c("csv", "txt")) {
+      l1 <- readLines(p, n = 1L, warn = FALSE, encoding = "UTF-8")
+      if (length(l1)) {
+        sep <- c(";", ",", "\t")[which.max(vapply(c(";", ",", "\t"), function(s)
+          lengths(regmatches(l1, gregexpr(s, l1, fixed = TRUE))), 1L))]
+        noms <- gsub('^"|"$', "", strsplit(l1, sep, fixed = TRUE)[[1]])
+        if ("synthetic" %in% noms) {
+          d <- utils::read.table(p, sep = sep, header = TRUE, quote = "\"", comment.char = "",
+                                 colClasses = "character", check.names = FALSE, fill = TRUE)
+          if (vrai(d[["synthetic"]])) arret(p, "colonne synthetic = TRUE")
+        }
+      }
+    } else if (ext %in% c("tif", "tiff")) {
+      m <- terra::metags(terra::rast(p))
+      # selon la version de terra : data.frame (name, value) ou matrice nommee par ligne
+      v <- if (is.data.frame(m) && all(c("name", "value") %in% names(m))) {
+        m$value[m$name == "synthetic"]
+      } else if (length(m) && "synthetic" %in% rownames(m)) m["synthetic", 1] else character(0)
+      if (vrai(v)) arret(p, "balise synthetic = TRUE")
+    } else if (ext == "gpkg") {
+      for (ly in sf::st_layers(p)$name) {
+        d <- sf::st_read(p, layer = ly, quiet = TRUE)
+        if ("synthetic" %in% names(d) && vrai(d[["synthetic"]])) arret(p, "colonne synthetic = TRUE")
+      }
+    } else if (ext == "xlsx" && requireNamespace("readxl", quietly = TRUE)) {
+      for (fe in readxl::excel_sheets(p)) {
+        if ("synthetic" %in% names(readxl::read_excel(p, sheet = fe, n_max = 0))) {
+          d <- readxl::read_excel(p, sheet = fe)
+          if (vrai(d[["synthetic"]])) arret(p, "colonne synthetic = TRUE")
+        }
+      }
+    }
+  }
+  invisible(paths)
 }
 
 #' Emprise de travail du mode réel
@@ -511,6 +574,8 @@ read_safran <- function(paths) {
 #' @param cache_dir Dossier de cache.
 #' @param offline `TRUE` : aucun téléchargement (seul le cache sert).
 #' @param downloader Voir [fetch_cached()].
+#' @param lignes_par_bloc Lignes lues à la fois : le fichier (environ 137 Mo compressé,
+#'   toute la France) est filtré à la lecture, jamais chargé en entier.
 #' @return Les chemins des fichiers `emprise_<année>.csv`.
 #' @examples
 #' \dontrun{
@@ -518,21 +583,45 @@ read_safran <- function(paths) {
 #' }
 #' @export
 fetch_safran <- function(years, emprise, cache_dir, offline = FALSE,
-                         downloader = utils::download.file) {
+                         downloader = utils::download.file, lignes_par_bloc = 200000L) {
   b <- .as_bbox(emprise)
   m <- 8000 * sqrt(2) / 2
   vapply(as.integer(years), function(y) {
     out <- file.path(cache_dir, sprintf("emprise_%d.csv", y))
     if (file.exists(out)) return(out)
     gz <- fetch_cached(sprintf(.URL_SAFRAN, y), cache_dir, offline, downloader)
-    d <- utils::read.csv2(gz, dec = ".", stringsAsFactors = FALSE, colClasses = "character")
-    ma <- .mailles_safran(data.frame(LAMBX = as.numeric(d$LAMBX), LAMBY = as.numeric(d$LAMBY)))
-    garde <- ma$maille[ma$x >= b[["xmin"]] - m & ma$x <= b[["xmax"]] + m &
-                         ma$y >= b[["ymin"]] - m & ma$y <= b[["ymax"]] + m]
-    d <- d[paste(as.numeric(d$LAMBX), as.numeric(d$LAMBY), sep = "_") %in% garde, , drop = FALSE]
-    utils::write.table(d, out, sep = ";", quote = FALSE, row.names = FALSE)
-    out
+    .filtrer_safran(gz, out, b, m, lignes_par_bloc)
   }, character(1))
+}
+
+# Lit un fichier SIM2 par blocs de lignes et n'ecrit que les mailles proches de la bbox
+# `b` (a moins de `m` metres) : la France entiere n'est jamais chargee en memoire.
+.filtrer_safran <- function(gz, out, b, m, lignes_par_bloc = 200000L) {
+  con <- gzfile(gz, "r")
+  on.exit(close(con), add = TRUE)
+  entete <- readLines(con, n = 1L)
+  tmp <- paste0(out, ".part")
+  sortie <- file(tmp, "w")
+  writeLines(entete, sortie)
+  decision <- logical(0)  # maille -> garder ?
+  repeat {
+    l <- readLines(con, n = lignes_par_bloc)
+    if (!length(l)) break
+    cle <- sub("^([^;]*;[^;]*);.*$", "\\1", l)
+    nouv <- setdiff(unique(cle), names(decision))
+    if (length(nouv)) {
+      k <- do.call(rbind, strsplit(nouv, ";", fixed = TRUE))
+      ma <- .mailles_safran(data.frame(LAMBX = as.numeric(k[, 1]), LAMBY = as.numeric(k[, 2])))
+      ok <- ma$x >= b[["xmin"]] - m & ma$x <= b[["xmax"]] + m &
+        ma$y >= b[["ymin"]] - m & ma$y <= b[["ymax"]] + m
+      decision <- c(decision, stats::setNames(ok, nouv))
+    }
+    garde <- unname(decision[cle])
+    if (any(garde)) writeLines(l[garde], sortie)
+  }
+  close(sortie)
+  file.rename(tmp, out)
+  out
 }
 
 #' Climat kilométrique à partir de SAFRAN
@@ -1060,39 +1149,60 @@ evidence_table_real <- function(f) {
 
 #' Points d'ancrage GBIF : mailles de bioindication et prédicteurs
 #'
-#' Centres des mailles de [grid_bioindication()] (maille de 50 m : précision posée à
-#' la demi-maille, 25 m, `source = "gbif"`), niveau trophique bioindiqué (moyenne de
-#' `ph` et `azote`, comme aux placettes) et extraction des prédicteurs. **La règle
-#' bloquante est appelée avant l'extraction** ([assert_no_fine_extract_on_ifn()]).
+#' Centres des mailles de [grid_bioindication()] (`source = "gbif"`), niveau trophique
+#' bioindiqué (moyenne de `ph` et `azote`, comme aux placettes) et extraction des
+#' prédicteurs. La précision de localisation d'une maille (`loc_precision_m`) est
+#' l'**incertitude maximale** des occurrences qu'elle contient (colonne `loc_precision_m`
+#' de [clean_occ()]) ; une maille sans occurrence lisible est écartée (et comptée).
+#' **La règle bloquante est appelée avant l'extraction**
+#' ([assert_no_fine_extract_on_ifn()]) : une précision supérieure à 25 m l'arrête.
 #'
-#' @param cells `sf` de [grid_bioindication()] (colonnes `ph`, `azote`).
+#' @param cells `sf` de [grid_bioindication()] (colonnes `cell_id`, `ph`, `azote`).
+#' @param occ `sf` de points de [clean_occ()] (colonne `loc_precision_m`), ceux qui ont
+#'   servi à `cells`.
 #' @param predictors `SpatRaster` des prédicteurs (fins et à maille large).
-#' @return Un `sf` de points : `cell_id`, `source`, `loc_precision_m`, `trophic`,
-#'   une colonne par couche de `predictors`.
+#' @return Un `sf` de points : `cell_id`, `source`, `loc_precision_m`, `n_occ_maille`,
+#'   `trophic`, une colonne par couche de `predictors`. Attribut `n_ecartees`.
 #' @examples
 #' cel <- sf::st_sf(cell_id = "a", ph = 5, azote = 4,
 #'   geometry = sf::st_sfc(sf::st_polygon(list(rbind(c(1015500, 6793500), c(1015550, 6793500),
 #'   c(1015550, 6793550), c(1015500, 6793550), c(1015500, 6793500)))), crs = 2154))
+#' occ <- sf::st_as_sf(data.frame(x = c(1015510, 1015520), y = 6793510,
+#'                                loc_precision_m = c(5, 12)),
+#'                     coords = c("x", "y"), crs = 2154)
 #' r <- terra::rast(xmin = 1015500, xmax = 1015600, ymin = 6793500, ymax = 6793600,
 #'                  resolution = 25, crs = "EPSG:2154", vals = 1)
 #' names(r) <- "pente"
-#' gbif_anchors(cel, r)
+#' gbif_anchors(cel, occ, r)$loc_precision_m
 #' @export
-gbif_anchors <- function(cells, predictors) {
+gbif_anchors <- function(cells, occ, predictors) {
   if (!inherits(cells, "sf") || !all(c("ph", "azote") %in% names(cells))) {
     stop("`cells` doit venir de grid_bioindication() (colonnes ph et azote).", call. = FALSE)
   }
+  if (!inherits(occ, "sf") || !"loc_precision_m" %in% names(occ)) {
+    stop("`occ` doit venir de clean_occ() (colonne loc_precision_m).", call. = FALSE)
+  }
   assert_crs_2154(cells)
-  pts <- suppressWarnings(sf::st_centroid(cells))
+  assert_crs_2154(occ)
+  j <- sf::st_intersects(cells, occ)
+  prec <- vapply(j, function(i) {
+    v <- suppressWarnings(as.numeric(occ$loc_precision_m[i]))
+    if (!length(v) || anyNA(v)) NA_real_ else max(v)
+  }, numeric(1))
+  garde <- !is.na(prec)
+  pts <- suppressWarnings(sf::st_centroid(cells[garde, ]))
   pts$source <- "gbif"
-  pts$loc_precision_m <- 25
+  pts$loc_precision_m <- prec[garde]
+  pts$n_occ_maille <- lengths(j)[garde]
   assert_no_fine_extract_on_ifn(pts, names(predictors))
   pts$trophic <- rowMeans(cbind(pts$ph, pts$azote), na.rm = TRUE)
   pts$trophic[is.nan(pts$trophic)] <- NA_real_
   xy <- sf::st_coordinates(pts)  # x = est, y = nord
   v <- terra::extract(predictors, xy)
-  out <- cbind(pts[, c("cell_id", "source", "loc_precision_m", "trophic")], v)
-  sf::st_as_sf(out)
+  out <- sf::st_as_sf(cbind(pts[, c("cell_id", "source", "loc_precision_m", "n_occ_maille",
+                                    "trophic")], v))
+  attr(out, "n_ecartees") <- sum(!garde)
+  out
 }
 
 #' Fertilité par type, ou table vide si aucun arbre n'a d'âge
@@ -1155,4 +1265,39 @@ write_types_gpkg_real <- function(path, type_table) {
     sf::st_delete(path, layer = "table_types", quiet = TRUE)
   }
   invisible(path)
+}
+
+#' Part de l'emprise non couverte par la géologie (départements BD Charm-50)
+#'
+#' La BD Charm-50 est téléchargée par département (`bdcharm_departements` de
+#' config.yml, liste explicite faute de couche des départements vérifiée). Avec
+#' `emprise: ser`, la SER peut déborder de ces départements : la fonction mesure la part
+#' de l'emprise qu'aucune formation ne couvre et **avertit** au-delà de `tol`.
+#'
+#' @param geol `sf` de [read_geology()].
+#' @param emprise `sf`/`sfc` (EPSG:2154), par exemple [real_extent()].
+#' @param departements Départements lus (pour le message).
+#' @param tol Part tolérée (0,01).
+#' @return La part non couverte (0 à 1), de façon invisible.
+#' @examples
+#' g <- read_geology(system.file("extdata", "bdcharm50_emprise_test.gpkg",
+#'                               package = "sylvostation"))
+#' e <- sf::st_as_sfc(sf::st_bbox(c(xmin = 1007000, ymin = 6790000, xmax = 1022000,
+#'                                  ymax = 6805000), crs = sf::st_crs(2154)))
+#' geology_coverage(g, e, c("067", "068", "088"))
+#' @export
+geology_coverage <- function(geol, emprise, departements = character(0), tol = 0.01) {
+  assert_crs_2154(geol)
+  e <- sf::st_union(sf::st_geometry(emprise))
+  assert_crs_2154(e)
+  couvert <- suppressWarnings(sf::st_intersection(sf::st_union(sf::st_make_valid(
+    sf::st_geometry(geol))), e))
+  a <- as.numeric(sf::st_area(e))
+  ac <- if (length(couvert)) sum(as.numeric(sf::st_area(couvert))) else 0
+  part <- max(0, 1 - ac / a)
+  if (part > tol) {
+    warning(sprintf("G\u00e9ologie : %.1f %% de l'emprise hors des d\u00e9partements BD Charm-50 lus (%s) ; compl\u00e9ter `bdcharm_departements` dans config.yml.",
+                    100 * part, paste(departements, collapse = ", ")), call. = FALSE)
+  }
+  invisible(part)
 }

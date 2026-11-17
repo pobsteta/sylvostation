@@ -9,7 +9,8 @@ fetch_safran(
   emprise,
   cache_dir,
   offline = FALSE,
-  downloader = utils::download.file
+  downloader = utils::download.file,
+  lignes_par_bloc = 200000L
 )
 }
 \arguments{
@@ -22,6 +23,9 @@ fetch_safran(
 \item{offline}{\code{TRUE} : aucun téléchargement (seul le cache sert).}
 
 \item{downloader}{Voir \code{\link[=fetch_cached]{fetch_cached()}}.}
+
+\item{lignes_par_bloc}{Lignes lues à la fois : le fichier (environ 137 Mo compressé,
+toute la France) est filtré à la lecture, jamais chargé en entier.}
 }
 \value{
 Les chemins des fichiers \verb{emprise_<année>.csv}.
