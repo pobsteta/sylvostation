@@ -25,9 +25,11 @@ Imports:
     yaml
 Suggests:
     ade4,
+    biljouR,
     blockCV,
     CAST,
     cluster,
+    euptf2,
     happign,
     indicspecies,
     knitr,
@@ -40,12 +42,16 @@ Suggests:
     rgbif,
     rmarkdown,
     rpart,
+    soiltexture,
     targets,
     testthat (>= 3.0.0),
     vegan,
     whitebox,
     readxl,
     withr
+Remotes:
+    github::pobsteta/biljouR,
+    github::tkdweber/euptf2
 Additional_repositories: https://r-lidar.r-universe.dev
 Config/testthat/edition: 3
 VignetteBuilder: knitr
