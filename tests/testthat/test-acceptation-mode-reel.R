@@ -2,20 +2,23 @@
 # de la mission 016 (R/pipeline_reel.R, _targets.R non lus). Sources :
 #  - docs/brief-technique.md § 7 (lignes 236-243) : critères d'acceptation ;
 #  - docs/spec.md (« Critères d'acceptation », état de preuve, objection B1) ;
-#  - pilotage/missions/016-mode-reel.md (clés `gnss_path`, `reference_path`, `max_tiles`,
-#    entrées absentes signalées dans l'état de preuve) et 017 (cas à couvrir) ;
+#  - pilotage/missions/016-mode-reel.md, rubrique « Contrat avec les tests d'acceptation de
+#    017 » : `offline: true` (config) = mode réel sans réseau sur les extraits de inst/extdata ;
+#    les tests lancent `demo: false, offline: true` (jamais de téléchargement) ; sorties
+#    etat_de_preuve.csv, types.tif, rapport.qmd, rapport.html ; libellés exacts
+#    « non atteint (entrée absente) » (GNSS) et « sautée (entrée absente) » (référence) ;
+#    colonne logique `azonal` dans legende_types.csv ; clés `gnss_path`, `reference_path`,
+#    `max_tiles` ; SYLVOSTATION_REEL_DIR = dossier de travail déjà exécuté (config.yml,
+#    magasin `_targets/` et sorties), seulement relu ;
 #  - CLAUDE.md (« Règles métier » : synth_, EPSG:2154, règle 700 m / 25 m) ;
 #  - man/evidence_table.Rd (colonnes etape, etat, dans_ce_run, detail), man/write_outputs.Rd.
 #
-# SAUT PROPRE : tant que le mode réel / l'interface offline n'est pas branché (la source de _targets.R avec
-# demo: false lève encore « Mode réel non branché »), les tests qui dépendent d'une
-# exécution réelle sont SAUTÉS, pas verts : un saut ne prouve rien.
+# SAUT PROPRE : seul le message exact « Mode réel non branché », levé à la sonde (source de
+# _targets.R avec demo: false), fait sauter les tests (016 non fusionnée) : un saut ne
+# prouve rien. Toute erreur de tar_make finit en rouge, même si elle cite « offline ».
 #
-# Boîte noire : on lance le pipeline en mode réel dans un dossier temporaire, avec
-# max_tiles = 1 (option décrite en 016) et SANS gnss_path ni reference_path, puis on
-# inspecte out_dir/<ser_code>/. Réseau : ces tests ne téléchargent rien eux-mêmes ; si le
-# mode réel exige le réseau, définir SYLVOSTATION_REEL_DIR vers un dossier de travail déjà
-# produit (contenant config.yml et le magasin `_targets`) : il est alors seulement relu.
+# Boîte noire : pipeline lancé une seule fois dans un dossier temporaire, avec
+# max_tiles = 1 et SANS gnss_path ni reference_path ; on inspecte out_dir/<ser_code>/.
 #
 # Non couvert : mécanisme de simulation des téléchargements de 016 (inconnu) ; noms exacts
 # des cibles et colonnes des tables de types (inconnus : recherche par motifs) ; surface
@@ -59,14 +62,12 @@ reel_run <- function() {
   # sonde : le mode réel (et l'interface offline de 016) est-il branché ?
   sonde <- tryCatch({ source("_targets.R", local = new.env()); NULL },
                     error = function(e) conditionMessage(e))
-  if (!is.null(sonde) && grepl("Mode réel non branché|offline", sonde))
+  if (!is.null(sonde) && grepl("Mode réel non branché", sonde, fixed = TRUE))
     sauter("mode réel / interface offline non branchés (mission 016 non fusionnée) : tests sautés")
   for (p in c("ranger", "CAST", "rpart", "indicspecies", "mgcv"))
     if (!requireNamespace(p, quietly = TRUE)) sauter(paste("paquet absent :", p))
   err <- tryCatch({ targets::tar_make(callr_function = NULL, reporter = "silent"); NULL },
                   error = function(e) conditionMessage(e))
-  if (!is.null(err) && grepl("offline|Mode réel non branché", err))
-    sauter("interface offline absente (016 non fusionnée) : tests sautés")
   .reel$res <- list(dir = normalizePath(d), cfg = read_config("config.yml"), erreur = err)
   # le run est mis en cache ; une erreur de tar_make fait échouer le premier test
   expect_null(err, info = "tar_make a échoué en mode réel offline")
