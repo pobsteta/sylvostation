@@ -18,6 +18,8 @@
 
 ## Terminé
 
+- [012-release-versionnage](missions/012-release-versionnage.md) · cycle 5 · dev · CI, release vAAAA.MM.N, badges
+
 - [000-critique-brief](missions/000-critique-brief.md) · cycle 1 · contradicteur
 - [001-referentiels](missions/001-referentiels.md) · cycle 1 · acquereur (fini par un agent généraliste)
 - [002-squelette](missions/002-squelette.md) · cycle 1 · dev
