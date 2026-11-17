@@ -24,7 +24,7 @@
   noms <- regmatches(txt, gregexpr("sa:TronconHydrographique_FXX_Topage[0-9]{4}", txt))[[1]]
   noms <- sort(unique(noms[grepl(.TOPAGE_LAYER_RE, noms)]), decreasing = TRUE)
   if (!length(noms)) {
-    stop("Aucune couche de tronçons de Métropole dans le service TOPAGE.", call. = FALSE)
+    stop("Aucune couche de tron\u00e7ons de M\u00e9tropole dans le service TOPAGE.", call. = FALSE)
   }
   noms[1]
 }
@@ -71,10 +71,10 @@ get_hydro_network <- function(emprise, source = c("wfs", "file"), path = NULL,
   b <- .as_bbox(emprise)
   if (source == "file") {
     if (is.null(path) || !file.exists(path)) {
-      stop("`path` doit désigner un fichier existant avec source = \"file\".", call. = FALSE)
+      stop("`path` doit d\u00e9signer un fichier existant avec source = \"file\".", call. = FALSE)
     }
     x <- sf::st_read(path, quiet = TRUE)
-    if (is.na(sf::st_crs(x))) stop("Extrait sans système de coordonnées.", call. = FALSE)
+    if (is.na(sf::st_crs(x))) stop("Extrait sans syst\u00e8me de coordonn\u00e9es.", call. = FALSE)
     x <- sf::st_transform(x, 2154)
     x <- x[lengths(sf::st_intersects(x, sf::st_as_sfc(b))) > 0, , drop = FALSE]
     couche <- basename(path)
@@ -93,7 +93,7 @@ get_hydro_network <- function(emprise, source = c("wfs", "file"), path = NULL,
       status <- utils::download.file(.wfs_url(.TOPAGE_URL, q), tmp, mode = "wb", quiet = TRUE)
       if (!identical(as.integer(status), 0L)) {
         unlink(tmp)
-        stop("Requête WFS BD TOPAGE impossible.", call. = FALSE)
+        stop("Requ\u00eate WFS BD TOPAGE impossible.", call. = FALSE)
       }
       p <- sf::st_read(tmp, quiet = TRUE)
       unlink(tmp)
@@ -112,7 +112,7 @@ get_hydro_network <- function(emprise, source = c("wfs", "file"), path = NULL,
   assert_crs_2154(x)
   geom <- as.character(sf::st_geometry_type(x))
   if (nrow(x) && !all(geom %in% c("LINESTRING", "MULTILINESTRING"))) {
-    stop("Le réseau doit être composé de lignes.", call. = FALSE)
+    stop("Le r\u00e9seau doit \u00eatre compos\u00e9 de lignes.", call. = FALSE)
   }
   attr(x, "couche") <- couche
   x
@@ -145,7 +145,7 @@ height_above_network <- function(dtm, network) {
   .check_dtm(dtm)
   if (inherits(network, "sf")) network <- terra::vect(network)
   if (!inherits(network, "SpatVector") || terra::geomtype(network) != "lines") {
-    stop("`network` doit être un SpatVector ou sf de lignes.", call. = FALSE)
+    stop("`network` doit \u00eatre un SpatVector ou sf de lignes.", call. = FALSE)
   }
   assert_crs_2154(network)
   out <- .height_above_streams(dtm, network)

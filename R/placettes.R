@@ -286,7 +286,7 @@ ru_coefficients <- function(source = c("bruand2004", "provisoire")) {
     return(structure(
       c("0" = 0, "1" = 0.7, "2" = 1.0, "3" = 1.1, "4" = 1.4, "5" = 1.6,
         "6" = 1.7, "7" = 1.5, "8" = 1.3, "9" = 1.4, "H" = NA_real_),
-      verifie = FALSE, source = "provisoire (non publié)", unite = "mm/cm"))
+      verifie = FALSE, source = "provisoire (non publi\u00e9)", unite = "mm/cm"))
   }
   # Bruand et al. 2004, tableau 2, p. 328 : reserve utile "defaut" (mm/cm),
   # sans prise en compte de Da, 15 classes du triangle de l'Aisne.
@@ -324,11 +324,11 @@ ru_coefficients <- function(source = c("bruand2004", "provisoire")) {
   if (is.list(ru_table)) {
     if (!all(c("haut", "bas") %in% names(ru_table)) ||
         !ok_vec(ru_table$haut) || !ok_vec(ru_table$bas)) {
-      stop("`ru_table` doit être un vecteur numérique nommé par code de texture ",
+      stop("`ru_table` doit \u00eatre un vecteur num\u00e9rique nomm\u00e9 par code de texture ",
            "ou une liste `haut`, `bas` de tels vecteurs.", call. = FALSE)
     }
   } else if (!ok_vec(ru_table)) {
-    stop("`ru_table` doit être un vecteur numérique nommé par code de texture.",
+    stop("`ru_table` doit \u00eatre un vecteur num\u00e9rique nomm\u00e9 par code de texture.",
          call. = FALSE)
   }
   invisible(TRUE)

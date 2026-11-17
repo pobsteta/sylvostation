@@ -151,7 +151,7 @@ load_indicator_values <- function(source = c("tichy", "ecoplant", "baseflor"), p
          "docs/referentiels.md, par. 14. Utiliser source = \"tichy\".", call. = FALSE)
   }
   if (source == "ecoplant") {
-    stop("EcoPlant est une donnée AgroParisTech sur demande, jamais dans le dépôt ",
+    stop("EcoPlant est une donn\u00e9e AgroParisTech sur demande, jamais dans le d\u00e9p\u00f4t ",
          "(docs/referentiels.md, par. 14). Utiliser source = \"tichy\".", call. = FALSE)
   }
   if (is.character(taxref)) taxref <- read_taxref(taxref)
@@ -216,7 +216,7 @@ load_indicator_values <- function(source = c("tichy", "ecoplant", "baseflor"), p
     rownames(out) <- NULL
     motif <- ifelse(is.na(r$CD_NOM), "CD_NOM absent de TAXREF",
                     ifelse(rang %in% c("GN", "FM", "OR", "CLAD", "SC", "SPTR"),
-                           "rang supérieur à l'espèce", "nom absent de la source"))
+                           "rang sup\u00e9rieur \u00e0 l'esp\u00e8ce", "nom absent de la source"))
     nonapp <- data.frame(cd_ref = suppressWarnings(as.numeric(taxa[!ok])), nom = nom[!ok],
                          rang = rang[!ok], motif = motif[!ok], stringsAsFactors = FALSE)
   }
