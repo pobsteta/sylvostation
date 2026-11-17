@@ -29,7 +29,7 @@ _Délégation totale._
 
 ## Harnais
 
-- **Peut (périmètre) :** `_targets.R`, `R/pipeline_reel.R` (nouveau), `R/config.R`, `config.yml` (nouvelles clés, `demo` reste `true` par défaut), `docs/pipeline.md`, `inst/quarto/` ou le gabarit du rapport, tests `test-pipeline-reel.R`, `DESCRIPTION`, `NAMESPACE`, `man/`, `.github/workflows/ci.yml` (étape de tests depuis la racine).
+- **Peut (périmètre) :** `inst/extdata/` (extrait SAFRAN des 12 mailles, `SOURCES.md`), `_targets.R`, `R/pipeline_reel.R` (nouveau), `R/config.R`, `config.yml` (nouvelles clés, `demo` reste `true` par défaut), `docs/pipeline.md`, `inst/quarto/` ou le gabarit du rapport, tests `test-pipeline-reel.R`, `DESCRIPTION`, `NAMESPACE`, `man/`, `.github/workflows/ci.yml` (étape de tests depuis la racine).
 - **Câblé :** pas de `main` ; journal en ajout seul ; `assert_no_fine_extract_on_ifn()` appelée par toute extraction.
 - **Ne doit pas :** versionner une donnée téléchargée ; remplacer une entrée absente par du synthétique en mode réel ; toucher aux tests d'acceptation de la mission 017.
 - **Sources autorisées :** `docs/`, `R/`, journal.
