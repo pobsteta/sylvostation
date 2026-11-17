@@ -4,6 +4,10 @@
 
 .CLASSES_SOL <- c(2L, 9L, 66L)
 
+# Classes exclues du MHC (maximum des hauteurs) : 66 points virtuels (referentiels, § 17).
+.CLASSES_EXCLUES_MHC <- 66L
+.FILTRE_MHC <- paste0("Classification %out% ", paste(.CLASSES_EXCLUES_MHC, collapse = " "))
+
 # Identifiant de dalle « XXXX-YYYY » lu dans un nom de fichier LHD_FXX_XXXX_YYYY_*, sinon NA.
 .tile_id_from_name <- function(f) {
   m <- regmatches(basename(f), regexec("LHD_FXX_(\\d{4})_(\\d{4})", basename(f)))[[1]]
@@ -35,9 +39,11 @@
   tri <- lasR::triangulate(filter = filtre_sol)
   mnt <- lasR::rasterize(res, tri, ofile = file.path(raw_dir, "*_mnt.tif"))
   nrm <- lasR::transform_with(tri, "-")
-  # Exclusion provisoire (décision par délégation). Classes 65 (artefacts) et 66 (points virtuels) exclues du MHC : à vérifier (nomenclature
-  # complète des classes LiDAR HD non reprise dans docs/referentiels.md).
-  mhc <- lasR::rasterize(res, "max", filter = "Classification %out% 65 66",
+  # MHC : classe 66 (points virtuels, artefacts du modele du sol) exclue ; la classe 65
+  # n'existe pas dans la nomenclature de juillet 2026 (docs/referentiels.md, § 17) et n'est
+  # plus citee. Classes 64 (sursol perenne) et 67 (divers - bati) conservees : a trancher
+  # apres un decompte sur dalle (§ 17).
+  mhc <- lasR::rasterize(res, "max", filter = .FILTRE_MHC,
                          ofile = file.path(raw_dir, "*_mhc.tif"))
   pipeline <- lasR::reader() + tri + mnt + nrm + mhc
   lasR::exec(pipeline, on = files,

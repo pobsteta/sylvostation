@@ -91,3 +91,18 @@ Extraits le 2026-11-16, mission 001 (voir `docs/referentiels.md`, § 5 et § 7).
   mêmes colonnes `cd_ref`, `ph`, `azote` (ajouter la jointure `CD_NOM` vers `CD_REF`).
 - **Licence :** sans objet (données fabriquées) ; les libellés viennent de l'IFN
   (Licence Ouverte Etalab 2.0).
+
+## `topage_troncons_extrait.gpkg` (mission 014)
+
+- **Source :** BD TOPAGE (Sandre/OFB), tronçons hydrographiques de Métropole, couche
+  `sa:TronconHydrographique_FXX_Topage2025`, service WFS
+  `https://services.sandre.eaufrance.fr/geo/topage2025` (docs/referentiels.md, § 16),
+  lue le 2026-11-17 par `get_hydro_network()` sur la boîte Lambert-93
+  `1014500, 6792500, 1016500, 6794500` (x = est, y = nord) autour de la dalle LiDAR 1015-6794.
+- **Contenu :** 10 tronçons (8 permanents, 2 intermittents), EPSG:2154, colonnes TOPAGE
+  non vides conservées ; colonnes de service GML (`gml_id`, `lowerCorner`, `upperCorner`)
+  retirées. Tronçons réels, pas de donnée synthétique.
+- **Licence : Licence Ouverte (Etalab).** Les fiches Sandre 2022 (v1.0) et 2024 (v2.0) la
+  donnent ; **la fiche 2025 n'a pas été lue** (référentiels § 16) : à confirmer avant toute
+  republication hors de ce dépôt. Les tronçons 2025 viennent des tronçons de la BD TOPO de
+  l'IGN (édition de décembre 2023).

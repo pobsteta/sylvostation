@@ -4,7 +4,12 @@
 \alias{derive_terrain}
 \title{Variables dérivées du MNT (prédicteurs fins)}
 \usage{
-derive_terrain(dtm, tpi_radii = c(100, 300, 1000), streams = NULL)
+derive_terrain(
+  dtm,
+  tpi_radii = c(100, 300, 1000),
+  streams = NULL,
+  mrvbf = FALSE
+)
 }
 \arguments{
 \item{dtm}{\code{SpatRaster} à une couche, EPSG:2154, maille carrée, altitudes en mètres.}
@@ -13,6 +18,10 @@ derive_terrain(dtm, tpi_radii = c(100, 300, 1000), streams = NULL)
 
 \item{streams}{Réseau hydrographique (BD TOPAGE) : \code{SpatVector} ou \code{sf} de lignes en
 EPSG:2154, ou \code{NULL}.}
+
+\item{mrvbf}{\code{TRUE} pour calculer le MRVBF par GRASS (lent : 2 à 4 minutes mesurées pour 1 600 à
+57 600 cellules) ; \code{FALSE} (défaut) laisse la couche à \code{NA} avec
+avertissement. Le pipeline en mode réel doit passer \code{TRUE}.}
 }
 \value{
 Un \code{SpatRaster} multicouche nommé.
@@ -42,10 +51,13 @@ de 0,1 degré pour éviter les infinis ;
 \item \code{surface_drainee} (m2) : accumulation D8 (O'Callaghan et Mark 1984) calculée en R,
 \strong{sans remplissage des cuvettes} (elles retiennent l'eau). Sur un MNT réel,
 prétraitement hydrologique \strong{à vérifier} ;
-\item \code{mrvbf} : \strong{non calculé} (\code{NA} et avertissement de classe
-\code{sylvostation_non_calcule}) : MRVBF reste \code{NA} tant qu'aucune branche whitebox
-n'est écrite (binaire WhiteboxTools absent de l'environnement) ;
-\item \code{hauteur_reseau} (m) : altitude moins celle de la cellule de cours d'eau la plus
+\item \code{mrvbf} : indice multi-résolution de fond de vallée (Gallant et Dowling 2003), par
+l'extension GRASS \code{r.valley.bottom} (\code{whitebox} n'a pas d'outil MRVBF, référentiels
+§ 20), paramètres \strong{par défaut} de l'extension (provisoires). \code{NA} et avertissement
+de classe \code{sylvostation_non_calcule} si \code{mrvbf = FALSE} ou si GRASS (\code{grass}) ou
+l'extension est absent.
+Calcul lent (2 à 4 minutes mesurées pour 1 600 à 57 600 cellules) ;
+#' * \code{hauteur_reseau} (m), voir \code{\link[=height_above_network]{height_above_network()}} : altitude moins celle de la cellule de cours d'eau la plus
 proche à vol d'oiseau (différence d'altitude, pas un HAND le long de
 l'écoulement) ; \code{NA} avec avertissement si \code{streams} est \code{NULL} ;
 \item \code{rayonnement} (kWh/m2/an) : rayonnement direct potentiel \strong{hors atmosphère et sans

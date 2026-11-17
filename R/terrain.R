@@ -76,10 +76,13 @@ aggregate_dtm <- function(dtm, res = c(5, 25)) {
 #' * `surface_drainee` (m2) : accumulation D8 (O'Callaghan et Mark 1984) calculée en R,
 #'   **sans remplissage des cuvettes** (elles retiennent l'eau). Sur un MNT réel,
 #'   prétraitement hydrologique **à vérifier** ;
-#' * `mrvbf` : **non calculé** (`NA` et avertissement de classe
-#'   `sylvostation_non_calcule`) : MRVBF reste `NA` tant qu'aucune branche whitebox
-#'   n'est écrite (binaire WhiteboxTools absent de l'environnement) ;
-#' * `hauteur_reseau` (m) : altitude moins celle de la cellule de cours d'eau la plus
+#' * `mrvbf` : indice multi-résolution de fond de vallée (Gallant et Dowling 2003), par
+#'   l'extension GRASS `r.valley.bottom` (`whitebox` n'a pas d'outil MRVBF, référentiels
+#'   § 20), paramètres **par défaut** de l'extension (provisoires). `NA` et avertissement
+#'   de classe `sylvostation_non_calcule` si `mrvbf = FALSE` ou si GRASS (`grass`) ou
+#'   l'extension est absent.
+#'   Calcul lent (2 à 4 minutes mesurées pour 1 600 à 57 600 cellules) ;
+#' #' * `hauteur_reseau` (m), voir [height_above_network()] : altitude moins celle de la cellule de cours d'eau la plus
 #'   proche à vol d'oiseau (différence d'altitude, pas un HAND le long de
 #'   l'écoulement) ; `NA` avec avertissement si `streams` est `NULL` ;
 #' * `rayonnement` (kWh/m2/an) : rayonnement direct potentiel **hors atmosphère et sans
@@ -92,6 +95,9 @@ aggregate_dtm <- function(dtm, res = c(5, 25)) {
 #'
 #' @param dtm `SpatRaster` à une couche, EPSG:2154, maille carrée, altitudes en mètres.
 #' @param tpi_radii Rayons du TPI, en mètres.
+#' @param mrvbf `TRUE` pour calculer le MRVBF par GRASS (lent : 2 à 4 minutes mesurées pour 1 600 à
+#'   57 600 cellules) ; `FALSE` (défaut) laisse la couche à `NA` avec
+#'   avertissement. Le pipeline en mode réel doit passer `TRUE`.
 #' @param streams Réseau hydrographique (BD TOPAGE) : `SpatVector` ou `sf` de lignes en
 #'   EPSG:2154, ou `NULL`.
 #' @return Un `SpatRaster` multicouche nommé.
@@ -102,7 +108,8 @@ aggregate_dtm <- function(dtm, res = c(5, 25)) {
 #'   suppressWarnings(names(derive_terrain(d, tpi_radii = 100)))
 #' }
 #' @export
-derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL) {
+derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
+                           mrvbf = FALSE) {
   .check_dtm(dtm)
   if (!is.numeric(tpi_radii) || !length(tpi_radii) || anyNA(tpi_radii) ||
       any(tpi_radii <= 0)) {
@@ -133,18 +140,61 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL) {
   } else {
     hand <- .height_above_streams(dtm, streams)
   }
-  .warn_non_calcule("`mrvbf` non calcul\u00e9 (NA) : WhiteboxTools indisponible, \u00e0 v\u00e9rifier.")
-  mrvbf <- dtm * NA
+  if (isTRUE(mrvbf)) {
+    mrvbf_r <- .mrvbf_grass(dtm)
+  } else {
+    .warn_non_calcule("`mrvbf` non demand\u00e9 (`mrvbf = FALSE`) : NA (calcul GRASS lent).")
+    mrvbf_r <- dtm * NA
+  }
 
   ray <- .radiation_layer(dtm, slope, asp)
 
   # terra renvoie 90 degres sur terrain plat : exposition indefinie => NA
   asp <- terra::ifel(slope == 0, NA, asp)
   out <- c(slope, cos(asp), sin(asp), curv, terra::rast(tpis), twi, acc * L^2,
-           mrvbf, hand, ray)
+           mrvbf_r, hand, ray)
   names(out) <- c("pente", "exposition_cos", "exposition_sin", "courbure",
                   "courbure_plan", "courbure_profil", tpi_names, "twi",
                   "surface_drainee", "mrvbf", "hauteur_reseau", "rayonnement")
+  out
+}
+
+# MRVBF par GRASS (extension r.valley.bottom) dans un projet temporaire : le MNT est
+# ecrit en GeoTIFF, lu par r.in.gdal, le resultat relu par terra. Sans GRASS, ou si
+# l'extension echoue : NA et avertissement `sylvostation_non_calcule`.
+.mrvbf_grass <- function(dtm, grass = Sys.which("grass")) {
+  na_out <- function(msg) {
+    .warn_non_calcule(paste0("`mrvbf` non calcul\u00e9 (NA) : ", msg))
+    dtm * NA
+  }
+  if (!nzchar(grass)) return(na_out("GRASS GIS (`grass`) introuvable, \u00e0 installer."))
+  dir <- tempfile("mrvbf_")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  inp <- file.path(dir, "in.tif")
+  outp <- file.path(dir, "out.tif")
+  terra::writeRaster(dtm, inp, datatype = "FLT8S")
+  sh <- file.path(dir, "run.sh")
+  writeLines(c("set -e",
+               paste0("r.in.gdal input='", inp, "' output=dem --quiet"),
+               "g.region raster=dem",
+               "r.valley.bottom elevation=dem mrvbf=mrvbf --quiet",
+               paste0("r.out.gdal input=mrvbf output='", outp,
+                      "' format=GTiff --overwrite --quiet -c -m")), sh)
+  res <- suppressWarnings(system2(grass, c("--tmp-project", shQuote(inp), "--exec", "sh",
+                                           shQuote(sh)), stdout = TRUE, stderr = TRUE))
+  if (!file.exists(outp)) {
+    return(na_out(paste0("\u00e9chec de GRASS ou de l'extension `r.valley.bottom` (",
+                         "g.extension extension=r.valley.bottom) : ",
+                         paste(utils::tail(res, 2), collapse = " "))))
+  }
+  m <- terra::rast(outp)
+  if (!all(c(terra::nrow(m), terra::ncol(m)) == c(terra::nrow(dtm), terra::ncol(dtm))) ||
+      !isTRUE(all.equal(as.vector(terra::ext(m)), as.vector(terra::ext(dtm))))) {
+    return(na_out("grille de sortie de GRASS diff\u00e9rente de celle du MNT."))
+  }
+  out <- dtm * NA
+  terra::values(out) <- terra::values(m, mat = FALSE)
   out
 }
 
