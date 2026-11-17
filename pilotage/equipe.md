@@ -56,6 +56,7 @@ le `testeur` de la mission 011, sans lire le code.
 | [014 MRVBF et hauteur au-dessus du réseau](missions/014-terrain-complements.md) | `dev` | sonnet | donner | oui · oui après 013 · oui | 5 |
 | [015 indicateurs et pédotransfert réels](missions/015-indicateurs-sols-reels.md) | `dev` | sonnet | donner | oui · oui après 013 · oui si source joignable | 5 |
 | [016 mode réel du pipeline](missions/016-mode-reel.md) | `dev` | opus | prendre | oui · oui · oui (GNSS, AgroParisTech optionnels) | 5 |
+| [019 gradient hydrique par biljouR](missions/019-gradient-hydrique-biljour.md) | `dev` | opus | donner | oui · oui · oui | 5 |
 | [017 tests d'acceptation du mode réel](missions/017-tests-mode-reel.md) | `testeur` | sonnet | donner | oui · oui · oui | 5 |
 | [018 exécution sur la SER pilote](missions/018-execution-ser-pilote.md) | `dev` | sonnet | donner | oui · oui après 016 · oui (≈ 42 Go, ≈ 6 h) | 5 |
 

@@ -19,7 +19,8 @@
 
 - [014-terrain-complements](missions/014-terrain-complements.md) · après 013 · dev
 - [015-indicateurs-sols-reels](missions/015-indicateurs-sols-reels.md) · après 013 · dev
-- [016-mode-reel](missions/016-mode-reel.md) · après 014, 015 · dev (opus)
+- [019-gradient-hydrique-biljour](missions/019-gradient-hydrique-biljour.md) · cycle 5 · dev (opus)
+- [016-mode-reel](missions/016-mode-reel.md) · après 014, 015, 019 · dev (opus)
 - [018-execution-ser-pilote](missions/018-execution-ser-pilote.md) · après 016, 017 · dev
 
 ## Terminé
