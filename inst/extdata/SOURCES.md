@@ -91,3 +91,36 @@ Extraits le 2026-11-16, mission 001 (voir `docs/referentiels.md`, § 5 et § 7).
   mêmes colonnes `cd_ref`, `ph`, `azote` (ajouter la jointure `CD_NOM` vers `CD_REF`).
 - **Licence :** sans objet (données fabriquées) ; les libellés viennent de l'IFN
   (Licence Ouverte Etalab 2.0).
+
+## `tichy_2023_extrait.csv` (mission 015, RÉEL)
+
+- **Source :** Tichý L., Axmanová I., Dengler J. et al. (2023), « Ellenberg-type indicator
+  values for European vascular plant species », *Journal of Vegetation Science* 34,
+  e13168. Jeu Zenodo `https://zenodo.org/records/7427088`, DOI `10.5281/zenodo.7427088`,
+  version 2.0 (2022-11-07), fichier `Indicator.values-tables-2022-11-07-Zenodo.v2.xlsx`
+  (19 503 599 octets, MD5 `3519d41639647dde8d80042fc98b2ef5`), téléchargé le 2026-11-17.
+- **Traitement :** feuille `Tab-IVs-Tichy-et-al2023`, **189 taxons** sur 8 908 : ceux qui
+  s'apparient aux espèces de `ifn_flore.csv` (nom, binôme, agrégat « binôme aggr. » ou synonyme TAXREF). Colonnes
+  d'origine `SeqID`, `Taxon`, `MOISTURE`, `REACTION`, `NUTRIENTS` ; `LIGHT`,
+  `TEMPERATURE`, `SALINITY` vidées. `x` (indifférent) devient une case vide. Script :
+  `inst/scripts/extraire_indicateurs.R`. Le fichier complet se télécharge à l'exécution,
+  hors dépôt.
+- **Licence :** CC BY 4.0 (champ `license` de l'API Zenodo). À citer : Tichý et al. (2023).
+  **Partage à l'identique :** les valeurs de Julve (2015) pour la France, reprises par Tichý et al., sont
+  peut-être sous CC BY-SA 2.0 (Tela Botanica) ; si c'est le cas, toute redistribution de cet extrait
+  (et de ses dérivés) devrait se faire sous la même licence ; point à trancher par Pascal.
+  Réserve connue : le jeu reprend les valeurs de Julve (2015) pour la France, annoncées
+  CC BY-SA 2.0 par Tela Botanica (écart de licence non résolu, `docs/referentiels.md`, § 14).
+- **Noms :** Euro+Med, pas TAXREF ; jointure par nom latin.
+
+## `taxref_v18_extrait.csv` (mission 015, RÉEL)
+
+- **Source :** MNHN/PatriNat, TAXREF v18 (2025),
+  `https://assets.patrinat.fr/files/referentiel/TAXREF_v18_2025.zip` (60 582 042 octets),
+  fichier `TAXREFv18.txt` (708 685 lignes), téléchargé le 2026-11-17.
+- **Traitement :** 4 colonnes (`CD_NOM`, `CD_REF`, `LB_NOM`, `RANG`), 2 248 lignes : les
+  269 `CD_NOM` de la flore IFN (qui est en v13.0 ; un `CD_NOM` ne change pas pour un nom
+  donné), leurs `CD_REF`, leurs synonymes de rang espèce, et les lignes dont `LB_NOM` est
+  dans l'extrait Tichý. Script : `inst/scripts/extraire_indicateurs.R`.
+- **Licence :** Licence Ouverte (data.gouv.fr : `lov2`, `fr-lo` ; la page PatriNat ne cite
+  aucune licence, écart déjà noté `docs/referentiels.md` § 15).

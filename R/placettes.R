@@ -240,24 +240,98 @@ unmatched_taxa <- function(flore, indicateurs) {
 #' argileux, 4 limon sableux, 5 limon argileux, 6 limon, 7 argile limoneuse,
 #' 8 argile sablo-limoneuse, 9 argile, H texture organique).
 #'
-#' **Valeurs à vérifier.** La méthode (réserve utile par pédotransfert à partir de la
-#' texture, de la profondeur et de la charge en éléments grossiers) s'inspire de
-#' Jamagne M., Bétrémieux R., Bégon J.C., Mori A. (1977), travaux sur la réserve en
-#' eau des sols de la région agricole française (référence citée de mémoire,
-#' non consultée : titre et pagination à vérifier). Les coefficients ci-dessous
-#' sont des ordres de grandeur **non repris de cette publication** ; ils ne doivent
-#' pas être utilisés tels quels pour une décision. Remplacer par la table publiée via
-#' l'argument `ru_table` de [compute_gradients()]. `H` vaut `NA` : la couche organique
-#' n'est pas comptée (à trancher).
+#' **`source = "bruand2004"` (défaut)** : table publiée. Bruand A., Duval O., Cousin I.
+#' (2004), « Estimation des propriétés de rétention en eau des sols à partir de la base
+#' de données SOLHYDRO : une première proposition combinant le type d'horizon, sa
+#' texture et sa densité apparente », *Étude et Gestion des Sols* 11(3) : 323-332,
+#' **tableau 2, p. 328**, colonnes « sans prise en compte de la densité apparente »
+#' (valeurs relues par le relecteur de la mission 013, `docs/referentiels.md` § 18).
+#' On retient la réserve en eau utile **« défaut »** (θ à pF 2,0 moins θ à pF 4,2),
+#' la plus basse des deux, par prudence. La table distingue l'horizon **A**
+#' (`TEXT1`, horizon supérieur) et les horizons **E, B, C** (`TEXT2`) : le résultat
+#' est une liste `list(haut = , bas = )` de deux vecteurs nommés, acceptée par
+#' l'argument `ru_table` de [compute_gradients()]. Attribut `verifie = TRUE` (le
+#' tableau lui-même est relu).
 #'
-#' @return Un vecteur numérique nommé par code de texture, attribut `verifie = FALSE`.
+#' Trois hypothèses du code, **non publiées** : (1) la correspondance des codes IFN
+#' avec les classes du triangle de l'Aisne, faite par les noms (la légende complète du
+#' triangle n'est pas dans les pages lues) : **à vérifier, provisoire**. Un code
+#' ambigu prend la **moyenne** des classes candidates qui ont une valeur : 4 = LS (LLS
+#' sans valeur), 5 = LA, LAS, LSA, 6 = LL, LM, LMS (LL sans valeur), 9 = A, ALO (A sans
+#' valeur en horizon A) ; 1 = S, 2 = SL, 3 = SA, 7 = AL, 8 = AS. Attribut
+#' `correspondance_verifiee = FALSE` : tant qu'il l'est, `compute_gradients()` rend
+#' `ru_verifie = FALSE` ; (2) `TEXT1` est pris pour un horizon A, `TEXT2` pour un
+#' horizon E, B ou C ; (3) LS n'a pas de valeur en horizons E, B, C : on prend alors la
+#' valeur de l'horizon A (repli signalé). Les écarts types de l'article (0,14 à
+#' 0,53 mm/cm) ne sont pas propagés. `H` vaut `NA` (la couche organique n'est pas
+#' comptée), `0` vaut 0.
+#'
+#' **`source = "provisoire"`** : ordres de grandeur **non publiés** de la mission
+#' 005 (vecteur unique pour les deux horizons), attribut `verifie = FALSE` ; conservés
+#' pour la comparaison.
+#'
+#' @param source `"bruand2004"` ou `"provisoire"`.
+#' @return `"bruand2004"` : liste `haut`, `bas` ; `"provisoire"` : vecteur nommé par
+#'   code de texture. Dans les deux cas, attributs `verifie`, `source`, `unite`
+#'   (`"mm/cm"`).
 #' @examples
 #' ru_coefficients()
+#' ru_coefficients("provisoire")
 #' @export
-ru_coefficients <- function() {
-  structure(c("0" = 0, "1" = 0.7, "2" = 1.0, "3" = 1.1, "4" = 1.4, "5" = 1.6,
-              "6" = 1.7, "7" = 1.5, "8" = 1.3, "9" = 1.4, "H" = NA_real_),
-            verifie = FALSE)
+ru_coefficients <- function(source = c("bruand2004", "provisoire")) {
+  source <- match.arg(source)
+  if (source == "provisoire") {
+    return(structure(
+      c("0" = 0, "1" = 0.7, "2" = 1.0, "3" = 1.1, "4" = 1.4, "5" = 1.6,
+        "6" = 1.7, "7" = 1.5, "8" = 1.3, "9" = 1.4, "H" = NA_real_),
+      verifie = FALSE, source = "provisoire (non publié)", unite = "mm/cm"))
+  }
+  # Bruand et al. 2004, tableau 2, p. 328 : reserve utile "defaut" (mm/cm),
+  # sans prise en compte de Da, 15 classes du triangle de l'Aisne.
+  # NA = "-" dans l'article (pas de valeur).
+  b <- data.frame(
+    aisne = c("ALO", "AL", "AS", "A", "LA", "LAS", "LSA", "LM", "LMS", "LS", "LLS", "LL",
+              "SA", "SL", "S"),
+    haut  = c(1.24, 1.36, 1.73, NA, 1.73, 1.67, 1.43, 2.13, 1.83, 1.62, NA, NA,
+              1.28, 1.31, 0.60),   # horizon A
+    bas   = c(1.12, 1.13, 0.95, 0.93, 1.49, 1.48, 1.27, 2.07, 1.96, NA, NA, NA,
+              1.03, 1.16, 0.73),   # horizons E, B, C
+    stringsAsFactors = FALSE)
+  # Correspondance code IFN -> classes candidates (PROVISOIRE, non publiee, par les noms) :
+  # un code ambigu prend la moyenne des classes candidates qui ont une valeur.
+  corr <- list("1" = "S", "2" = "SL", "3" = "SA", "4" = c("LS", "LLS"),
+               "5" = c("LA", "LAS", "LSA"), "6" = c("LL", "LM", "LMS"),
+               "7" = "AL", "8" = "AS", "9" = c("A", "ALO"))
+  moy <- function(classes, col) {
+    v <- b[[col]][match(classes, b$aisne)]
+    if (all(is.na(v))) NA_real_ else mean(v, na.rm = TRUE)
+  }
+  haut <- vapply(corr, moy, numeric(1), col = "haut")
+  bas  <- vapply(corr, moy, numeric(1), col = "bas")
+  haut2 <- ifelse(is.na(haut), bas, haut)   # repli : valeur de l'autre type d'horizon
+  bas2  <- ifelse(is.na(bas), haut, bas)    # (code 4, LS en horizons E, B, C : valeur de A)
+  haut <- stats::setNames(c(0, haut2, NA_real_), c("0", names(corr), "H"))
+  bas  <- stats::setNames(c(0, bas2,  NA_real_), c("0", names(corr), "H"))
+  structure(list(haut = haut, bas = bas), verifie = TRUE, correspondance_verifiee = FALSE,
+            source = paste("Bruand, Duval et Cousin (2004), Etude et Gestion des Sols 11(3),",
+                           "323-332, tableau 2 p. 328, colonne defaut, sans Da"),
+            unite = "mm/cm", correspondance = corr)
+}
+
+# Valide `ru_table` : vecteur nomme, ou liste(haut, bas) de vecteurs nommes
+.check_ru_table <- function(ru_table) {
+  ok_vec <- function(x) is.numeric(x) && !is.null(names(x))
+  if (is.list(ru_table)) {
+    if (!all(c("haut", "bas") %in% names(ru_table)) ||
+        !ok_vec(ru_table$haut) || !ok_vec(ru_table$bas)) {
+      stop("`ru_table` doit être un vecteur numérique nommé par code de texture ",
+           "ou une liste `haut`, `bas` de tels vecteurs.", call. = FALSE)
+    }
+  } else if (!ok_vec(ru_table)) {
+    stop("`ru_table` doit être un vecteur numérique nommé par code de texture.",
+         call. = FALSE)
+  }
+  invisible(TRUE)
 }
 
 # Reserve utile (mm) : somme sur les deux horizons (epaisseur cm x coefficient mm/cm),
@@ -266,9 +340,11 @@ ru_coefficients <- function() {
 # PROF1 < PROF2 sur tous les extraits. Sans fosse (OBSPEDO 5 ou X) : NA.
 .reserve_utile <- function(pl, ru_table) {
   col <- function(v) if (v %in% names(pl)) pl[[v]] else rep(NA_character_, nrow(pl))
-  coef <- function(code) {
+  tab_haut <- if (is.list(ru_table)) ru_table$haut else ru_table
+  tab_bas <- if (is.list(ru_table)) ru_table$bas else ru_table
+  coef <- function(code, tab) {
     k <- toupper(as.character(code))
-    v <- unname(ru_table[k])
+    v <- unname(tab[k])
     v[is.na(k)] <- NA_real_
     v
   }
@@ -277,9 +353,9 @@ ru_coefficients <- function() {
   deux <- !is.na(p1) & !is.na(col("TEXT1"))
   ep_haut <- ifelse(deux, p1, 0)
   ep_bas <- p2 - ifelse(deux, p1, 0)
-  c_haut <- ifelse(deux, coef(col("TEXT1")), 0)
+  c_haut <- ifelse(deux, coef(col("TEXT1"), tab_haut), 0)
   c_haut[is.na(c_haut)] <- 0   # couche organique ou code inconnu : non comptee
-  c_bas <- coef(col("TEXT2"))
+  c_bas <- coef(col("TEXT2"), tab_bas)
   c_bas[!is.na(col("TEXT2")) & is.na(c_bas)] <- 0
   cail <- .num(col("CAILLOUX"))
   cail[toupper(col("CAILLOUX")) %in% "X"] <- 0
@@ -336,7 +412,11 @@ ru_coefficients <- function() {
 #'   soit le nom des couches ; agréger avant avec [aggregate_to_km()].
 #' @param min_res_ifn_m Maille minimale (m) d'une couche croisée avec des placettes
 #'   IFN : 1000 (brief technique, étape 5 : climat et pH agrégés à 1 km).
-#' @param ru_table Vecteur nommé de coefficients mm/cm par code de texture.
+#' @param ru_table Vecteur nommé de coefficients mm/cm par code de texture, ou liste
+#'   `haut`, `bas` (horizon supérieur `TEXT1`, horizon inférieur `TEXT2`), voir
+#'   [ru_coefficients()]. `ru_verifie` du résultat vaut `TRUE` seulement
+#'   si `verifie` est vrai et si `correspondance_verifiee` n'est pas faux ; l'attribut
+#'   `correspondance_verifiee` est repris tel quel.
 #' @return Un `sf` (Lambert-93) : `id_placette`, `CAMPAGNE`, `IDP`, `source`,
 #'   `loc_precision_m`, `n_taxa_indic`, `grad_ph`, `grad_azote`, `grad_trophique`,
 #'   `ru_mm`, `engorg_prof_cm`, `engorgement` et, si `climat`, les colonnes
@@ -352,10 +432,7 @@ ru_coefficients <- function() {
 compute_gradients <- function(ifn, indicateurs = NULL, climat = NULL,
                               ru_table = ru_coefficients(), min_res_ifn_m = 1000) {
   .check_ifn(ifn)
-  if (!is.numeric(ru_table) || is.null(names(ru_table))) {
-    stop("`ru_table` doit \u00eatre un vecteur num\u00e9rique nomm\u00e9 par code de texture.",
-         call. = FALSE)
-  }
+  .check_ru_table(ru_table)
   pl <- ifn$placettes
   fl <- ifn$flore
   out <- pl[, c("id_placette", "CAMPAGNE", "IDP", "source", "loc_precision_m")]
@@ -417,7 +494,11 @@ compute_gradients <- function(ifn, indicateurs = NULL, climat = NULL,
     out$coarse_p_etp_sv <- cl$p_etp_sv
     out$coarse_t_moy <- cl$t_moy
   }
-  attr(out, "ru_verifie") <- FALSE  # coefficients par defaut : a verifier
+  # vrai seulement si la table est publiee ET la correspondance codes IFN -> classes
+  # de l'Aisne est sourcee (attribut absent = table sans correspondance a verifier : vrai)
+  cv <- attr(ru_table, "correspondance_verifiee")
+  attr(out, "ru_verifie") <- isTRUE(attr(ru_table, "verifie")) && (is.null(cv) || isTRUE(cv))
+  attr(out, "correspondance_verifiee") <- if (is.null(cv)) NA else isTRUE(cv)
   attr(out, "methode_trophique") <- methode
   attr(out, "taxa_non_apparies") <- non_app
   out

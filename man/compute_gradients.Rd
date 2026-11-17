@@ -22,7 +22,11 @@ TAXREF v13.0, colonnes \code{ph}, \code{azote}), ou \code{NULL} pour l'AFC. Voir
 \item{climat}{\code{SpatRaster} ou \code{NULL}. Maille d'au moins \code{min_res_ifn_m}, quel que
 soit le nom des couches ; agréger avant avec \code{\link[=aggregate_to_km]{aggregate_to_km()}}.}
 
-\item{ru_table}{Vecteur nommé de coefficients mm/cm par code de texture.}
+\item{ru_table}{Vecteur nommé de coefficients mm/cm par code de texture, ou liste
+\code{haut}, \code{bas} (horizon supérieur \code{TEXT1}, horizon inférieur \code{TEXT2}), voir
+\code{\link[=ru_coefficients]{ru_coefficients()}}. \code{ru_verifie} du résultat vaut \code{TRUE} seulement
+si \code{verifie} est vrai et si \code{correspondance_verifiee} n'est pas faux ; l'attribut
+\code{correspondance_verifiee} est repris tel quel.}
 
 \item{min_res_ifn_m}{Maille minimale (m) d'une couche croisée avec des placettes
 IFN : 1000 (brief technique, étape 5 : climat et pH agrégés à 1 km).}

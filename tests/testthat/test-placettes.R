@@ -143,7 +143,10 @@ test_that("une placette sans flore retenue a un gradient trophique NA, pas 0", {
 })
 
 test_that("réserve utile et engorgement : calcul à la main (jeu synthétique)", {
-  g <- compute_gradients(make_synth_ifn(), make_synth_indic())
+  # mécanique de calcul vérifiée avec la table provisoire (vecteur unique) ; les valeurs
+  # de Bruand et al. 2004 sont testées dans test-indicateurs.R
+  g <- compute_gradients(make_synth_ifn(), make_synth_indic(),
+                         ru_table = ru_coefficients("provisoire"))
   # P1 : (20 cm x 1,7 + 40 cm x 1,0) x (1 - 0,2) = 59,2 ; P2 : 50 x 1,4 ("X" = 0 caillou) = 70
   # P3 : 70 ; P4 : 40 x 0,7 x 0 (10/10 de cailloux) = 0 ; P5 : pas de fosse -> NA
   expect_equal(g$ru_mm, c(59.2, 70, 70, 0, NA))
@@ -153,12 +156,18 @@ test_that("réserve utile et engorgement : calcul à la main (jeu synthétique)"
 })
 
 test_that("ru_table personnalisée prise en compte et validée", {
-  tab <- ru_coefficients()
+  tab <- ru_coefficients("provisoire")
   tab[] <- 1
   g <- compute_gradients(make_synth_ifn(), make_synth_indic(), ru_table = tab)
   expect_equal(g$ru_mm[2], 50)
   expect_error(compute_gradients(make_synth_ifn(), make_synth_indic(), ru_table = 1), "nomm")
-  expect_false(isTRUE(attr(ru_coefficients(), "verifie")))  # valeurs à vérifier
+  expect_false(isTRUE(attr(ru_coefficients("provisoire"), "verifie")))  # non publiées
+  expect_true(isTRUE(attr(ru_coefficients(), "verifie")))               # Bruand et al. 2004
+  # liste haut/bas : TEXT1 lit `haut`, TEXT2 lit `bas`
+  lst <- list(haut = c(stats::setNames(rep(2, 10), c(0:9)), H = NA),
+              bas = c(stats::setNames(rep(1, 10), c(0:9)), H = NA))
+  g2 <- compute_gradients(make_synth_ifn(), make_synth_indic(), ru_table = lst)
+  expect_equal(g2$ru_mm[1], (20 * 2 + 40 * 1) * 0.8)
 })
 
 test_that("compute_gradients : sf Lambert-93 marqué IFN, sans variable fine", {
@@ -245,12 +254,12 @@ test_that("climat : maille < 1000 m refusée quel que soit le nom, 1000 m accept
                                     min_res_ifn_m = 500))
 })
 
-test_that("réserve utile : OBSPEDO R -> 0, texture H -> NA ; ru_verifie = FALSE", {
+test_that("réserve utile : OBSPEDO R -> 0, texture H -> NA ; table provisoire non vérifiée", {
   ifn <- make_synth_ifn()
   ifn$placettes$OBSPEDO[1] <- "R"
   ifn$placettes$TEXT1[1] <- "0"
   ifn$placettes$TEXT2[2] <- "H"
-  g <- compute_gradients(ifn, make_synth_indic())
+  g <- compute_gradients(ifn, make_synth_indic(), ru_table = ru_coefficients("provisoire"))
   expect_equal(g$ru_mm[1], 0)
   expect_true(is.na(g$ru_mm[2]))
   expect_equal(g$ru_mm[3], 70)
