@@ -14,7 +14,6 @@
 
 ## Validé
 
-- [013-referentiels-complements](missions/013-referentiels-complements.md) · cycle 5 · acquereur
 - [017-tests-mode-reel](missions/017-tests-mode-reel.md) · cycle 5 · testeur
 
 ## Planifié
@@ -26,6 +25,7 @@
 
 ## Terminé
 
+- [013-referentiels-complements](missions/013-referentiels-complements.md) · cycle 5 · acquereur · passe 3 des référentiels
 - [012-release-versionnage](missions/012-release-versionnage.md) · cycle 5 · dev · CI, release vAAAA.MM.N, badges
 
 - [000-critique-brief](missions/000-critique-brief.md) · cycle 1 · contradicteur

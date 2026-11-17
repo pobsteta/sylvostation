@@ -17,6 +17,14 @@
   **Refusés :** `geoservices.brgm.fr` (page « Request Rejected » du pare-feu du BRGM,
   code 200 et 246 octets, à chaque requête), `mapsref.brgm.fr`, `inpn.mnhn.fr`,
   `taxref.mnhn.fr` (hors des hôtes ouverts de la session).
+- **Passe 3 (agent `acquereur`, mission 013, 2026-11-17).** Outils : `WebFetch` (page
+  convertie puis résumée par un petit modèle : les décomptes `numberMatched` et les horodatages
+  `timeStamp` sont ceux du serveur, la liste des colonnes est celle du `DescribeFeatureType`
+  lu par ce résumeur) et `WebSearch`. **Pas de `curl` ni de R dans cette passe** : aucune
+  signature n'a été exécutée avec `args()`, aucune archive n'a été décompressée. Les PDF
+  (IGN LiDAR HD, Bruand et al. 2004) ont été enregistrés par l'outil et **lus en image page
+  par page** : les chiffres des tableaux sont recopiés de ces pages. Sections : § 14 à § 21 ;
+  les § 6 et § 9 renvoient vers elles.
 - **Les surfaces** sont calculées avec `sf::st_area` en EPSG:2154 après
   `st_make_valid` et `st_intersection` avec le carré de l'emprise.
 
@@ -128,12 +136,15 @@ nombre de morceaux de polygones) :
 | Licence | **vérifié, sans nom de licence** | `curl -s https://www.data.gouv.fr/api/1/datasets/66631d4a67b5b112fafd0f8a/` (jeu BRGM « Cartes géologiques vectorisées et harmonisées à 1/50 000 du BRGM ») | Champ `license` : **`notspecified`**. Métadonnées DCAT moissonnées du BRGM : `license` = `…/ConditionsApplyingToAccessAndUse/noConditionsApply`, `accessRights` = `noLimitations`, `rights` = « Limite d'utilisation liée à l'échelle », « Aucune condition ne s'applique », « Données ouvertes ». **La Licence Ouverte Etalab n'est pas nommée.** Le PDF descriptif porte « © BRGM, 2004, ce document ne peut être reproduit […] sans l'autorisation expresse du BRGM » (le document, pas les données). |
 | Extrait déposé | **fait** | script R de l'agent (découpe, `st_simplify(dTolerance = 5)`) | `inst/extdata/bdcharm50_emprise_test.gpkg`, couche `s_fgeol`, 661 polygones, 565 248 octets, EPSG:2154, champs `dep, CARTE, CODE, CODE_LEG, NOTATION, DESCR, surf_m2` (`surf_m2` avant simplification ; somme 225 km²). Déposé sur la foi de « Aucune condition ne s'applique / Données ouvertes » ; **à retirer si l'orchestrateur exige une licence nommée.** Source dans `inst/extdata/SOURCES.md`. |
 
-## 6. Régolithe 1/1 000 000 (BRGM) : partiellement vérifié
+## 6. Régolithe 1/1 000 000 (BRGM) : vérifié en passe 3 (voir § 19)
+
+(Les lignes ci-dessous sont celles de la passe 2, le 2026-11-16 ; la ligne « Service
+joignable » est **levée** par le § 19, relu le 2026-11-17.)
 
 | Point | État | Commande | Résultat |
 |---|---|---|---|
 | Jeux et couches | **vérifié** (catalogue) | `curl -s "https://www.data.gouv.fr/api/1/datasets/?q=regolithe&page_size=10"` | Deux jeux BRGM : « Etat des lieux de la connaissance du régolithe **allochtone** au millionième » (id `66631d4a67b5b112fafd0f8b`, couche WMS `REGOLITHES_ALLOCH_S_1M`) et « … **autochtone** au millionième » (id `66631d4b67b5b112fafd0f8d`, couche WMS `REGOLITHES_AUTOCH_S_1M`, modifié le 2026-08-26). Service annoncé : `https://mapsref.brgm.fr/wxs/infoterre/regolithe?SERVICE=WMS&REQUEST=GetCapabilities`. |
-| Service joignable, couches réelles, champs, WFS | **non vérifié** | `curl` sur `mapsref.brgm.fr` → aucune réponse (code 000, hôte hors des hôtes ouverts) ; `https://geoservices.brgm.fr/geologie?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities` (et WFS) → page « Request Rejected » du pare-feu BRGM | Ni GetCapabilities, ni champs, ni existence d'un WFS lus. À relancer avec `mapsref.brgm.fr` ouvert. |
+| Service joignable, couches réelles, champs, WFS | **non vérifié le 2026-11-16 ; levé le 2026-11-17 (§ 19)** | `curl` sur `mapsref.brgm.fr` → aucune réponse (code 000, hôte hors des hôtes ouverts) ; `https://geoservices.brgm.fr/geologie?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities` (et WFS) → page « Request Rejected » du pare-feu BRGM | Ni GetCapabilities, ni champs, ni existence d'un WFS lus. À relancer avec `mapsref.brgm.fr` ouvert. |
 | Licence | **vérifié, sans nom de licence** | API data.gouv.fr des deux jeux | `license` = `notspecified` ; `rights` : « Limite d'utilisation liée à l'échelle » (allochtone), « Aucune limite d'utilisation mise a part l'échelle d'utilisation… » (autochtone). |
 
 ## 7. Données brutes IFN : vérifié
@@ -213,7 +224,10 @@ Jeux GBIF de l'emprise test (Tracheophyta, 2000–2026), `datasetKey`, nombre, l
 
 Signatures `rgbif` 3.9.0 (`args()`, voir § 10).
 
-## 9. Baseflor, TAXREF : non vérifié pour Baseflor, partiel pour TAXREF
+## 9. Baseflor, TAXREF : état du 2026-11-16 (repris aux § 14 et § 15)
+
+(La passe 3 du 2026-11-17 complète ce § : Baseflor et les autres valeurs indicatrices au
+§ 14, TAXREF au § 15. Les lignes ci-dessous restent l'état de la passe 2.)
 
 | Point | État | Commande | Résultat |
 |---|---|---|---|
@@ -245,8 +259,15 @@ Commande : `LC_ALL=C.UTF-8 Rscript` avec `packageVersion()` et `args(getExported
 | BD Charm-50 | Pas de licence nommée ; métadonnées BRGM : « Aucune condition ne s'applique », « Données ouvertes » ; data.gouv.fr : `notspecified` | § 5 |
 | Régolithe 1/1 000 000 | Pas de licence nommée ; data.gouv.fr : `notspecified` | § 6 |
 | GBIF | Par jeu : 26 jeux CC BY 4.0, 4 jeux CC BY-NC 4.0 dans l'emprise | § 8 |
-| TAXREF | `fr-lo` (fiche MNHN) et `lov2` (fiche SIB) sur data.gouv.fr ; source primaire non lue | § 9 |
-| Baseflor | **non vérifié** | § 9 |
+| TAXREF | `lov2` et `fr-lo` selon la fiche data.gouv.fr ; aucune licence sur la page PatriNat ; source primaire (INPN) en erreur 500 | § 15 |
+| Baseflor | **piste** : ODbL 1.0 (base) et CC BY-SA 2.0 (données), annoncées par un résultat de recherche ; page Tela Botanica en 403 | § 14 |
+| Valeurs de type Ellenberg (Tichý et al.) | CC BY 4.0 (Zenodo, API) | § 14 |
+| EcoPlant | non trouvée | § 14 |
+| BD TOPAGE | Licence Ouverte 1.0 (2022), 2.0 (2023, 2024) ; fiche 2025 non lue | § 16 |
+| LiDAR HD, descriptif de contenu | cartes.gouv.fr : etalab-2.0 (page) | § 17 |
+| SoilGrids (phh2o) | CC BY 4.0 | § 18 |
+| Réserve utile BDGSF 1/1 000 000 | Licence Ouverte 2.0 | § 18 |
+| Bruand et al. 2004 (tableau) | droits de reproduction non vérifiés | § 18 |
 
 ## 12. Emprise du massif test : gardée
 
@@ -269,6 +290,237 @@ géologie impose trois départements BD Charm-50 (68, 67, 88).
 |---|---|---|---|
 | Une dalle | **vérifié** | `curl -sI https://data.geopf.fr/telechargement/download/LiDARHD-NUALID/NUALHD_1-0__LAZ_LAMB93_RF_2024-12-20/LHD_FXX_1007_6793_PTS_LAMB93_IGN69.copc.laz` | HTTP/2 200, `content-type: application/octet-stream`, **`content-length: 227690995`** (227,7 Mo) pour 37 644 004 points. |
 | Les 225 dalles de l'emprise | **vérifié** (225 requêtes HEAD) | liste `url_npl` par la requête `WITHIN` du § 2 (`OUTPUTFORMAT=application/json&PROPERTYNAME=coordonnees_nw,url_npl,nombre_points&COUNT=300`), puis `curl -sI` sur chaque URL | Total **45 735 823 198 octets (45,7 Go)** ; minimum 61 589 356 (`1021-6796`, 15 725 137 points) ; médiane 207 019 249 ; maximum 358 541 399 (`1007-6791`, 65 776 663 points). Points : 7 959 708 253 au total. **Une dalle dépasse souvent 200 Mo** : aucune n'a été téléchargée. |
+
+---
+
+# Passe 3 (mission 013, 2026-11-17) : compléments pour le mode réel
+
+**Décision éclairée :** ce que les missions 014 à 016 peuvent coder sans rien inventer
+(URL, couches, colonnes), et quelle valeur indicatrice peut entrer dans un dépôt public.
+Toutes les consultations datent du **2026-11-17**. Statut de chaque ligne : **vérifié**
+(lu à la source primaire, résultat noté), **piste** (relevé dans un résultat de recherche,
+source primaire non lue : ne pas coder), **non vérifié** (avec la raison).
+
+## 14. Valeurs indicatrices (pH, azote, humidité) : Baseflor, Ellenberg, EcoPlant
+
+CQQCOQP : **pourquoi** (calibrer pH, richesse en azote et humidité sur la flore des placettes,
+`docs/brief-technique.md` l. 42 : EcoPlant si accessible, sinon Baseflor ou Ellenberg) ; **qui** Julve (Baseflor, programme CATMINAT), Tichý et al. (compilation
+européenne), Gégout et al. (EcoPlant, AgroParisTech) ; **où** France entière (Baseflor),
+Europe (Tichý), forêts françaises (EcoPlant).
+
+| Source | État | URL / DOI, version, date | Licence | Colonnes, clé taxonomique |
+|---|---|---|---|---|
+| **Baseflor** (Julve) | **piste** (la page de téléchargement et la fiche de métadonnées de Tela Botanica répondent **HTTP 403** à l'outil ; résultat de recherche seulement) | `https://www.tela-botanica.org/ressources/donnees/telechargements/` (lien « Télécharger baseflor »), fiche `https://www.tela-botanica.org/eflore/consultation/popup.php?module=fiche-metadonnees&action=affichageMetaDonnees&projet=baseflor` ; version annoncée **01 juin 2024**. Page INRAE Capflor (`https://capflor.inra.fr/index.php/site/page/view/mentions`) : version citée **15/08/2012**, lien d'origine chez Julve (page personnelle Orange ; un commentaire de mars 2026 la dit hors ligne, non vérifié). | Annoncée : base sous **ODbL 1.0**, données contenues sous **CC BY-SA 2.0** (résultat de recherche, non lu à la source) | **Non vérifié : aucune colonne lue.** Ne coder aucun nom de colonne pH, azote ou humidité. Clé taxonomique non lue. |
+| **Valeurs de type Ellenberg harmonisées** (Tichý et al. 2023, J. Veg. Sci. 34, e13168) | **vérifié** (API Zenodo) ; contenu du fichier **non lu** | `https://zenodo.org/records/7427088`, DOI `10.5281/zenodo.7427088`, version 2.0 (révision 11), publiée **2022-11-07** ; fichier `Indicator.values-tables-2022-11-07-Zenodo.v2.xlsx`, **19 503 599 octets**, MD5 `3519d41639647dde8d80042fc98b2ef5` | **CC BY 4.0** (champ `license` de l'API) | Lumière, température, humidité, réaction, nutriments, salinité ; valeurs originales de **13 jeux sources** dont la France ; noms standardisés sur **Euro+Med PlantBase, pas TAXREF**. Feuilles et colonnes **non lues** (fichier de plus de 10 Mo, refusé par l'outil). |
+| **EcoPlant** (Gégout et al. 2005, J. Veg. Sci. 16(2), DOI `10.1658/1100-9233(2005)016[0257:EAFSDL]2.0.CO;2`) | **non vérifié** pour l'accès | Base de 6 432 relevés phytosociologiques de forêts françaises avec sol et climat (résumé de l'article). Aucune page de téléchargement, aucune licence, aucune procédure de demande trouvées. Le brief technique (l. 41) la dit « sur demande ». | **Non trouvée** | Non lues. Gril et al. 2024 (DOI `10.1111/jvs.13241`, p. 2) la rangent parmi les valeurs « biogéographiques » à échelle continue, par opposition aux valeurs ordinales de Julve fondées sur l'expertise. |
+
+**Lecture pour la décision.**
+
+- **Aucune de ces trois sources n'a pu être ouverte jusqu'aux colonnes.** Les missions
+  014 à 016 ne doivent coder aucun nom de colonne d'indicatrices ; la colonne à utiliser
+  est à lire dans le fichier quand il aura été téléchargé (par Pascal ou sur un poste dont
+  Tela Botanica répond).
+- **Laquelle peut entrer dans un dépôt public ?** Aucune n'entre dans `inst/extdata` à ce
+  jour. Baseflor est annoncée ODbL et CC BY-SA : l'obligation de partage à l'identique
+  serait à examiner avant tout dépôt, et la règle du projet (une nomenclature tenue par un
+  autre système se lit, ne se recopie pas) joue : **téléchargement à l'exécution, cache
+  hors dépôt**. Le fichier Zenodo est CC BY 4.0, mais il reprend les valeurs de Julve
+  pour la France, annoncées CC BY-SA 2.0 par Tela Botanica : **écart de licence non
+  résolu** (§ Écarts, n° 15). EcoPlant : pas de licence, donnée AgroParisTech, jamais dans
+  le dépôt (règle du `CLAUDE.md`).
+- **Deuxième source :** Baseflor (expert, France) et Tichý (compilation européenne dont
+  la France) ne sont pas indépendantes (la seconde reprend Julve) ; l'indépendance
+  viendrait d'EcoPlant, inaccessible ici.
+- **Clé de jointure :** nom latin ou Euro+Med dans le fichier Zenodo, donc passage par
+  TAXREF (§ 15) à prévoir ; rien n'est vérifié pour Baseflor.
+
+## 15. TAXREF : version courante, téléchargement, passage depuis la v13
+
+| Point | État | URL, commande | Résultat |
+|---|---|---|---|
+| Version courante | **vérifié** | page `https://www.patrinat.fr/fr/page-temporaire-de-telechargement-des-referentiels-de-donnees-lies-linpn-7353` (publiée 2025-08-11, mise à jour **2026-10-19**) | **TAXREF v18 (2025)**. Un site tiers (`mycofrance.fr`, résultat de recherche) date la 18.0 du 9 janvier 2025. La page PatriNat dit que cette page temporaire sera supprimée « dans les prochains mois » (**URL volatile**) et renvoie à `https://inpn.mnhn.fr/referentiels-donnees` (non lue). |
+| Téléchargement | **vérifié** (lien lu sur la page ; fichier **non téléchargé**) | `https://assets.patrinat.fr/files/referentiel/TAXREF_v18_2025.zip` | Taille, colonnes et contenu : **non vérifiés** à la source. Une demande de fusion publique tierce (`github.com/olivierlacan/indigene/pull/268`, octobre 2026) décrit le zip : ~60 Mo ; `TAXREFv18.txt` (708 685 lignes), `TAXVERNv18.txt` ; colonnes `CD_NOM`, `CD_REF`, `LB_NOM`, `RANG`, `NOM_VERN` ; textes entre guillemets, fin de ligne CRLF. **Piste, ne pas coder.** |
+| Page officielle | **non vérifié : indisponible** | `https://inpn.mnhn.fr/telechargement/referentielEspece/referentielTaxo` → HTTP 500 ; `https://inpn.mnhn.fr/programme/referentiel-taxonomique-taxref` → HTTP 500 ; `https://taxref.mnhn.fr/taxref-web/api/doc` répond (navigation seulement, pas de version) | Le MNHN a subi une cyberattaque (page PatriNat) ; la fiche data.gouv.fr (`66601a4032498dd005f23ba9`) note ces liens en erreur. Un tiers rapporte une barrière anti-robot sur l'API. |
+| **Table de passage v13 vers v18** | **non trouvée** | recherches web, pages `taxref.mnhn.fr/taxref-web/stat/versions` et `/stat/versions/compare` (pages de consultation : « Évolutions des données », « Comparaison de deux versions ») | **Aucun fichier de correspondance entre versions trouvé.** Pistes : tableau `CDNOM_DISPARUS.xls` (7 498 lignes : CD_NOM disparus, cause, remplaçant des doublons) cité par la présentation du séminaire TAXREF de 2016 (`https://seminaire-taxref.mnhn.fr/wp-content/uploads/sites/15/2016/01/07_nouvelle_version.pdf`), **non confirmé comme encore publié** ; historique par taxon sur `taxref.mnhn.fr/taxref-web/taxa/<cd_nom>/history`. Principe de méthode cité (même séminaire) : un `CD_NOM` ne change pas pour un `LB_NOM` donné, la synonymie passe par `CD_REF`. |
+| Licence | **écart** | API data.gouv.fr, 2026-11-17 | `lov2` (jeu `66601a4032498dd005f23ba9`, modifié 2025-08-29) et `fr-lo` (jeu `559ba6aec751df5c17390bd3`, modifié 2025-08-28) ; la page PatriNat ne cite aucune licence. |
+
+**Pour les dev.** Il n'existe pas ici de table de passage à lire : la **stratégie** est celle du
+`CLAUDE.md` : joindre le `CD_REF` v13 de la flore IFN (§ 7) sur le `CD_NOM` v18, prendre le
+`CD_REF` v18 de la ligne, lister les non appariés. **Stratégie non éprouvée** (le fichier v18
+n'a pas été ouvert). Version à figer dans `config.yml` : **v18 (2025)**, téléchargée une fois
+et gardée hors dépôt.
+
+## 16. BD TOPAGE : tronçons hydrographiques
+
+CQQCOQP : **pourquoi** (hauteur au-dessus du réseau hydrographique, `docs/brief-technique.md` l. 75) ; **qui** Sandre/OFB avec IGN, collaboratif ; **où** France ; **quand**
+millésime annuel.
+
+| Point | État | Commande | Résultat |
+|---|---|---|---|
+| Service Sandre, millésime 2025 | **vérifié** | `https://services.sandre.eaufrance.fr/geo/topage2025?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetCapabilities` | Titre « Référentiel Hydrographique (BD TOPAGE) », WFS 2.0.0, **38 `FeatureType`** (préfixe `sa:`), dont cinq de tronçons : `sa:TronconHydrographique_Topage2025` (France entière), **`sa:TronconHydrographique_FXX_Topage2025` (Métropole)**, `…_MTQ_…`, `…_GLP_…`, `…_MYT_…`. **Le millésime est dans le nom de la couche** (autres millésimes vus : 2019, 2022, 2023) : lire le nom dans le GetCapabilities, ne pas le figer. |
+| Colonnes de `TronconHydrographique_FXX_Topage2025` | **vérifié** | `&REQUEST=DescribeFeatureType&TYPENAMES=sa:TronconHydrographique_FXX_Topage2025` | **38 éléments**, tous facultatifs : `msGeometry` (`gml:GeometryPropertyType`), `gid` (entier), `CdOH`, `DateCreationOH` (`gml:TimeInstantType`), `StatutOH`, `TopoOH`, `StatutNomOH`, `SourceNomOH`, `NatureTH`, `TronconFictifTH` (booléen), `PositionParRapportSolTH`, `PersistanceTH`, `SaliniteTH` (booléen), `OrigineTH`, `SensEcoulementTH`, `ReseauPrincipalCoulantTH` (booléen), `DelimitationTH` (booléen), `ClasseLargeurTH`, `BrasTH`, `NumeroOrdreTH`, `StrategieClassementNumeroOrdreTH`, `PerimetreUtilisationNumeroOrdreTH`, `CommentaireOH`, `CdCoursEau_1`, `CdCoursEau_2`, `CdCoursEau_3`, `CdSurfaceElementaire`, `CdNoeudDebut`, `CdNoeudFin`, `CdPays_1`, `CdPays_2`, `CdPays_3`, `SystemeAltiOH`, `PrecAltiOH`, `ModeAltiOH`, `PrecPlaniOH`, `ModObCoordiOH`, `ProjCoordOH` (les autres sont des chaînes). |
+| Volume | **vérifié** | `&RESULTTYPE=hits` | **3 042 333** tronçons (Métropole), horodatage serveur 2026-11-17T21:17:53. Toujours filtrer par emprise. Sans `RESULTTYPE=hits`, `numberMatched` vaut « unknown ». |
+| Emprise voisine du massif test | **vérifié** | `&RESULTTYPE=hits&BBOX=48.13,7.12,48.28,7.35,urn:ogc:def:crs:EPSG::4326` | **748** (2026-11-17T21:24:29). **Ordre des axes : latitude puis longitude** avec le CRS en `urn:ogc:def:crs:EPSG::4326`. Cette boîte (WGS84) enveloppe l'emprise test (§ 8) sans la coïncider. Relecture du 2026-11-17 (shell) : la BBOX en Lambert-93 `BBOX=1007000,6790000,1022000,6805000,urn:ogc:def:crs:EPSG::2154` répond et donne **641** tronçons sur l'emprise test : à préférer (EPSG:2154 partout). |
+| Valeurs vues (2 tronçons) | **vérifié** (échantillon de 2, pas un inventaire) | `&COUNT=2&PROPERTYNAME=CdOH,NatureTH,PersistanceTH,PositionParRapportSolTH,NumeroOrdreTH,TronconFictifTH,ClasseLargeurTH` | `NatureTH` = « Ecoulement naturel » ; `PersistanceTH` = « permanent » ; `PositionParRapportSolTH` = « surface » ; `ClasseLargeurTH` = « 0_5 » ; `TronconFictifTH` = false ; `NumeroOrdreTH` vide. **La liste des modalités n'a pas été lue** (dictionnaire : `https://id.eaufrance.fr/ddd/ETH/latest`). `CQL_FILTER=PersistanceTH='permanent'` : 748, identique au décompte sans filtre : **non tranché** (tous permanents ou filtre ignoré). |
+| Alternative IGN (Géoplateforme) | **vérifié** | `https://data.geopf.fr/wfs/ows?SERVICE=WFS&VERSION=2.0.0&REQUEST=DescribeFeatureType&TYPENAMES=BDTOPO_V3:troncon_hydrographique` | **45 éléments**, géométrie `geometrie` (`gml:CurvePropertyType`) ; dont `cleabs`, `code_hydrographique`, `nature`, `fictif`, `etat_de_l_objet`, `position_par_rapport_au_sol`, `persistance`, `statut`, `numero_d_ordre`, `classe_de_largeur`, `sens_de_l_ecoulement`, `reseau_principal_coulant`. Même boîte WGS84 : **752** tronçons (2026-11-17T20:24:43Z). `CQL_FILTER=persistance='permanent'` : HTTP 500. |
+| Origine du millésime 2025 | **piste** (fiche Sandre vue en résultat de recherche) | — | « issus des tronçons hydrographiques du thème hydrographique de la BD TOPO, édition du 15 décembre 2023 ». |
+| Licence | **écart** | fiches `sandre.eaufrance.fr/atlas/srv/api/records/<id>` | **2022** : Licence Ouverte 1.0 (`fc253cb2-0de4-41bb-8cf7-1347fe0a14a2`) ; **2023** : `lov2` (data.gouv.fr, jeu `bd-topage-r-metropole-2023`) ; **2024** : Licence Ouverte 2.0, « pas de restriction d'accès public » (`7fa4c224-fe38-4e2c-846d-dcc2fa7ef73e`). **Fiche 2025 non lue.** Licence de la couche `BDTOPO_V3` : non lue. |
+| Fichiers | **vérifié** (liens lus, rien téléchargé) | fiches 2022 et 2024 | Shapefile 2024 Métropole : `https://services.sandre.eaufrance.fr/telechargement/geo/ETH/BDTopage/2024/BD_Topage_FXX_2024-shp.zip` ; tronçons 2022 en shp, gpkg, geojson sous `…/BDTopage/2022/TronconHydrographique/TronconHydrographique_FXX-{shp,gpkg,geojson}.zip`. Fichiers 2025 : non vus. |
+
+**Écart observé :** 748 tronçons (TOPAGE 2025) contre 752 (BD TOPO courante) dans la même boîte.
+La BD TOPO est plus récente que l'édition de décembre 2023 qui alimente TOPAGE 2025 ;
+**cause non vérifiée**.
+
+## 17. Classes LiDAR HD : nomenclature officielle de l'IGN
+
+Source unique : « LiDAR HD, version 1.0, Nuages de points, Modèles numériques, Descriptif de
+contenu », date du document mai 2022, **révision juillet 2026**,
+`https://data.geopf.fr/annexes/ressources/documentation/DC_LiDAR_HD_1-0.pdf` (5,8 Mo ; les
+anciennes adresses `geoservices.ign.fr/sites/default/files/…/DC_LiDAR_HD_1-0*.pdf`
+redirigent vers la page d'accueil de cartes.gouv.fr). Lu en images, pages 1 à 10 et 15 à 20
+(PDF et pagination du document coïncident). Le sommaire (p. 2) liste les sections
+2.2.8.1 à 2.2.8.9.
+
+| Code | Description (p. 16) | Prédéfinie LAS 1.4 | Section |
+|---|---|---|---|
+| 1 | Non classé | oui | 2.2.8.1, p. 16 |
+| 2 | Sol | oui | 2.2.8.2, p. 16 |
+| 3 | Végétation basse (0-50 cm) | oui | 2.2.8.3, p. 16 |
+| 4 | Végétation moyenne (50 cm-1,50 m) | oui | 2.2.8.3, p. 16 |
+| 5 | Végétation haute (+1,50 m) | oui | 2.2.8.3, p. 16 |
+| 6 | Bâtiment | oui | 2.2.8.4, p. 17 |
+| 9 | Eau | oui | 2.2.8.5, p. 17 |
+| 17 | Tablier de pont | oui | 2.2.8.6, p. 18 |
+| **64** | **Sursol pérenne** | non | 2.2.8.7, p. 19 |
+| **66** | **Points virtuels** | non | 2.2.8.8, p. 19 |
+| **67** | **Divers - bâtis** | non | 2.2.8.9, p. 20 |
+
+**11 classes** : 8 prédéfinies LAS 1.4 et 3 créées pour le LiDAR HD « parmi des valeurs
+réservées par la spécification (64, 66 et 67) » (p. 15). **Il n'y a pas de classe 65 dans
+cette révision** (ni dans le tableau, ni dans le sommaire).
+
+Ce que dit le descriptif des trois classes propres (p. 19 et 20) :
+
+- **64, Sursol pérenne** : éléments du sursol ni bâtiment, ni végétation, ni pont, pérennes
+  (éoliennes, téléphériques, antennes, câbles et pylônes, caténaires ; haubans et piliers de
+  ponts) ; hors classe : véhicules, personnes, objets transitoires.
+- **66, Points virtuels** : « points artificiels situés sur des lignes de rupture de pente »
+  saisis sous les ponts, pour améliorer le modèle du sol ; aussi « certains points virtuels
+  situés dans certains cours d'eau » (traitement des écoulements, p. 20). Sens de balayage et
+  bord de bande fixés à 0 (p. 15).
+- **67, Divers - bâtis** : points de bâtiments « avec un degré de certitude inférieur » à
+  la classe 6 ; classement produit **exclusivement par le procédé automatique de l'IGN** ;
+  peut contenir « certains types de végétation (haies bien taillées, pins parasols,
+  massifs proches d'habitation) », des rochers et ruptures de pente, des terrasses, etc.
+
+**Décision éclairée : l'exclusion des classes 65 et 66 du MHC.**
+
+- **66 : exclusion fondée** sur la nomenclature officielle (points artificiels, pas des
+  retours du couvert).
+- **65 : exclusion sans objet dans la nomenclature de juillet 2026** (aucune définition).
+  Un résultat de recherche attribue à une version antérieure du descriptif (2023) une section
+  « Artefact (code 65) » ; **non vérifié** (ce PDF n'est plus à son adresse). Garder 65
+  dans la liste d'exclusion reste inoffensif, mais **sans citer l'IGN pour la justifier**.
+- **À trancher en 014 (non fixé ici)** : les dalles du massif test ont été classées par
+  `IGN_AUTO_V5` (§ 2) ; la classe **67 y est donc possible** et peut contenir de la
+  végétation, tandis que la classe **64** (pylônes, câbles) n'est pas du couvert. Un décompte
+  des classes sur une dalle (`lasR::info`, non exécuté) dira ce qu'elles pèsent.
+- **Cohérence :** `use_class = c(2L, 9L)` de `lidR` (§ 10) correspond bien à Sol et Eau.
+- **Autres sources :** cartes.gouv.fr (`…/nuages-points-lidar-hd/`) annonce « 11 catégories »,
+  licence etalab-2.0 ; une présentation wallonne de décembre 2024 donne 67 = « Divers - bâtis ».
+  Concordance. Une documentation tierce (projet `IGN_LIDAR_HD_DATASET`) regroupe 64, 65 et
+  67 en classe 1 : choix de cet outil, pas la nomenclature de l'IGN.
+
+## 18. Sols : pH, réserve utile, pédotransfert
+
+| Point | État | Source | Résultat |
+|---|---|---|---|
+| GlobalSoilMap France, programme | **piste** | pages Theia (`theia-land.fr/en/blog/ceslist/digital-soil-mapping-sec/`) | Produits à **90 m**, six profondeurs (0-5, 5-15, 15-30, 30-60, 60-100, 100-200 cm), propriétés dont pH, granulométrie, réserve utile ; diffusion en ligne « 2020-2023 » annoncée au calendrier. **Aucun jeu de pH France à 90 m avec URL et licence n'a été trouvé.** |
+| Texture 90 m (granulométrie) | **piste** (page refusée par la protection anti-robot) | DOI `10.57745/N4E4NE`, `https://entrepot.recherche.data.gouv.fr/dataset.xhtml?persistentId=doi:10.57745/N4E4NE` | Couches de sable 0-5, 5-15, 15-30 cm, 90 m (page Theia). Licence, fichiers : **non lus**. |
+| Réserve utile nationale 90 m | **piste** (page refusée) | DOI `10.15454/9IRARJ` (page Theia « Map of the Soil Available Water Capacity in Metropolitan France ») | Méthode : fonction de pédotransfert sur propriétés cartographiées. Résolution nationale, licence, fichiers : **non lus** (la mention « 90 m » de la page vise le Languedoc-Roussillon). |
+| **pH ouvert, équivalent** | **vérifié** (fiche ISRIC lue) | SoilGrids 2.0, `https://data.isric.org/geonetwork/srv/api/records/713396fd-1687-11ea-a7c0-a0481ca9e724` | `phh2o`, **250 m**, **pH × 10** (diviser par 10), profondeurs 0-5, 5-15, 15-30, 30-60, 60-100, 100-200 cm, statistiques mean, Q0.05, Q0.5, Q0.95 ; **CC BY 4.0** ; publié 2020-05-04. Fichiers : `https://files.isric.org/soilgrids/latest/data/` (WebDAV, chemin « latest »), WMS `https://maps.isric.org/mapserv?map=/map/phh2o.map`. Le WCS a été signalé hors service par la documentation d'ISRIC (résultat de recherche, non revérifié). Exactitude sur la France : **non évaluée**. |
+| **Réserve utile ouverte, grossière** | **vérifié** (fiche INRAE lue) | `https://geodata.inrae.fr/geonetwork/srv/api/records/393d8106-4400-51cd-9767-e8bbef2f73a6`, DOI `10.15454/JPB9RB` | « Carte de la Réserve Utile en eau issue de la BDGSF » : classe dominante par unité cartographique de sol, **1/1 000 000**, 2 295 objets, BDGSF 3.2.8.0, par fonctions de pédotransfert ; **Licence Ouverte 2.0** ; créée 2018-02-02, révisée 2023-02-13. WFS : `https://geodata.inrae.fr/geoserver/inra_bdgsf/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=inra_bdgsf:bdgsf_classe_ru&outputFormat=shape-zip`, couche `inra_bdgsf:bdgsf_classe_ru`. Unités des classes : **non indiquées**. La fiche déconseille toute lecture plus fine que le 1/1 000 000 : **trop grossière pour un massif de 225 km²**. |
+| Réserves utiles Languedoc-Roussillon | **vérifié** (hors zone) | data.gouv.fr, jeu `61aab14989a1ddaa864ed799` | `lov2`, 100, 150, 200 cm, 1/250 000, Languedoc-Roussillon seulement : **inutilisable pour les Vosges**. |
+| **Table de pédotransfert** | **vérifié** (article lu en images) | Bruand A., Duval O., Cousin I. (2004), « Estimation des propriétés de rétention en eau des sols à partir de la base de données SOLHYDRO : une première proposition combinant le type d'horizon, sa texture et sa densité apparente », *Étude et Gestion des Sols* 11(3) : 323-332, `https://afes.fr/wp-content/uploads/2024/10/EGS_2004_11_3_bruand.pdf` | **Tableau 2, p. 328** : réserve en eau utile en mm par cm, par type d'horizon et classe de texture (triangle de l'Aisne), sans puis avec prise en compte de la densité apparente. Reproduction ci-dessous des colonnes « sans prise en compte de Da ». |
+| Jamagne et al. (1977) | **non consulté** | cité par Bruand et al. p. 325 ; bibliographie p. 332 : Jamagne M., Bétrémieux R., Bégon J.C., Mori A., 1977, *Bulletin Technique d'Information* 324-325, pp. 627-641 | Tableau d'origine non lu. Bruand et al. (p. 327) disent que leurs valeurs sont plus faibles pour les textures argileuses (ALO, AL, A) et limono-argileuses (LA, LAS, LSA). |
+
+**Tableau 2 de Bruand et al. (2004), p. 328, sans prise en compte de Da** (mm de réserve
+utile par cm de sol ; « excès » = θ1,5 − θ4,2 ; « défaut » = θ2,0 − θ4,2, pF 1,5 ; 2,0 ; 4,2).
+Codes de texture **tels qu'imprimés** ; l'article précise seulement LL = limon léger, LLS =
+limon léger sableux, LS = limon sableux ; la légende complète du triangle n'est pas dans les
+pages lues. Valeurs recopiées de la page, deuxième lecture à faire par un relecteur.
+Valeurs proposées pour **12 classes sur 15** par type d'horizon (p. 329) ; `-` = pas de valeur.
+
+| Texture | Horizons A, excès | A, défaut | Horizons E, B, C, excès | E, B, C, défaut |
+|---|---|---|---|---|
+| ALO | 1,42 | 1,24 | 1,24 | 1,12 |
+| AL | 1,49 | 1,36 | 1,29 | 1,13 |
+| AS | 1,73 | 1,73 | 1,15 | 0,95 |
+| A | - | - | 1,10 | 0,93 |
+| LA | 1,88 | 1,73 | 1,68 | 1,49 |
+| LAS | 1,82 | 1,67 | 1,65 | 1,48 |
+| LSA | 1,63 | 1,43 | 1,50 | 1,27 |
+| LM | 2,28 | 2,13 | 2,15 | 2,07 |
+| LMS | 1,94 | 1,83 | 2,19 | 1,96 |
+| LS | 1,73 | 1,62 | - | - |
+| LLS | - | - | - | - |
+| LL | - | - | - | - |
+| SA | 1,47 | 1,28 | 1,26 | 1,03 |
+| SL | 1,74 | 1,31 | 1,55 | 1,16 |
+| S | 0,83 | 0,60 | 1,27 | 0,73 |
+
+Réserve : la reproduction de ce tableau d'un article de la revue de l'AFES n'a pas fait
+l'objet d'une vérification de droits ; **ne pas copier ce tableau dans `inst/extdata`**
+sans cette vérification (les écarts types sont à l'annexe, p. 332 : par exemple 0,14 à 0,53
+mm/cm sur les classes renseignées).
+
+## 19. Régolithe 1/1 000 000 (BRGM) : service joignable (lève la réserve du § 6)
+
+| Point | État | Commande | Résultat |
+|---|---|---|---|
+| Service WMS | **vérifié** | `https://mapsref.brgm.fr/wxs/infoterre/regolithe?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities` | WMS 1.3.0, résumé « Catalogue InfoTerre ». Couches : `REGOLITHE`, `REGOLITHES_AUTOCH_S_1M` (« Formations autochtones au 1/1 000 000e »), `REGOLITHES_ALLOCH_S_1M` (« Formations allochtones au 1/1 000 000e »), `REGOLITHE_SP`, `REGOLITHE_RAPPORTS_SP_COMPTE`, `REGOLITHE_RAPPORTS_SP`. CRS dont EPSG:2154 ; échelles de 1/150 000 à 1/4 000 000 ; pas d'attribution ni de `MetadataURL`. |
+| Service WFS | **vérifié** | même hôte, `SERVICE=WFS&VERSION=2.0.0&REQUEST=GetCapabilities` | WFS 2.0.0, **4 `FeatureType`** : `ms:REGOLITHES_AUTOCH_S_1M`, `ms:REGOLITHES_ALLOCH_S_1M`, `ms:REGOLITHE_RAPPORTS_SP_COMPTE`, `ms:REGOLITHE_RAPPORTS_SP`. |
+| Colonnes (les deux couches de formations) | **vérifié** | `&REQUEST=DescribeFeatureType&TYPENAMES=ms:REGOLITHES_AUTOCH_S_1M,ms:REGOLITHES_ALLOCH_S_1M` | Identiques : `msGeometry` (`gml:GeometryPropertyType`), `NOTATION`, `TITRE`, `TITRE1`, `DESCR` (chaînes). |
+| Allochtone : volume | **vérifié** | `&TYPENAMES=ms:REGOLITHES_ALLOCH_S_1M&RESULTTYPE=hits` | **9 095** (2026-11-17T21:23:10). |
+| Allochtone : boîte du massif test | **vérifié** | `&BBOX=48.13,7.12,48.28,7.35,urn:ogc:def:crs:EPSG::4326` (axes latitude, longitude), `COUNT=20` | **6** entités : `Fz` « Holocène à actuel », « Alluvionnaire », « Dépôts alluviaux » ; `Fy` « Weichsélien (Pléistocène sup.) », « Alluvionnaire », « Dépôts récents de la basse vallée et sous-flandriennes. Sables +/- argileux, graviers et galets » ; `J` « Age indéterminé », « Alluvionnaire », « Cône de déjection » (×2) ; `OE` « Age indéterminé », « Éolien », « Loess et lehms » (×2). |
+| Autochtone : boîte du massif test | **vérifié** (1 entité) | même BBOX, `ms:REGOLITHES_AUTOCH_S_1M` | `NOTATION` = « ¡m » (caractère `¡` : encodage à vérifier), `TITRE` = « Age indéterminé », `TITRE1` = « Altérites de roches du socle », `DESCR` = « Altérites de roches plutoniques et métamorphiques ». |
+| Pièges | **vérifié** | — | (1) **Corrigé par la relecture du 2026-11-17 (shell)** : `GetFeature` avec `BBOX` en **EPSG:2154** répond **HTTP 200** en sortie par défaut (boîte écrite `EPSG:2154`, `urn:ogc:def:crs:EPSG::2154` ou sans CRS) ; le HTTP 400 vient de `OUTPUTFORMAT=application/json`, pas du système de coordonnées : ne pas demander de JSON. Sur l'emprise de `config.yml` (1007000, 6790000, 1022000, 6805000) : 4 entités allochtones (Fz, Fy, J × 2) et 1 autochtone (¡m, caractère U+00A1 réel du service). (2) `numberMatched` = « unknown » sans `RESULTTYPE=hits`. (3) **Autochtone : `hits` sans filtre = 0 mais 1 entité avec la boîte** : le décompte brut de cette couche n'est pas fiable. (4) L'emprise annoncée pour `REGOLITHES_AUTOCH_S_1M` dans le GetCapabilities WMS se lit (ouest −1,92, est 6,86, sud 4,89, nord 12,75), ce qui n'est pas la France : lecture par résumeur, **à relire dans le XML**. |
+| Hôte `geoservices.brgm.fr` | **changement d'état** | `https://geoservices.brgm.fr/geologie?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetCapabilities` | Répond le 2026-11-17 (page « Request Rejected » le 2026-11-16 ; autre chemin réseau). Document de 225 796 caractères, lu jusqu'au caractère 200 000 : 36 `FeatureType` nommés (17 dans les 100 000 premiers caractères, 19 dans les 100 000 suivants, plus un nom coupé), **les 25 796 derniers caractères ne sont pas lus** ; aucun nom lu n'est du régolithe ; dont `ms:C50_L_DIVERS`, `ms:C50_P_STRUCT`, `ms:SCAN_H_GEOL50_PERIMETRE` (« Périmètre de la carte géologique 50 000e - harmonisé »). |
+| Licence | **inchangé** | § 6 | `notspecified` sur data.gouv.fr ; non relue ce jour. |
+
+**Pour les dev.** Couche utile : `ms:REGOLITHES_ALLOCH_S_1M` (alluvions, loess) et
+`ms:REGOLITHES_AUTOCH_S_1M` (altérites du socle), champ à lire : `TITRE1` (famille) et `DESCR`.
+À 1/1 000 000, la couche renseigne 7 polygones sur la boîte WGS84 (plus large) et 5 sur l'emprise test en Lambert-93 (relecture du 2026-11-17) : **prédicteur de
+contexte, pas de détail**.
+
+## 20. WhiteboxTools sous R
+
+Source : paquet `whitebox` **2.4.3**, publié 2025-10-20, licence MIT, `https://whiteboxr.gishub.org/`,
+`https://github.com/opengeos/whiteboxR` (CRAN : `https://cran.r-project.org/web/packages/whitebox/index.html`),
+`SystemRequirements` : WhiteboxTools. Fonctions lues dans les sources sur GitHub (branche
+principale, fichiers `R/wbt.R`, `R/terrain_analysis.R`, `R/hydro_analysis.R`), **non exécutées**
+(pas de R dans cette passe).
+
+| Point | État | Résultat |
+|---|---|---|
+| Installation | **vérifié** (source lue) | `whitebox::install_whitebox(pkg_dir = wbt_data_dir(), platform = NULL, force = FALSE, remove = FALSE)` : appelle `wbt_install()` (mêmes arguments), télécharge un ZIP depuis whiteboxgeo.com, l'extrait, règle les droits, appelle `wbt_init()`. `platform` : `"linux_amd64"`, `"linux_musl"`, `"darwin_amd64"`, `"darwin_m_series"`, `"win_amd64"`. Voir aussi `wbt_init(exe_path = wbt_exe_path(shell_quote = FALSE), ..., check_version = TRUE)`, `wbt_version(extract = FALSE)`, `wbt_exe_path(exe_path = NULL, shell_quote = TRUE)` (ordre : argument, variable `R_WHITEBOX_EXE_PATH`, option `whitebox.exe_path`, PATH, défaut). |
+| **Outil MRVBF** | **vérifié : absent du paquet R** | Aucune fonction `wbt_mrvbf` ni fonction de fond de vallée dans `R/terrain_analysis.R` (lu en entier, 191 859 caractères) ni dans la liste du manuel CRAN (premiers 100 000 de 609 559 caractères : séries `wbt_multiscale_*` sans MRVBF), ni dans `R/hydro_analysis.R` (113 883 caractères, derniers 13 883 non lus). Les fonctions voisines, alphabétiquement, de `wbt_minimal_curvature` sont `wbt_multidirectional_hillshade`, `wbt_multiscale_*`. **Il n'y a donc pas de « nom exact de l'outil MRVBF » côté `whitebox`.** Limites : branche principale de GitHub, pas l'étiquette 2.4.3 ; le binaire WhiteboxTools lui-même (manuel de whiteboxgeo.com : URL consultée en 404) n'a pas été interrogé. |
+| Équivalents du MRVBF | **piste** (documentation, pas exécutée) | SAGA GIS, bibliothèque `ta_morphometry`, outil 8 « Multiresolution Index of Valley Bottom Flatness (MRVBF) » (`https://saga-gis.sourceforge.io/saga_tool_doc/9.3.2/ta_morphometry_8.html` ; seuil de pente initial par défaut 16) ; GRASS, extension `r.valley.bottom`. Méthode : Gallant et Dowling (2003), *Water Resources Research*. Passerelle R vers SAGA : non vérifiée. |
+| Signatures lues | **vérifié** (sources) | `wbt_slope(dem, output, zfactor=NULL, units="degrees", wd=NULL, verbose_mode=NULL, compress_rasters=NULL, command_only=FALSE)` ; `wbt_wetness_index(sca, slope, output, wd=NULL, verbose_mode=NULL, compress_rasters=NULL, command_only=FALSE)` ; `wbt_relative_topographic_position(dem, output, filterx=11, filtery=11, wd=…)` ; `wbt_multiscale_topographic_position_image(local, meso, broad, output, hillshade=NULL, lightness=1.2, wd=…)` ; `wbt_multiscale_curvatures(dem, out_mag, curv_type="ProfileCurv", out_scale=NULL, min_scale=0, step=1, num_steps=1, step_nonlinearity=1.0, log=TRUE, standardize=FALSE, wd=…)` ; `wbt_elevation_above_stream(dem, streams, output, wd=…)` ; `wbt_d_inf_flow_accumulation(input, output, out_type="Specific Contributing Area", threshold=NULL, log=FALSE, clip=FALSE, pntr=FALSE, wd=…)` ; `wbt_breach_depressions_least_cost(dem, output, dist, max_cost=NULL, min_dist=TRUE, flat_increment=NULL, fill=TRUE, wd=…)`. (`wd=…` : suite commune `wd=NULL, verbose_mode=NULL, compress_rasters=NULL, command_only=FALSE`.) |
+| Fonctions dont seul le nom est lu | **vérifié** (noms) | `wbt_depth_to_water`, `wbt_elevation_above_stream_euclidean`, `wbt_geomorphons`, `wbt_stream_power_index`, `wbt_openness`, `wbt_downslope_distance_to_stream`, `wbt_d8_flow_accumulation`, `wbt_fd8_flow_accumulation` : signatures **non lues**. |
+
+## 21. Référence AgroParisTech : ce qui est publié du format des rasters de stations
+
+| Point | État | Source | Résultat |
+|---|---|---|---|
+| Publication de référence | **vérifié** (notice) | Gégout J.-C., Piedallu C., Cornu J.-F., Cluzeau C. (2008), « La cartographie prédictive des stations forestières : un nouvel outil au service du gestionnaire », *Revue forestière française* 60(1) : 37-60, DOI `10.4267/2042/17240`, notice `https://infodoc.agroparistech.fr/index.php?lvl=notice_display&id=101455` | Le résumé parle de « couches numériques » produites sous SIG et d'une carte d'unités écologiquement homogènes pour le massif vosgien ; **aucun format de fichier, aucun nombre de types, aucun codage** n'y figure. |
+| Les 59 types, le code à trois chiffres, la résolution de 50 m | **non vérifié à la source** | brief technique, `docs/brief-technique.md` l. 255 : « 8 800 km², pixels de 50 m, 59 types codés sur trois chiffres (6 classes trophiques, 5 bioclimatiques, 4 classes d'eau) » | **Ce chiffrage vient du brief, pas d'une consultation de cette passe.** Rien n'a été trouvé qui publie le raster, ses couches ou son codage (recherches : data.gouv.fr, Zenodo, entrepôt recherche.data.gouv.fr). La page SILVAE, citée par le brief, n'a pas été consultée. |
+| Diffusion | **non trouvée** | brief technique l. 265 | Le brief dit : demande à adresser à AgroParisTech Nancy (équipe SILVAE). **Aucune diffusion ouverte trouvée.** |
+| Voisins, pour mémoire | **piste** (listes de résultats, pages non ouvertes sauf la première) | data.gouv.fr « Guides des stations forestières en France métropolitaine » (La Forestière, Licence Ouverte 2.0, GeoPackage 2,4 Mo, couches `guides`, `ressources`, `guides_urls`, `cnpfs`, `cnpfs_urls`, `stations`, mise à jour 2026-09-22 ; **emprises de validité des guides, pas un raster**) ; cartes prédites des Hauts-de-France (WMS/WFS) et du CNPF Normandie (WMS), inspirées du LERFoB | Ne donnent pas le format du raster de référence. |
+
+**Pour les dev.** Le format réel des rasters, les noms de couches, le codage des 59 types et
+l'ordre des chiffres du code (`recode_3digits()`) **restent inconnus** : ne rien coder, garder la
+mention « à vérifier » (docs/pipeline.md l. 38-39) jusqu'à la réponse d'AgroParisTech.
 
 ---
 
@@ -306,16 +558,40 @@ géologie impose trois départements BD Charm-50 (68, 67, 88).
     sans licence nommée (`notspecified`) malgré la mention « Données ouvertes ».
 11. Le site InfoTerre est fermé depuis le 2026-10-21 ; les archives BD Charm-50 restent
     servies à leur ancienne adresse, la page de formulaire citée par data.gouv.fr répond 404.
-12. La flore IFN est codée en TAXREF v13.0 ; la version courante de TAXREF n'a pas pu être
-    lue.
+12. La flore IFN est codée en TAXREF v13.0 ; la version courante est **v18 (2025)** (§ 15,
+    passe 3) : cinq versions d'écart, **aucune table de passage trouvée**.
+13. LiDAR HD, classe 65 : la révision de juillet 2026 du descriptif de l'IGN n'a **pas** de
+    classe 65 (11 classes : 1, 2, 3, 4, 5, 6, 9, 17, 64, 66, 67) ; un résultat de recherche en
+    attribue une à une version antérieure (« Artefact »), non vérifié (§ 17).
+14. Régolithe : service muet le 2026-11-16, **joignable le 2026-11-17** (§ 19). Sur
+    `REGOLITHES_AUTOCH_S_1M`, `hits` sans filtre = 0 mais 1 entité avec une boîte : décompte
+    brut peu fiable.
+15. Licences des valeurs indicatrices : Zenodo (Tichý et al.) **CC BY 4.0** contre
+    **CC BY-SA 2.0** annoncée par Tela Botanica pour les données de Baseflor, dont le fichier
+    Zenodo reprend les valeurs françaises de Julve ; non résolu (§ 14).
+16. BD TOPAGE : **748** tronçons (millésime 2025) contre **752** (BD TOPO courante) dans la
+    même boîte WGS84 ; licence selon le millésime : Licence Ouverte 1.0 (2022) puis 2.0
+    (2023, 2024) (§ 16).
+17. MRVBF : le brief technique (l. 75) cite l'indice ; **il n'existe pas dans `whitebox`**
+    (§ 20).
 
-## Dépendances et statut du jour (2026-11-16)
+## Dépendances et statut du jour (2026-11-17)
 
-- Vérifié aujourd'hui : § 1, 2, 3, 4, 5, 7, 8, 10, 11 (sauf Baseflor), 12, 13.
-- Non vérifié : § 6 (service régolithe : `mapsref.brgm.fr` et `geoservices.brgm.fr`
-  inaccessibles), § 9 (Baseflor ; version courante de TAXREF : `inpn.mnhn.fr` et
-  `taxref.mnhn.fr` non ouverts), `lidarHD` (hors GitHub ?), `rgbif::occ_download` (compte
-  GBIF requis).
+- Vérifié le 2026-11-16 (passes 1 et 2) : § 1, 2, 3, 4, 5, 7, 8, 10, 12, 13 ; § 11 pour les
+  lignes antérieures à la passe 3.
+- Vérifié le 2026-11-17 (passe 3) : § 15 (version v18 et lien de téléchargement seulement),
+  § 16, § 17, § 19, § 20 (lecture des sources, rien exécuté), § 18 (SoilGrids, BDGSF,
+  Bruand et al. 2004).
+- **Pistes, à ne pas coder** : Baseflor (§ 14), EcoPlant (§ 14), contenu du zip TAXREF v18
+  (§ 15), GlobalSoilMap France pH, texture et réserve utile 90 m (§ 18), fiches de la
+  référence AgroParisTech voisines (§ 21).
+- **Non vérifié** : colonnes de toutes les valeurs indicatrices (§ 14) ; table de passage
+  TAXREF v13 vers v18 (§ 15) ; format du raster de stations AgroParisTech (§ 21) ; `lidarHD`
+  (hors GitHub ?), `rgbif::occ_download` (compte GBIF requis) ; § 6 : **réserve levée**
+  (service joignable, § 19), reste la licence sans nom.
+- **Non exécuté en passe 3** : tout R (`install_whitebox()`, `args()`), tout téléchargement
+  (zip TAXREF, fichier Zenodo de 19,5 Mo, GeoPackage).
 - Dépendances : l'URL BD Charm-50 dépend de la refonte d'InfoTerre (fin 2026 annoncée) ;
   le nom de l'archive IFN change à chaque campagne ; l'URL `url_npl` du LiDAR contient la
-  date d'édition (2024-12-20).
+  date d'édition (2024-12-20) ; la page PatriNat de TAXREF v18 sera retirée « dans les
+  prochains mois » ; le millésime est dans le nom des couches TOPAGE.
