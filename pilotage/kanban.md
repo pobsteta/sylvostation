@@ -18,6 +18,8 @@
 
 ## Terminé
 
+- [012-release-versionnage](missions/012-release-versionnage.md) · cycle 5 · dev · CI, release vAAAA.MM.N, badges
+
 - [000-critique-brief](missions/000-critique-brief.md) · cycle 1 · contradicteur
 - [001-referentiels](missions/001-referentiels.md) · cycle 1 · acquereur (fini par un agent généraliste)
 - [002-squelette](missions/002-squelette.md) · cycle 1 · dev
@@ -35,4 +37,4 @@
 
 ## Livraisons
 
-- Branche `claude/admiring-cerf-hq7t8l` : 981 tests verts, `R CMD check` sans erreur ni warning ; pipeline démo 47 cibles en ≈ 23 s ; PR brouillon impossible tant que le dépôt n'a pas de branche `main` (journal).
+- PR #1 fusionnée dans `main` le 2026-11-17 (0ab9b02) : 889 tests verts, 16 sautés ; pipeline démo 47 cibles.

@@ -1,0 +1,92 @@
+name: CI
+
+# Push sur main et pull requests (ADR 0005). La release (release.yml) part après un run VERT de ce
+# workflow sur un push de main.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+      _R_CHECK_FORCE_SUGGESTS_: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tester la décision de release
+        run: .github/scripts/test-release-necessaire.sh
+
+      - name: Tester le calcul de version calendaire
+        run: .github/scripts/test-version-calendaire.sh
+
+      - name: Tester le badge de couverture
+        run: .github/scripts/test-badge-couverture.sh
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+          # lasR n'est pas sur le CRAN : dépôt r-universe de r-lidar.
+          extra-repositories: https://r-lidar.r-universe.dev
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+
+      - uses: r-lib/actions/check-r-package@v2
+
+  couverture:
+    # Seulement sur un push de main, après un check vert. Un échec ici ne casse jamais la CI :
+    # les paquets Suggests peuvent manquer (les tests sautent par skip_if_not_installed).
+    if: github.event_name == 'push'
+    needs: check
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      _R_CHECK_FORCE_SUGGESTS_: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+          extra-repositories: https://r-lidar.r-universe.dev
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::covr
+          needs: coverage
+
+      - name: Mesurer la couverture (covr)
+        id: covr
+        continue-on-error: true
+        run: |
+          Rscript -e 'p <- covr::percent_coverage(covr::package_coverage()); writeLines(format(round(p, 1), nsmall = 1), "couverture.txt")'
+          echo "pct=$(cat couverture.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Générer le badge SVG (local, sans service externe)
+        run: .github/scripts/badge-couverture.sh "${{ steps.covr.outputs.pct }}"
+
+      - name: Publier le badge mis à jour
+        continue-on-error: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/badges/couverture.svg
+          if git diff --cached --quiet; then echo "Badge inchangé."; exit 0; fi
+          git commit -m "docs: mise à jour du badge de couverture [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main

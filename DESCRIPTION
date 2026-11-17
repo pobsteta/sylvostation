@@ -1,7 +1,7 @@
 Package: sylvostation
 Type: Package
 Title: Catalogue de Stations Forestières par Sylvoécorégion
-Version: 0.0.0.9000
+Version: 2026.11.0
 Authors@R: person("Équipe", "sylvostation", role = c("aut", "cre"),
     email = "contact@example.org")
 Description: Fonctions et pipeline pour produire, à partir du seul code d'une
@@ -41,7 +41,8 @@ Suggests:
     targets,
     testthat (>= 3.0.0),
     vegan,
-    whitebox
+    whitebox,
+    withr
 Additional_repositories: https://r-lidar.r-universe.dev
 Config/testthat/edition: 3
 VignetteBuilder: knitr
