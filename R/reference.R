@@ -37,7 +37,7 @@ load_reference <- function(path, layers = NULL) {
     stop("Couches absentes : ", paste(setdiff(layers, names(r)), collapse = ", "), ".",
          call. = FALSE)
   }
-  if (startsWith(basename(path), "synth_") || identical(unname(terra::metags(r)["synthetic"]), "TRUE")) {
+  if (startsWith(basename(path), "synth_") || identical(.get_metag(r, "synthetic"), "TRUE")) {
     terra::metags(r) <- c(synthetic = "TRUE")
   }
   r
@@ -168,8 +168,8 @@ compare_gradients <- function(ours, ref, res = 50, max_cells = 100000L) {
     names(e) <- paste0("ecart_", nm)
     ec[[i]] <- e
   }
-  syn <- identical(unname(terra::metags(ours)["synthetic"]), "TRUE") ||
-    identical(unname(terra::metags(ref)["synthetic"]), "TRUE")
+  syn <- identical(.get_metag(ours, "synthetic"), "TRUE") ||
+    identical(.get_metag(ref, "synthetic"), "TRUE")
   list(correlation = data.frame(gradient = communs, rho = unname(rho), n = n,
                                 stringsAsFactors = FALSE),
        ecarts = do.call(c, ec), ours = o, ref = r, res = res, synthetic = syn)

@@ -186,3 +186,26 @@ assert_crs_2154 <- function(x) {
   }
   invisible(x)
 }
+
+#' Lit une balise de métadonnées d'un raster terra
+#'
+#' Selon la version de terra, `terra::metags()` renvoie un vecteur nommé
+#' (anciennes versions) ou un data.frame à colonnes `name`, `value`, `domain`
+#' (versions récentes). Cette fonction renvoie la valeur de la clé dans les deux cas.
+#'
+#' @param r Un `SpatRaster`, ou directement l'objet renvoyé par `terra::metags()`
+#'   (vecteur nommé ou data.frame).
+#' @param key Nom de la balise recherchée.
+#' @return La valeur (caractère), ou `NULL` si la clé est absente.
+#' @noRd
+.get_metag <- function(r, key) {
+  tags <- if (inherits(r, "SpatRaster")) terra::metags(r) else r
+  if (is.data.frame(tags)) {
+    if (!all(c("name", "value") %in% names(tags))) return(NULL)
+    i <- which(tags$name == key)
+    if (length(i) == 0L) return(NULL)
+    return(as.character(tags$value[i[1L]]))
+  }
+  if (is.null(names(tags)) || !key %in% names(tags)) return(NULL)
+  unname(as.character(tags[[key]]))
+}

@@ -15,7 +15,7 @@ test_that("synth_demo_dtm : sur la grille en Lambert-93, balisé synthétique", 
   expect_equal(as.vector(terra::ext(d)), as.vector(terra::ext(g)))
   expect_equal(terra::res(d), c(25, 25))
   expect_error(assert_crs_2154(d), NA)
-  expect_equal(unname(terra::metags(d)["synthetic"]), "TRUE")
+  expect_equal(sylvostation:::.get_metag(d, "synthetic"), "TRUE")
   # reproductible, sans toucher à la graine globale
   set.seed(5); a <- stats::runif(1)
   set.seed(5); synth_demo_dtm(g); b <- stats::runif(1)
@@ -34,7 +34,7 @@ test_that("synth_demo_climat : trois couches de 1 km, convention de compute_grad
   c1 <- synth_demo_climat(c(1007000, 6790000, 1022000, 6805000))
   expect_equal(names(c1), c("p_sv", "etp_sv", "t_moy"))
   expect_equal(terra::res(c1), c(1000, 1000))
-  expect_equal(unname(terra::metags(c1)["synthetic"]), "TRUE")
+  expect_equal(sylvostation:::.get_metag(c1, "synthetic"), "TRUE")
   expect_error(assert_crs_2154(c1), NA)
 })
 
@@ -83,7 +83,7 @@ test_that("synth_demo_reference : 50 m, aligné sur la grille de 25 m, balisé",
   ref <- synth_demo_reference(s$truth, res = 50)
   expect_equal(terra::res(ref), c(50, 50))
   expect_equal(names(ref), names(s$truth))
-  expect_equal(unname(terra::metags(ref)["synthetic"]), "TRUE")
+  expect_equal(sylvostation:::.get_metag(ref, "synthetic"), "TRUE")
   expect_equal(terra::xmin(ref) %% 50, 0)
   expect_error(synth_demo_reference(s$truth, res = 30), "multiple")
 })

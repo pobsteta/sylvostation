@@ -16,7 +16,7 @@ test_that("load_reference lit le jeu synthétique : EPSG:2154, couches, balise",
   expect_equal(names(r), c("trophic", "hydric", "bioclim"))
   expect_error(assert_crs_2154(r), NA)
   expect_equal(terra::res(r), c(50, 50))
-  expect_equal(unname(terra::metags(r)["synthetic"]), "TRUE")
+  expect_equal(sylvostation:::.get_metag(r, "synthetic"), "TRUE")
   # origine multiple de 50 m (ADR 0004)
   expect_equal(terra::xmin(r) %% 50, 0)
   expect_equal(terra::ymin(r) %% 50, 0)
@@ -32,7 +32,7 @@ test_that("load_reference : erreurs", {
   g <- tempfile(fileext = ".tif")
   terra::writeRaster(grille_ref(), g)
   expect_error(load_reference(g, layers = "hydric"), "absentes")
-  expect_false(isTRUE(unname(terra::metags(load_reference(g))["synthetic"]) == "TRUE"))
+  expect_false(isTRUE(sylvostation:::.get_metag(load_reference(g), "synthetic") == "TRUE"))
   # mauvais CRS
   h <- tempfile(fileext = ".tif")
   r4 <- terra::rast(nrows = 2, ncols = 2, xmin = 6, xmax = 7, ymin = 48, ymax = 49,

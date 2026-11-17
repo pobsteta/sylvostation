@@ -103,7 +103,7 @@ test_that("predict_raster : couches, CRS, point connu, AOA", {
   expect_true(all(terra::values(r$sd) >= 0))
   expect_true(all(terra::values(r$aoa) %in% c(0, 1)))
   expect_gt(mean(terra::values(r$aoa)), 0.8)
-  expect_equal(unname(terra::metags(r)["synthetic"]), "TRUE")
+  expect_equal(sylvostation:::.get_metag(r, "synthetic"), "TRUE")
 })
 
 test_that("AOA : une zone hors domaine est signalée hors zone", {

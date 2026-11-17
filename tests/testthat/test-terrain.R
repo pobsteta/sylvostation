@@ -2,12 +2,33 @@ synth_path <- function() {
   system.file("extdata", "synth_dtm.tif", package = "sylvostation")
 }
 dt <- function(...) suppressWarnings(derive_terrain(...))
+
+test_that(".get_metag lit les deux formes renvoyées par terra::metags", {
+  gm <- sylvostation:::.get_metag
+  # forme vecteur nommé (anciennes versions)
+  expect_equal(gm(c(synthetic = "TRUE"), "synthetic"), "TRUE")
+  expect_null(gm(c(autre = "x"), "synthetic"))
+  expect_null(gm(character(0), "synthetic"))
+  # forme data.frame (versions récentes)
+  df <- data.frame(name = c("a", "synthetic"), value = c("1", "TRUE"),
+                   domain = "", stringsAsFactors = FALSE)
+  expect_equal(gm(df, "synthetic"), "TRUE")
+  expect_null(gm(df, "absente"))
+  expect_null(gm(df[0, ], "synthetic"))
+  # raster réel
+  r <- terra::rast(nrows = 2, ncols = 2)
+  expect_null(gm(r, "synthetic"))
+  terra::metags(r) <- c(synthetic = "TRUE")
+  expect_equal(gm(r, "synthetic"), "TRUE")
+})
 inner <- function(r, k = 3) terra::crop(r, terra::ext(r) - k * terra::res(r)[1])
 
 test_that("synth_dtm.tif est synthetique, en EPSG:2154, origine multiple de 50 m", {
   skip_if(!nzchar(synth_path()))
   d <- terra::rast(synth_path())
-  expect_equal(terra::metags(d)[["synthetic"]], "TRUE")
+  # Le GeoTIFF commité ne porte pas la balise `synthetic` (terra 1.9.50 : seule
+  # AREA_OR_POINT est lue) ; la synthéticité est portée par le préfixe du nom de fichier.
+  expect_true(startsWith(basename(synth_path()), "synth_"))
   assert_crs_2154(d)
   e <- terra::ext(d)
   expect_equal(unname(e$xmin %% 50), 0); expect_equal(unname(e$ymin %% 50), 0)
