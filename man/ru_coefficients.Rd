@@ -35,18 +35,19 @@ est une liste \code{list(haut = , bas = )} de deux vecteurs nommés, acceptée p
 l'argument \code{ru_table} de \code{\link[=compute_gradients]{compute_gradients()}}. Attribut \code{verifie = TRUE} (le
 tableau lui-même est relu).
 
-Trois hypothèses du code, \strong{non publiées} : (1) la correspondance des codes IFN
-avec les classes du triangle de l'Aisne, faite par les noms (la légende complète du
-triangle n'est pas dans les pages lues) : \strong{à vérifier, provisoire}. Un code
-ambigu prend la \strong{moyenne} des classes candidates qui ont une valeur : 4 = LS (LLS
-sans valeur), 5 = LA, LAS, LSA, 6 = LL, LM, LMS (LL sans valeur), 9 = A, ALO (A sans
-valeur en horizon A) ; 1 = S, 2 = SL, 3 = SA, 7 = AL, 8 = AS. Attribut
-\code{correspondance_verifiee = FALSE} : tant qu'il l'est, \code{compute_gradients()} rend
-\code{ru_verifie = FALSE} ; (2) \code{TEXT1} est pris pour un horizon A, \code{TEXT2} pour un
-horizon E, B ou C ; (3) LS n'a pas de valeur en horizons E, B, C : on prend alors la
-valeur de l'horizon A (repli signalé). Les écarts types de l'article (0,14 à
-0,53 mm/cm) ne sont pas propagés. \code{H} vaut \code{NA} (la couche organique n'est pas
-comptée), \code{0} vaut 0.
+\strong{Correspondance codes IFN → classes de l'Aisne} (mission 019) : lue dans le
+dictionnaire des données brutes de l'IFN (\code{\link[=read_texture_dictionary]{read_texture_dictionary()}}, extrait de
+\code{metadonnees.csv}), qui définit chaque code par les abréviations des classes du
+triangle de l'Aisne : 1 = S, 2 = SL, 3 = SA, 4 = LS, LSA, LMS, LLS, 5 = LA, LAS,
+6 = LM, LL, 7 = AL, 8 = AS (et \code{Als}, hors du triangle de l'Aisne, sans valeur
+chez Bruand), 9 = A, ALO. Attribut \code{correspondance_verifiee = TRUE}. Un code qui
+couvre plusieurs classes prend la \strong{moyenne simple} des classes qui ont une valeur
+(choix du code, non publié). Deux hypothèses restent du code : (1) \code{TEXT1} est pris
+pour un horizon A, \code{TEXT2} pour un horizon E, B ou C ; (2) une case « - » d'un type
+d'horizon prend la valeur de l'autre type (repli). Les écarts types de l'article
+(0,14 à 0,53 mm/cm) ne sont pas propagés. \code{H} vaut \code{NA} (la couche organique n'est
+pas comptée), \code{0} vaut 0. La réserve utile de référence est désormais celle de
+\code{\link[=ru_from_texture]{ru_from_texture()}} (euptf2) ; cette table sert de contre-vérification.
 
 \strong{\code{source = "provisoire"}} : ordres de grandeur \strong{non publiés} de la mission
 005 (vecteur unique pour les deux horizons), attribut \code{verifie = FALSE} ; conservés

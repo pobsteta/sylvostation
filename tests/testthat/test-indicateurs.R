@@ -162,22 +162,25 @@ test_that("ru_coefficients() : tableau 2 de Bruand et al. (2004), colonne défau
   # valeurs du tableau, lues sur le PDF : S 0,60 (A) / 0,73 (BC) ; LM 2,13 / 2,07 ; AL 1,36 / 1,13
   expect_equal(unname(ru$haut[c("1", "7")]), c(0.60, 1.36))
   expect_equal(unname(ru$bas[c("1", "7")]), c(0.73, 1.13))
-  # codes ambigus : moyenne des classes candidates qui ont une valeur (provisoire)
-  expect_equal(unname(ru$haut["6"]), mean(c(2.13, 1.83)))        # LM, LMS (LL sans valeur)
-  expect_equal(unname(ru$bas["6"]), mean(c(2.07, 1.96)))
-  expect_equal(unname(ru$haut["5"]), mean(c(1.73, 1.67, 1.43)))  # LA, LAS, LSA
-  expect_equal(unname(ru$bas["5"]), mean(c(1.49, 1.48, 1.27)))
+  # codes a plusieurs classes (dictionnaire IFN, mission 019) : moyenne des classes
+  # qui ont une valeur
+  expect_equal(unname(ru$haut["6"]), 2.13)                       # LM, LL (LL sans valeur)
+  expect_equal(unname(ru$bas["6"]), 2.07)
+  expect_equal(unname(ru$haut["5"]), mean(c(1.73, 1.67)))        # LA, LAS
+  expect_equal(unname(ru$bas["5"]), mean(c(1.49, 1.48)))
+  expect_equal(unname(ru$haut["4"]), mean(c(1.62, 1.43, 1.83)))  # LS, LSA, LMS (LLS sans valeur)
+  expect_equal(unname(ru$bas["4"]), mean(c(1.27, 1.96)))         # LSA, LMS (LS, LLS sans valeur)
   expect_equal(unname(ru$haut["9"]), 1.24)                       # A sans valeur en horizon A : ALO
   expect_equal(unname(ru$bas["9"]), mean(c(0.93, 1.12)))         # A, ALO
   # reperes : 0 sans terre fine, H non compte, repli documente pour les cases "-"
   expect_equal(unname(ru$haut["0"]), 0)
   expect_true(is.na(ru$haut["H"]) && is.na(ru$bas["H"]))
-  expect_equal(unname(ru$bas["4"]), 1.62)    # LS en E,B,C : "-" -> valeur de l'horizon A (repli)
-  expect_false(attr(ru, "correspondance_verifiee"))
+  expect_true(attr(ru, "correspondance_verifiee"))   # dictionnaire IFN (mission 019)
   # codes IFN couverts
   expect_setequal(names(ru$haut), c("0", as.character(1:9), "H"))
-  expect_equal(attr(ru, "correspondance")[["8"]], "AS")
-  expect_equal(attr(ru, "correspondance")[["6"]], c("LL", "LM", "LMS"))
+  expect_equal(attr(ru, "correspondance")[["8"]], c("AS", "ALS"))   # Als : hors Aisne, sans valeur
+  expect_equal(attr(ru, "correspondance")[["6"]], c("LM", "LL"))
+  expect_equal(unname(ru$bas["8"]), 0.95)
 })
 
 test_that("ru_coefficients(\"provisoire\") : ancien vecteur, non vérifié", {
@@ -187,14 +190,14 @@ test_that("ru_coefficients(\"provisoire\") : ancien vecteur, non vérifié", {
   expect_error(ru_coefficients("autre"))
 })
 
-test_that("compute_gradients : RU de Bruand calculée à la main, ru_verifie = FALSE (correspondance non sourcée)", {
+test_that("compute_gradients : RU de Bruand calculée à la main, ru_verifie = TRUE (dictionnaire IFN)", {
   g <- compute_gradients(make_synth_ifn(), make_synth_indic())
-  expect_false(attr(g, "ru_verifie"))             # table relue, correspondance non sourcée
-  expect_false(attr(g, "correspondance_verifiee"))
-  # P1 : 20 cm de limon (A : moyenne LM, LMS) + 40 cm de sable limoneux (bas 1,16), 20 % de cailloux
-  expect_equal(g$ru_mm[1], (20 * mean(c(2.13, 1.83)) + 40 * 1.16) * 0.8)
-  # P3 : 50 cm de limon sableux sous un seul horizon -> `bas` (repli 1,62), sans cailloux
-  expect_equal(g$ru_mm[3], 50 * 1.62)
+  expect_true(attr(g, "ru_verifie"))              # table relue, correspondance du dictionnaire IFN
+  expect_true(attr(g, "correspondance_verifiee"))
+  # P1 : 20 cm de limon (A : LM) + 40 cm de sable limoneux (bas 1,16), 20 % de cailloux
+  expect_equal(g$ru_mm[1], (20 * 2.13 + 40 * 1.16) * 0.8)
+  # P3 : 50 cm de limon sableux sous un seul horizon -> `bas` (LSA, LMS), sans cailloux
+  expect_equal(g$ru_mm[3], 50 * mean(c(1.27, 1.96)))
   # P4 : 40 cm de sable (bas 0,73), 100 % de cailloux -> 0
   expect_equal(g$ru_mm[4], 0)
   # la table provisoire donne un autre chiffre et ru_verifie = FALSE
@@ -212,4 +215,8 @@ test_that("ru_verifie : vrai seulement si table publiee ET correspondance source
   g <- compute_gradients(make_synth_ifn(), make_synth_indic(), ru_table = ru)
   expect_true(attr(g, "ru_verifie"))
   expect_true(attr(g, "correspondance_verifiee"))
+  attr(ru, "correspondance_verifiee") <- FALSE
+  g <- compute_gradients(make_synth_ifn(), make_synth_indic(), ru_table = ru)
+  expect_false(attr(g, "ru_verifie"))
+  expect_false(attr(g, "correspondance_verifiee"))
 })

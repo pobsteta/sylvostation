@@ -124,3 +124,29 @@ Extraits le 2026-11-16, mission 001 (voir `docs/referentiels.md`, § 5 et § 7).
   dans l'extrait Tichý. Script : `inst/scripts/extraire_indicateurs.R`.
 - **Licence :** Licence Ouverte (data.gouv.fr : `lov2`, `fr-lo` ; la page PatriNat ne cite
   aucune licence, écart déjà noté `docs/referentiels.md` § 15).
+
+## `ifn_texture_dictionnaire.csv` (mission 019, RÉEL)
+
+- **Source :** IGN – Inventaire forestier national français, Données brutes, Campagnes
+  annuelles 2005 et suivantes, https://inventaire-forestier.ign.fr/dataIFN/ , site consulté le
+  17/11/2026. Fichier `metadonnees.csv` de l'archive
+  `https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip`
+  (export du 2026-10-07, 71 136 669 octets).
+- **Traitement :** modalités des unités `TEXT` (campagnes 2005-2016) et `TEXT1` (2017 et
+  suivantes) du bloc « Définition des modalités pour chaque unité » (lignes 5845-5865), avec
+  la période de chaque unité lue dans le bloc « Définition des unités » (lignes 376-379).
+  Colonnes `unite;campagnes;code;libelle;definition`, texte d'origine (espaces insécables
+  compris), 21 lignes. Voir `docs/referentiels.md`, § 22.
+- **Licence :** Licence Ouverte / Open Licence Etalab Version 2.0.
+
+## `safran_sim2_extrait.csv` (mission 019, RÉEL)
+
+- **Source :** Météo-France, « Données changement climatique - SIM quotidienne »
+  (data.gouv.fr, jeu `6569b27598256cc583c917a7`), fichiers
+  `https://meteofrance.s3.sbg.io.cloud.ovh.net/data/REF_CC/SIM/QUOT_SIM2_2003.csv.gz` et
+  `…_2004.csv.gz`, téléchargés le 2026-11-17. Mention obligatoire : « Source : Météo-France ».
+- **Traitement :** maille `LAMBX = 9640`, `LAMBY = 23690` (Lambert II étendu en hm ; centre
+  environ x = 1 014 550, y = 6 799 283 en Lambert-93, au centre de l'emprise test), du
+  2003-01-01 au 2004-12-31 (731 jours), colonnes `LAMBX;LAMBY;DATE;PRENEI;PRELIQ;ETP`
+  (mm). 21 Ko. Voir `docs/referentiels.md`, § 23.
+- **Licence :** Licence Ouverte 2.0 (`lov2`, champ licence de data.gouv.fr).

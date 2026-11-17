@@ -253,18 +253,19 @@ unmatched_taxa <- function(flore, indicateurs) {
 #' l'argument `ru_table` de [compute_gradients()]. Attribut `verifie = TRUE` (le
 #' tableau lui-même est relu).
 #'
-#' Trois hypothèses du code, **non publiées** : (1) la correspondance des codes IFN
-#' avec les classes du triangle de l'Aisne, faite par les noms (la légende complète du
-#' triangle n'est pas dans les pages lues) : **à vérifier, provisoire**. Un code
-#' ambigu prend la **moyenne** des classes candidates qui ont une valeur : 4 = LS (LLS
-#' sans valeur), 5 = LA, LAS, LSA, 6 = LL, LM, LMS (LL sans valeur), 9 = A, ALO (A sans
-#' valeur en horizon A) ; 1 = S, 2 = SL, 3 = SA, 7 = AL, 8 = AS. Attribut
-#' `correspondance_verifiee = FALSE` : tant qu'il l'est, `compute_gradients()` rend
-#' `ru_verifie = FALSE` ; (2) `TEXT1` est pris pour un horizon A, `TEXT2` pour un
-#' horizon E, B ou C ; (3) LS n'a pas de valeur en horizons E, B, C : on prend alors la
-#' valeur de l'horizon A (repli signalé). Les écarts types de l'article (0,14 à
-#' 0,53 mm/cm) ne sont pas propagés. `H` vaut `NA` (la couche organique n'est pas
-#' comptée), `0` vaut 0.
+#' **Correspondance codes IFN → classes de l'Aisne** (mission 019) : lue dans le
+#' dictionnaire des données brutes de l'IFN ([read_texture_dictionary()], extrait de
+#' `metadonnees.csv`), qui définit chaque code par les abréviations des classes du
+#' triangle de l'Aisne : 1 = S, 2 = SL, 3 = SA, 4 = LS, LSA, LMS, LLS, 5 = LA, LAS,
+#' 6 = LM, LL, 7 = AL, 8 = AS (et `Als`, hors du triangle de l'Aisne, sans valeur
+#' chez Bruand), 9 = A, ALO. Attribut `correspondance_verifiee = TRUE`. Un code qui
+#' couvre plusieurs classes prend la **moyenne simple** des classes qui ont une valeur
+#' (choix du code, non publié). Deux hypothèses restent du code : (1) `TEXT1` est pris
+#' pour un horizon A, `TEXT2` pour un horizon E, B ou C ; (2) une case « - » d'un type
+#' d'horizon prend la valeur de l'autre type (repli). Les écarts types de l'article
+#' (0,14 à 0,53 mm/cm) ne sont pas propagés. `H` vaut `NA` (la couche organique n'est
+#' pas comptée), `0` vaut 0. La réserve utile de référence est désormais celle de
+#' [ru_from_texture()] (euptf2) ; cette table sert de contre-vérification.
 #'
 #' **`source = "provisoire"`** : ordres de grandeur **non publiés** de la mission
 #' 005 (vecteur unique pour les deux horizons), attribut `verifie = FALSE` ; conservés
@@ -297,11 +298,11 @@ ru_coefficients <- function(source = c("bruand2004", "provisoire")) {
     bas   = c(1.12, 1.13, 0.95, 0.93, 1.49, 1.48, 1.27, 2.07, 1.96, NA, NA, NA,
               1.03, 1.16, 0.73),   # horizons E, B, C
     stringsAsFactors = FALSE)
-  # Correspondance code IFN -> classes candidates (PROVISOIRE, non publiee, par les noms) :
-  # un code ambigu prend la moyenne des classes candidates qui ont une valeur.
-  corr <- list("1" = "S", "2" = "SL", "3" = "SA", "4" = c("LS", "LLS"),
-               "5" = c("LA", "LAS", "LSA"), "6" = c("LL", "LM", "LMS"),
-               "7" = "AL", "8" = "AS", "9" = c("A", "ALO"))
+  # Correspondance code IFN -> classes : dictionnaire IFN (metadonnees.csv, mission 019).
+  # Un code a plusieurs classes prend la moyenne des classes qui ont une valeur.
+  dico <- read_texture_dictionary()
+  dico <- dico[dico$code %in% as.character(1:9), , drop = FALSE]
+  corr <- stats::setNames(strsplit(dico$classes, ",", fixed = TRUE), dico$code)
   moy <- function(classes, col) {
     v <- b[[col]][match(classes, b$aisne)]
     if (all(is.na(v))) NA_real_ else mean(v, na.rm = TRUE)
@@ -312,7 +313,7 @@ ru_coefficients <- function(source = c("bruand2004", "provisoire")) {
   bas2  <- ifelse(is.na(bas), haut, bas)    # (code 4, LS en horizons E, B, C : valeur de A)
   haut <- stats::setNames(c(0, haut2, NA_real_), c("0", names(corr), "H"))
   bas  <- stats::setNames(c(0, bas2,  NA_real_), c("0", names(corr), "H"))
-  structure(list(haut = haut, bas = bas), verifie = TRUE, correspondance_verifiee = FALSE,
+  structure(list(haut = haut, bas = bas), verifie = TRUE, correspondance_verifiee = TRUE,
             source = paste("Bruand, Duval et Cousin (2004), Etude et Gestion des Sols 11(3),",
                            "323-332, tableau 2 p. 328, colonne defaut, sans Da"),
             unite = "mm/cm", correspondance = corr)

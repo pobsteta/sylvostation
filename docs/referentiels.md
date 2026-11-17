@@ -524,6 +524,43 @@ mention « à vérifier » (docs/pipeline.md l. 38-39) jusqu'à la réponse d'Ag
 
 ---
 
+# Passe 4 (mission 019, 2026-11-17) : gradient hydrique (ADR 0006)
+
+## 22. Dictionnaire IFN des codes de texture `TEXT1`, `TEXT2` : vérifié
+
+| Point | État | Commande / source | Résultat |
+|---|---|---|---|
+| Archive | **vérifié** | `curl -sSL -o data/cache/ifn/export_dataifn_2005_2025.zip https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip` | 71 136 669 octets, mêmes 20 fichiers qu'au § 7 (export du 2026-10-07). Gardée hors dépôt dans `data/cache/ifn/`. |
+| Unités des colonnes | **vérifié** | `metadonnees.csv`, bloc « Définition des unités », lignes 376-379 | `TEXT1` et `TEXT2` : unité `TEXT` pour les campagnes **2005-2016**, unité `TEXT1` pour **2017 et suivantes** (« Estimation manuelle de la texture des horizons du sol »). `PROF1`, `PROF2` : unité `DM` (décimètre). `CAILLOUX` : `1/10PCT` (2005-2016), `1/10PCT_X` (2017-), en dixièmes du volume. |
+| **Modalités** | **vérifié** | `metadonnees.csv`, bloc « Définition des modalités pour chaque unité », lignes 5845-5865 | `0` absence de terre fine ; `1` sable « S : sable dominant » ; `2` sable limoneux « Sl » ; `3` sable argileux « Sa » ; `4` limon sableux « **Ls, Lsa, Lms, Lls** : limon dominant + sable » ; `5` limon argileux « **La, Las** » ; `6` limon « **Lm, Ll** » ; `7` argile limoneuse « Al » ; `8` argile sablo-limoneuse « **As, Als** » ; `9` argile « **A, Alo** : argile et argile lourde » ; `H` texture organique (unité `TEXT1` seulement). Codes 0 à 9 identiques dans les deux unités. Un **espace insécable** (U+00A0) précède chaque « : ». |
+| Triangle de référence | **déduit des abréviations** (l'IFN ne nomme pas le triangle) | `soiltexture::TT.get("FR.AISNE.TT")` | Les abréviations des codes 1 à 9 contiennent **les 15 classes du triangle de l'Aisne** (ALO, A, AL, AS, LA, LAS, LSA, SA, LM, LMS, LS, SL, S, LL, LLS), **chacune une fois** : les codes en forment une partition. Le triangle du GEPPA (`FR.GEPPA.TT`, 17 classes) n'a ni Lms, ni Lls, ni Lm, ni Alo. **Une abréviation est hors du triangle de l'Aisne : `Als`** (code 8), classe « argile limono-sableuse » du GEPPA. |
+| Documentation | **vérifié** | `IGN_DB_doc_ecologie.pdf` (version 2.3, 14/10/2025), p. 6 | Texture appréciée **au toucher**. « Dans le cas d'un sol à texture homogène, TEXT1 = 0, et TEXT2 est renseigné. » Non renseignées sans fosse (`OBSPEDO` = 5). L'annexe `IGN_DB_doc_ecologie_annexes.pdf` (25 p.) ne contient pas de triangle. |
+| Extrait déposé | **fait** | script de l'agent (lecture des deux blocs de `metadonnees.csv`) | `inst/extdata/ifn_texture_dictionnaire.csv` : colonnes `unite;campagnes;code;libelle;definition`, 21 lignes, texte d'origine (Licence Ouverte 2.0). |
+| Charge en cailloux | **vérifié** | `metadonnees.csv`, lignes 441-463 | `k` = 1 à 9 : de (10k - 5) % à (10k + 5) % ; `0` : moins de 5 % ; `10` : plus de 95 % ; `X` : absence (2017-). Le code prend le centre de la classe (2,5 %, 10k %, 97,5 %). |
+
+## 23. Climat SAFRAN (SIM2 quotidien, Météo-France) : vérifié
+
+| Point | État | Commande / source | Résultat |
+|---|---|---|---|
+| Jeu de données | **vérifié** | `https://www.data.gouv.fr/api/1/datasets/6569b27598256cc583c917a7/` | « Données changement climatique - SIM quotidienne », **licence `lov2`** (Licence Ouverte 2.0), 84 ressources. Mention : « Source : Météo-France ». |
+| Fichiers | **vérifié** | même API | Un fichier par année, `https://meteofrance.s3.sbg.io.cloud.ovh.net/data/REF_CC/SIM/QUOT_SIM2_AAAA.csv.gz`, de 1958 à 2026 (+ `QUOT_SIM2_latest.csv.gz`), environ **137 Mo** par année (2024 : 137 936 316 octets ; 2015 : 136 900 395). Grille : `coordonnees_grille_safran_lambert-2-etendu.csv` (`LAMBX (hm);LAMBY (hm);LAT_DG;LON_DG`), `SIM2.shp`. Paramètres : `sim-quotidienne-parametres-20260331.pdf`. |
+| Colonnes | **vérifié** | `zcat QUOT_SIM2_1996.csv.gz \| head -1` | `LAMBX;LAMBY;DATE;PRENEI;PRELIQ;T;FF;Q;DLI;SSI;HU;EVAP;ETP;PE;SWI;SSWI_10J;DRAINC;RUNC;RESR_NEIGE;RESR_NEIGE6;HTEURNEIGE;HTEURNEIGE6;HTEURNEIGEX;SNOW_FRAC;ECOULEMENT;WG_RACINE;WGI_RACINE;TINF_H;TSUP_H`, décimale point. `DATE` AAAAMMJJ ; `PRENEI`, `PRELIQ` précipitations solides et liquides (mm) ; `ETP` évapotranspiration potentielle Penman-Monteith (mm). **Sans le suffixe `_Q`** que supposent les défauts de `biljouR::safran_to_meteo()` (écart 19). |
+| Coordonnées | **vérifié** | document des paramètres | `LAMBX`, `LAMBY` : Lambert II étendu en **hectomètres** (× 100 → EPSG:27572), maille 8 km. Mailles de l'emprise test (avec 8 km de marge) : **12** ; mailles des 100 placettes de `inst/extdata` : **9** (distance placette-centre de maille : 632 à 5 231 m). |
+| Miroir INRAE | **vérifié : vide** | `biljouR::safran_dataverse_files()` (DOI `10.57745/BAZ12C`) | Deux fichiers seulement : `data-access.html`, `grid-SIM.gpkg`. **Aucun NetCDF par variable** : `biljouR::safran_download()` ne trouve rien à télécharger. Passer par les CSV annuels ci-dessus. |
+| Cache | **fait** | `QUOT_SIM2_1996` à `2025` dans `data/cache/safran/` (hors dépôt), filtrés aux 12 mailles (`emprise_AAAA.csv`, 4 381 ou 4 393 lignes par année) | Période de calcul retenue : **1996-2025** (30 ans complets les plus récents, couvrant les campagnes IFN 2005-2025) : choix provisoire. |
+| Extrait déposé | **fait** | `inst/extdata/safran_sim2_extrait.csv` | Maille `9640_23690` (centre de l'emprise, environ x = 1 014 550, y = 6 799 283 en Lambert-93), 2003-2004 (731 jours), colonnes `LAMBX;LAMBY;DATE;PRENEI;PRELIQ;ETP`, 21 Ko. |
+
+## 24. Paquets de la chaîne hydrique : `soiltexture`, `euptf2`, `biljouR` : vérifié (exécuté)
+
+| Point | État | Résultat |
+|---|---|---|
+| `soiltexture` | **vérifié** | CRAN, version **1.5.3**, licence AGPL (>= 3). `TT.get("FR.AISNE.TT")` : 29 sommets (`tt.points`, colonnes `CLAY`, `SILT`, `SAND` en fractions), 15 polygones (`tt.polygons`, `name`, `points`), limites granulométriques `0, 2, 50, 2000` µm (mêmes que `euptf2`). Les 15 polygones couvrent exactement le triangle (somme des aires 0,5 dans le plan argile-limon). `TT.points.in.classes(tri.data, class.sys, PiC.type = "t")` place le centre de gravité de chaque classe dans sa classe. |
+| `euptf2` | **vérifié** | `remotes::install_github("tkdweber/euptf2")`, version **1.0.0**, commit `5075f33`, GPL-3. Szabó B., Weynants M., Weber T. K. D. (2021), *Geoscientific Model Development* 14 : 151-175 (prépublication `10.5194/gmd-2020-36`). Cibles (vignette) : `FC_2` θ à -100 cm (pF 2,0), `FC` à -330 cm (pF 2,5), `WP` à -15 000 cm (pF 4,2), `AWC_2` = `FC_2` - `WP`, `AWC` = `FC` - `WP`, en cm³/cm³. Prédicteurs : `USSAND`, `USSILT`, `USCLAY` (%), `DEPTH_M` (**profondeur moyenne en cm**, malgré le nom). `which_PTF()` rend **PTF01** pour granulométrie + profondeur. |
+| `euptf2`, pièges | **vérifié** | `euptfFun()` et `load_PTF_object()` appellent `data()` sans `package =` : **échouent si le paquet n'est pas attaché** (« object 'suggested_PTF' not found ») et écrivent dans l'environnement global. Contournement exécuté : `utils::data(list = "AWC_2_PTF01", package = "euptf2", envir = e)` puis `euptf2::ptfFun.pred(e$AWC_2_PTF01, df)` ; mêmes valeurs qu'`euptfFun()` (0,2060 et 0,1563 sur deux points d'essai). `ranger` 0.18.0 avertit « Forest grown in ranger version <0.11.5, converting ». |
+| `biljouR` | **vérifié** | `remotes::install_github("pobsteta/biljouR")`, version **0.1.0**, commit `b0dade7`, GPL-3, « réimplémentation indépendante, ni produite ni validée par l'INRAE ». `biljou_soil(ewm, roots = NULL, macro = NULL, micro = NULL, init = 1)` (1 à 3 couches, `ewm` > 0 en mm) ; `biljou_run(meteo, soil, lai_max, forest_type = c("broadleaved", "coniferous"), budburst = NULL, leaf_fall = NULL, rew_c = 0.4, k = 0.5, et_max_ratio = 1.2, wet_canopy_factor = 0.2, interception_coef = NULL)` ; `biljou_indices(run)` : par année, `NJstress` (jours REW < 0,4), `Istress` = somme (0,4 - REW) / 0,4 sur les jours de stress (définition de l'outil en ligne), `is_1999` (Granier et al. 1999, éq. 5), `DEBstress` ; pour les feuillus, sur la période feuillée seulement. `safran_to_meteo(df, cols = list(date = "DATE", rain_liq = "PRELIQ_Q", rain_sol = "PRENEI_Q", pet = "ETP_Q", ...))`. |
+
+---
+
 ## Écarts relevés entre sources
 
 1. Le brief cite la couche `IGNF_LIDAR-HD_METADONNEE:metadata` : elle existe, l'écart est
@@ -574,6 +611,18 @@ mention « à vérifier » (docs/pipeline.md l. 38-39) jusqu'à la réponse d'Ag
     (2023, 2024) (§ 16).
 17. MRVBF : le brief technique (l. 75) cite l'indice ; **il n'existe pas dans `whitebox`**
     (§ 20).
+18. Texture IFN : le dictionnaire (`metadonnees.csv`) donne au code `0` le sens « absence de
+    terre fine », la documentation (`IGN_DB_doc_ecologie.pdf`, p. 6) écrit « TEXT1 = 0 » pour un
+    sol homogène ; sur l'extrait, `TEXT1 = 0` va avec `PROF1` vide (36 placettes) : sol homogène.
+    Le code 8 cite `Als`, classe du triangle du GEPPA, absente du triangle de l'Aisne (§ 22). La
+    correspondance provisoire de la mission 015 (5 = LA, LAS, **LSA** ; 6 = LL, LM, **LMS**) était
+    fausse : LSA et LMS sont au code 4.
+19. SAFRAN : les CSV de meteo.data.gouv.fr nomment `PRELIQ`, `PRENEI`, `ETP` ; `biljouR`
+    attend par défaut `PRELIQ_Q`, `PRENEI_Q`, `ETP_Q`. Le miroir NetCDF de l'INRAE (DOI
+    `10.57745/BAZ12C`) cité par `biljouR` ne contient plus que la grille (§ 23).
+20. Réserve utile : sur les 97 placettes calculables, `euptf2` (AWC_2) donne en moyenne
+    **plus** que Bruand et al. 2004 (colonne défaut) ; les deux sont très corrélées (chiffres au
+    rendu de la mission 019).
 
 ## Dépendances et statut du jour (2026-11-17)
 
@@ -582,6 +631,9 @@ mention « à vérifier » (docs/pipeline.md l. 38-39) jusqu'à la réponse d'Ag
 - Vérifié le 2026-11-17 (passe 3) : § 15 (version v18 et lien de téléchargement seulement),
   § 16, § 17, § 19, § 20 (lecture des sources, rien exécuté), § 18 (SoilGrids, BDGSF,
   Bruand et al. 2004).
+- Vérifié le 2026-11-17 (passe 4, mission 019, exécuté en R) : § 22 (dictionnaire IFN des
+  textures ; triangle de l'Aisne **déduit** des abréviations, `Als` hors triangle), § 23
+  (SAFRAN SIM2), § 24 (`soiltexture`, `euptf2`, `biljouR`).
 - **Pistes, à ne pas coder** : Baseflor (§ 14), EcoPlant (§ 14), contenu du zip TAXREF v18
   (§ 15), GlobalSoilMap France pH, texture et réserve utile 90 m (§ 18), fiches de la
   référence AgroParisTech voisines (§ 21).
