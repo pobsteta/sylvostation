@@ -80,11 +80,12 @@ aggregate_dtm <- function(dtm, res = c(5, 25)) {
 #'   l'extension GRASS `r.valley.bottom` (`whitebox` n'a pas d'outil MRVBF, référentiels
 #'   § 20), paramètres **par défaut** de l'extension (provisoires). `NA` et avertissement
 #'   de classe `sylvostation_non_calcule` si `mrvbf = FALSE` ou si GRASS (`grass`) ou
-#'   l'extension est absent.
-#'   Calcul lent (2 à 4 minutes mesurées pour 1 600 à 57 600 cellules) ;
-#' #' * `hauteur_reseau` (m), voir [height_above_network()] : altitude moins celle de la cellule de cours d'eau la plus
-#'   proche à vol d'oiseau (différence d'altitude, pas un HAND le long de
-#'   l'écoulement) ; `NA` avec avertissement si `streams` est `NULL` ;
+#'   l'extension est absent. Calcul lent (2 à 4 minutes mesurées pour 1 600 à 57 600
+#'   cellules) ;
+#' * `hauteur_reseau` (m), voir [height_above_network()] : HAND (altitude moins celle de
+#'   la première cellule du réseau atteinte en suivant les directions D8 de
+#'   `surface_drainee`). `NA` si l'écoulement n'atteint pas le réseau ; jamais négatif ;
+#'   `NA` avec avertissement si `streams` est `NULL` ;
 #' * `rayonnement` (kWh/m2/an) : rayonnement direct potentiel **hors atmosphère et sans
 #'   ombres portées**, 12 jours types (Klein 1977), pas de 30 min, formules d'incidence
 #'   de Duffie et Beckman (*Solar Engineering of Thermal Processes*, éq. 1.6.2 et
@@ -128,7 +129,8 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
   slope <- terra::terrain(dtm, "slope", unit = "degrees", neighbors = 8)
   asp <- terra::terrain(dtm, "aspect", unit = "radians", neighbors = 8)
   curv <- .curvatures(dtm)
-  acc <- .flow_accumulation(dtm)
+  tg <- .d8_targets(dtm)
+  acc <- .flow_accumulation(dtm, tg)
   twi <- log((acc * L) / tan(terra::clamp(slope, lower = 0.1, values = TRUE) * pi / 180))
 
   tpis <- lapply(tpi_radii, function(r) .tpi(dtm, r))
@@ -138,7 +140,7 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
     .warn_non_calcule("`streams` absent : `hauteur_reseau` non calcul\u00e9e (NA).")
     hand <- dtm * NA
   } else {
-    hand <- .height_above_streams(dtm, streams)
+    hand <- .height_above_streams(dtm, streams, tg)
   }
   if (isTRUE(mrvbf)) {
     mrvbf_r <- .mrvbf_grass(dtm)
@@ -157,6 +159,14 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
                   "courbure_plan", "courbure_profil", tpi_names, "twi",
                   "surface_drainee", "mrvbf", "hauteur_reseau", "rayonnement")
   out
+}
+
+# TRUE si l'extension GRASS `ext` est installee (`g.extension -a`), sans chemin en dur.
+.grass_has_extension <- function(ext = "r.valley.bottom", grass = Sys.which("grass")) {
+  if (!nzchar(grass)) return(FALSE)
+  res <- suppressWarnings(system2(grass, c("--tmp-project", "EPSG:2154", "--exec",
+                                           "g.extension", "-a"), stdout = TRUE, stderr = TRUE))
+  ext %in% trimws(res)
 }
 
 # MRVBF par GRASS (extension r.valley.bottom) dans un projet temporaire : le MNT est
@@ -235,26 +245,33 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
   dtm - m
 }
 
-# Accumulation D8 (nombre de cellules, cellule comprise), sans remplissage.
-.flow_accumulation <- function(dtm) {
+# Directions D8 sans remplissage : index lineaire (colonnes) de la cellule cible, 0 = puits.
+# La cible est toujours strictement plus basse que la cellule.
+.d8_targets <- function(dtm) {
   nr <- terra::nrow(dtm); nc <- terra::ncol(dtm)
   L <- terra::res(dtm)[1]
   z <- matrix(terra::values(dtm, mat = FALSE), nr, nc, byrow = TRUE)
   zp <- matrix(NA_real_, nr + 2, nc + 2)
   zp[2:(nr + 1), 2:(nc + 1)] <- z
   best <- matrix(0, nr, nc)   # meilleure pente descendante
-  tgt <- matrix(0L, nr, nc)   # index lin\u00e9aire (colonnes) de la cible, 0 = puits
+  tgt <- matrix(0L, nr, nc)
   for (di in -1:1) for (dj in -1:1) {
     if (di == 0 && dj == 0) next
     nb <- zp[(2:(nr + 1)) + di, (2:(nc + 1)) + dj]
-    s <- (z - nb) / (L * sqrt(di^2 + dj^2))
-    ok <- !is.na(s) & s > best
-    best[ok] <- s[ok]
+    sl <- (z - nb) / (L * sqrt(di^2 + dj^2))
+    ok <- !is.na(sl) & sl > best
+    best[ok] <- sl[ok]
     tgt[ok] <- (((col(z) + dj) - 1L) * nr + (row(z) + di))[ok]
   }
-  a <- ifelse(is.na(as.vector(z)), NA_real_, 1)
-  tg <- as.vector(tgt)
-  for (i in order(as.vector(z), decreasing = TRUE, na.last = NA)) {
+  as.vector(tgt)
+}
+
+# Accumulation D8 (nombre de cellules, cellule comprise), sans remplissage.
+.flow_accumulation <- function(dtm, tg = .d8_targets(dtm)) {
+  nr <- terra::nrow(dtm); nc <- terra::ncol(dtm)
+  zc <- matrix(terra::values(dtm, mat = FALSE), nr, nc, byrow = TRUE)
+  a <- ifelse(is.na(as.vector(zc)), NA_real_, 1)
+  for (i in order(as.vector(zc), decreasing = TRUE, na.last = NA)) {
     t <- tg[i]
     if (t > 0L) a[t] <- a[t] + a[i]
   }
@@ -264,26 +281,33 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
   out
 }
 
-# Hauteur au-dessus de la cellule de cours d'eau la plus proche.
-.height_above_streams <- function(dtm, streams) {
-  s <- terra::values(terra::rasterize(streams, dtm, field = 1, touches = TRUE),
-                     mat = FALSE)
-  z <- terra::values(dtm, mat = FALSE)
-  cells_s <- which(!is.na(s) & !is.na(z))
+# HAND : pour chaque cellule, altitude moins celle de la premiere cellule du reseau
+# atteinte en suivant les directions D8 (sans remplissage). NA si l'ecoulement n'atteint
+# pas le reseau (puits, sortie du MNT, cellule en aval du reseau) : jamais negatif.
+.height_above_streams <- function(dtm, streams, tg = .d8_targets(dtm)) {
+  nr <- terra::nrow(dtm); nc <- terra::ncol(dtm)
   out <- dtm * NA
-  if (!length(cells_s)) {
+  sr <- terra::rasterize(streams, dtm, field = 1, touches = TRUE)
+  zr <- terra::values(dtm, mat = FALSE)
+  is_s <- !is.na(terra::values(sr, mat = FALSE)) & !is.na(zr)
+  if (!any(is_s)) {
     .warn_non_calcule("Aucune cellule de cours d'eau dans l'emprise : `hauteur_reseau` NA.")
     return(out)
   }
-  all_cells <- which(!is.na(z))
-  pts <- function(cells) {
-    sf::st_as_sf(as.data.frame(terra::xyFromCell(dtm, cells)),
-                 coords = c("x", "y"), crs = 2154)
+  # tg est en index lineaire par colonnes ; terra range par lignes : permutation
+  perm <- as.vector(matrix(seq_len(nr * nc), nr, nc, byrow = TRUE))
+  z_cm <- zr[perm]
+  s_cm <- is_s[perm]
+  ref <- rep(NA_real_, nr * nc)
+  ref[s_cm] <- z_cm[s_cm]
+  for (i in order(z_cm, na.last = NA)) {      # du plus bas au plus haut
+    if (s_cm[i]) next
+    t <- tg[i]
+    if (t > 0L) ref[i] <- ref[t]
   }
-  nn <- sf::st_nearest_feature(pts(all_cells), pts(cells_s))
-  v <- rep(NA_real_, length(z))
-  v[all_cells] <- z[all_cells] - z[cells_s[nn]]
-  terra::values(out) <- v
+  h <- numeric(nr * nc)
+  h[perm] <- z_cm - ref
+  terra::values(out) <- h
   out
 }
 

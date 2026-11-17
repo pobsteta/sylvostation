@@ -117,7 +117,7 @@ test_that("TWI fini sur plan et croissant avec la surface drainee", {
   expect_equal(tw[10, 15], log(10 * 10 / 0.1), tolerance = 1e-5)
 })
 
-test_that("hauteur au-dessus du reseau : plan et ruisseau a y connu", {
+test_that("hauteur au-dessus du reseau (HAND) : plan et ruisseau a y connu", {
   d <- make_synth_dtm(nc = 40, res = 10)
   y0 <- 6800000 + 195  # centre d'une rangee de cellules
   ln <- terra::vect(cbind(id = 1, part = 1, x = c(980000, 980400), y = c(y0, y0)),
@@ -126,7 +126,7 @@ test_that("hauteur au-dessus du reseau : plan et ruisseau a y connu", {
   c_n <- terra::cellFromXY(d, cbind(980205, y0 + 50))  # 50 m au nord
   c_s <- terra::cellFromXY(d, cbind(980205, y0 - 50))
   expect_equal(out$hauteur_reseau[c_n][[1]], 5, tolerance = 1e-6)
-  expect_equal(out$hauteur_reseau[c_s][[1]], -5, tolerance = 1e-6)
+  expect_true(is.na(out$hauteur_reseau[c_s][[1]]))   # en aval du reseau : jamais negatif
   out2 <- dt(d, tpi_radii = 50, streams = sf::st_as_sf(ln))
   expect_equal(out2$hauteur_reseau[c_n][[1]], 5, tolerance = 1e-6)
   expect_error(dt(d, streams = terra::vect(cbind(980000, 6800000), crs = "EPSG:2154")),
@@ -233,10 +233,13 @@ test_that(".mrvbf_grass : GRASS absent ou en echec => NA et avertissement, sans 
   expect_true(all(is.na(terra::values(m2))))
 })
 
+test_that(".grass_has_extension : FALSE sans GRASS", {
+  expect_false(sylvostation:::.grass_has_extension("r.valley.bottom", grass = ""))
+})
+
 test_that("MRVBF GRASS : fond de vallee plat >> versant, grille identique (lent, ~2 min)", {
   skip_if(!nzchar(Sys.which("grass")), "GRASS absent")
-  skip_if(!file.exists(file.path(path.expand("~"), ".grass8", "addons", "scripts",
-                                 "r.valley.bottom")),
+  skip_if(!sylvostation:::.grass_has_extension("r.valley.bottom"),
           "extension r.valley.bottom absente (g.extension extension=r.valley.bottom)")
   skip_if(nzchar(Sys.getenv("SYLVOSTATION_SKIP_GRASS")), "SYLVOSTATION_SKIP_GRASS defini")
   # vallee : fond plat (x = 980300 +/- 200 m), versants a 0,3 (17 degres)

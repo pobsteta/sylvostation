@@ -55,11 +55,12 @@ prétraitement hydrologique \strong{à vérifier} ;
 l'extension GRASS \code{r.valley.bottom} (\code{whitebox} n'a pas d'outil MRVBF, référentiels
 § 20), paramètres \strong{par défaut} de l'extension (provisoires). \code{NA} et avertissement
 de classe \code{sylvostation_non_calcule} si \code{mrvbf = FALSE} ou si GRASS (\code{grass}) ou
-l'extension est absent.
-Calcul lent (2 à 4 minutes mesurées pour 1 600 à 57 600 cellules) ;
-#' * \code{hauteur_reseau} (m), voir \code{\link[=height_above_network]{height_above_network()}} : altitude moins celle de la cellule de cours d'eau la plus
-proche à vol d'oiseau (différence d'altitude, pas un HAND le long de
-l'écoulement) ; \code{NA} avec avertissement si \code{streams} est \code{NULL} ;
+l'extension est absent. Calcul lent (2 à 4 minutes mesurées pour 1 600 à 57 600
+cellules) ;
+\item \code{hauteur_reseau} (m), voir \code{\link[=height_above_network]{height_above_network()}} : HAND (altitude moins celle de
+la première cellule du réseau atteinte en suivant les directions D8 de
+\code{surface_drainee}). \code{NA} si l'écoulement n'atteint pas le réseau ; jamais négatif ;
+\code{NA} avec avertissement si \code{streams} est \code{NULL} ;
 \item \code{rayonnement} (kWh/m2/an) : rayonnement direct potentiel \strong{hors atmosphère et sans
 ombres portées}, 12 jours types (Klein 1977), pas de 30 min, formules d'incidence
 de Duffie et Beckman (\emph{Solar Engineering of Thermal Processes}, éq. 1.6.2 et

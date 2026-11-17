@@ -40,6 +40,11 @@ Seuils et résolution de config.yml, provisoires.
 
 - **Dépend de :** 016 et 017 fusionnées.
 
+## Contrôles reportés des missions 014 et 019
+
+- MRVBF et `hauteur_reseau` sur le MNT réel : valeurs, temps de calcul, part de cellules négatives de `hauteur_reseau`, contrôle dans un vallon vosgien connu.
+- Décompte des classes LiDAR 64 et 67 sur les dalles réelles (exclusion du MHC à trancher).
+
 ## Tests
 
 État de preuve : chaque critère du § 7 « atteint », « non atteint » ou « non atteint (entrée absente) », chiffre et source.

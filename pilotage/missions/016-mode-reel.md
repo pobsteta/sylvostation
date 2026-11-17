@@ -56,7 +56,7 @@ Blocs 3 × 3, résolution 25 m, tampon 5 km (config.yml) : provisoires, gel avan
 
 ## Dépend de / rouge attendu jusqu'à
 
-- **Dépend de :** 014, 015 (fusionnées). **Ordre de fusion :** 014, 015 → 016. Les tests de 017 sont rouges jusqu'à 016.
+- **Dépend de :** 014, 015, 019 (fusionnées). **Ordre de fusion :** 014, 015, 019 → 016. Le gradient hydrique passe par `hydric_stress()` (ADR 0006) ; `mrvbf = TRUE` en mode réel ; version TAXREF figée dans `config.yml`. Les tests de 017 sont rouges jusqu'à 016.
 
 ## Tests
 

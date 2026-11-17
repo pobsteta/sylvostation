@@ -13,15 +13,17 @@ height_above_network(dtm, network)
 \code{\link[=get_hydro_network]{get_hydro_network()}}.}
 }
 \value{
-Un \code{SpatRaster} à une couche nommée \code{hauteur_reseau} (m). Tout \code{NA} avec
+Un \code{SpatRaster} à une couche nommée \code{hauteur_reseau} (m, >= 0). Tout \code{NA} avec
 avertissement de classe \code{sylvostation_non_calcule} si aucun tronçon ne touche le MNT.
 }
 \description{
-Pour chaque cellule du MNT, altitude moins celle de la cellule de cours d'eau la plus
-proche \strong{à vol d'oiseau} (distance euclidienne entre centres de cellules) : une
-différence d'altitude, \strong{pas} un HAND le long de l'écoulement (\code{wbt_elevation_above_stream}
-de \code{whitebox} demande un binaire absent ; non utilisé). Valeur négative sous le niveau
-du cours d'eau voisin. Variable \strong{fine} : jamais aux coordonnées des placettes IFN.
+HAND (\emph{height above nearest drainage}) : pour chaque cellule du MNT, altitude moins celle
+de la \strong{première cellule du réseau} atteinte en suivant les directions d'écoulement D8
+(les mêmes que \code{surface_drainee} de \code{\link[=derive_terrain]{derive_terrain()}}, \strong{sans remplissage} des
+cuvettes). Le réseau est rastérisé (cellules touchées). Résultat \code{NA} là où
+l'écoulement n'atteint pas le réseau (cuvette, sortie du MNT, cellule en aval du
+dernier point du réseau) ; \strong{jamais négatif}, car l'écoulement descend. Variable
+\strong{fine} : jamais aux coordonnées des placettes IFN.
 }
 \examples{
 d <- terra::rast(nrows = 20, ncols = 20, xmin = 980000, xmax = 980500,

@@ -63,7 +63,7 @@ test_that("height_above_network : plan et ruisseau a y connu, nom de couche", {
   c_s <- terra::cellFromXY(d, cbind(980205, y0 - 50))
   c_r <- terra::cellFromXY(d, cbind(980205, y0))        # la cellule du ruisseau
   expect_equal(h[c_n][[1]], 5, tolerance = 1e-6)
-  expect_equal(h[c_s][[1]], -5, tolerance = 1e-6)
+  expect_true(is.na(h[c_s][[1]]))   # en aval du reseau : NA, jamais negatif
   expect_equal(h[c_r][[1]], 0, tolerance = 1e-6)
   h2 <- height_above_network(d, sf::st_as_sf(ln))
   expect_equal(terra::values(h2), terra::values(h))
@@ -78,7 +78,7 @@ test_that("height_above_network : extrait TOPAGE reel sur un MNT synthetique du 
   h <- height_above_network(d, net)
   v <- terra::values(h, mat = FALSE)
   expect_true(any(!is.na(v)))
-  expect_true(all(is.finite(v)))
+  expect_true(all(v[!is.na(v)] >= 0))
   # un point de troncon tombe sur une cellule de hauteur 0
   pt <- sf::st_coordinates(sf::st_line_sample(sf::st_geometry(net)[1], sample = 0.5))[1, 1:2]
   cell <- terra::cellFromXY(d, cbind(pt[["X"]], pt[["Y"]]))
@@ -98,4 +98,24 @@ test_that("height_above_network : refus (CRS, type) et aucun troncon => NA avec 
   expect_warning(h <- height_above_network(d, hors), class = "sylvostation_non_calcule")
   expect_true(all(is.na(terra::values(h))))
   expect_error(height_above_network(1, hors), "SpatRaster")
+})
+
+test_that("HAND : vallon synthetique, trace decale d'une cellule, aucune valeur negative dans le fond", {
+  # vallon en V nord-sud : thalweg en x = 980205 (centre de cellule), fond qui descend vers
+  # le sud, versants a 0,3. Le trace passe une cellule a l'est du thalweg (x = 980215) :
+  # l'erreur de calage typique du reseau. A vol d'oiseau, le fond serait negatif.
+  d <- make_synth_dtm(nc = 40, res = 10, xmin = 980000, ymin = 6800000,
+                      fun = function(x, y) 100 + 0.3 * abs(x - 980205) + 0.05 * (y - 6800000))
+  ln <- terra::vect(cbind(id = 1, part = 1, x = c(980215, 980215), y = c(6800000, 6800400)),
+                    type = "lines", crs = "EPSG:2154")
+  h <- height_above_network(d, ln)
+  v <- terra::values(h, mat = FALSE)
+  expect_true(any(!is.na(v)))
+  expect_true(all(v[!is.na(v)] >= 0))                    # jamais negatif
+  fond <- terra::cellFromXY(d, cbind(980205, seq(6800005, 6800395, by = 10)))
+  expect_true(all(is.na(v[fond]) | v[fond] >= 0))         # le fond, plus bas que le trace
+  trace <- terra::cellFromXY(d, cbind(980215, 6800205))   # x = est, y = nord
+  expect_equal(h[trace][[1]], 0, tolerance = 1e-9)
+  versant_est <- terra::cellFromXY(d, cbind(980255, 6800205))   # 4 cellules a l'est du trace
+  expect_equal(h[versant_est][[1]], 0.3 * 40, tolerance = 1e-6)
 })

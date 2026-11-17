@@ -120,16 +120,18 @@ get_hydro_network <- function(emprise, source = c("wfs", "file"), path = NULL,
 
 #' Hauteur au-dessus du réseau hydrographique
 #'
-#' Pour chaque cellule du MNT, altitude moins celle de la cellule de cours d'eau la plus
-#' proche **à vol d'oiseau** (distance euclidienne entre centres de cellules) : une
-#' différence d'altitude, **pas** un HAND le long de l'écoulement (`wbt_elevation_above_stream`
-#' de `whitebox` demande un binaire absent ; non utilisé). Valeur négative sous le niveau
-#' du cours d'eau voisin. Variable **fine** : jamais aux coordonnées des placettes IFN.
+#' HAND (*height above nearest drainage*) : pour chaque cellule du MNT, altitude moins celle
+#' de la **première cellule du réseau** atteinte en suivant les directions d'écoulement D8
+#' (les mêmes que `surface_drainee` de [derive_terrain()], **sans remplissage** des
+#' cuvettes). Le réseau est rastérisé (cellules touchées). Résultat `NA` là où
+#' l'écoulement n'atteint pas le réseau (cuvette, sortie du MNT, cellule en aval du
+#' dernier point du réseau) ; **jamais négatif**, car l'écoulement descend. Variable
+#' **fine** : jamais aux coordonnées des placettes IFN.
 #'
 #' @param dtm `SpatRaster` à une couche, EPSG:2154, maille carrée.
 #' @param network Réseau de lignes (`sf` ou `SpatVector`, EPSG:2154), p. ex.
 #'   [get_hydro_network()].
-#' @return Un `SpatRaster` à une couche nommée `hauteur_reseau` (m). Tout `NA` avec
+#' @return Un `SpatRaster` à une couche nommée `hauteur_reseau` (m, >= 0). Tout `NA` avec
 #'   avertissement de classe `sylvostation_non_calcule` si aucun tronçon ne touche le MNT.
 #' @examples
 #' d <- terra::rast(nrows = 20, ncols = 20, xmin = 980000, xmax = 980500,
