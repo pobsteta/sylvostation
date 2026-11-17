@@ -28,7 +28,7 @@ _Délégation totale._
 
 ## Harnais
 
-- **Peut (périmètre) :** `R/terrain.R`, `R/hydro.R` (nouveau), `tests/testthat/test-terrain.R`, `tests/testthat/test-hydro.R`, `inst/extdata/` (extrait BD TOPAGE du massif test s'il est sous licence ouverte, avec `SOURCES.md`), `DESCRIPTION`, `NAMESPACE`, `man/`.
+- **Peut (périmètre) :** `R/terrain.R`, `R/hydro.R` (nouveau), `R/lidar.R` (classes exclues du MHC), `tests/testthat/test-lidar.R`, `tests/testthat/test-terrain.R`, `tests/testthat/test-hydro.R`, `inst/extdata/` (extrait BD TOPAGE du massif test s'il est sous licence ouverte, avec `SOURCES.md`), `DESCRIPTION`, `NAMESPACE`, `man/`.
 - **Câblé :** pas de `main` ; journal en ajout seul.
 - **Ne doit pas :** toucher à `_targets.R` (mission 016) ; inventer une couche.
 - **Sources autorisées :** `docs/referentiels.md`, `docs/brief-technique.md` (étape 3), ADR 0001 à 0005.
@@ -36,7 +36,7 @@ _Délégation totale._
 ## Attendus
 
 `get_hydro_network(emprise)` (BD TOPAGE, Lambert-93), `height_above_network(dtm, network)`,
-MRVBF via `whitebox` (saut propre si absent : NA + avertissement, comme aujourd'hui) ; tests
+MRVBF via GRASS `r.valley.bottom` (décision du 2026-11-17 : `whitebox` n'a pas de MRVBF, référentiels § 20 ; GRASS absent → NA + avertissement) ; MHC : classe 66 exclue, 65 retirée de l'exclusion (référentiels § 17), dans `R/lidar.R` ; tests
 sans réseau sur un extrait ; contrôle sur le MNT réel de l'incrément 1 (valeurs, temps) dans le compte rendu.
 
 ## Valeur provisoire (chiffre, réglage)
