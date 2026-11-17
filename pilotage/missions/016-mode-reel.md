@@ -29,7 +29,7 @@ _Délégation totale._
 
 ## Harnais
 
-- **Peut (périmètre) :** `_targets.R`, `R/pipeline_reel.R` (nouveau), `R/config.R`, `config.yml` (nouvelles clés, `demo` reste `true` par défaut), `docs/pipeline.md`, `inst/quarto/` ou le gabarit du rapport, tests `test-pipeline-reel.R`, `DESCRIPTION`, `NAMESPACE`, `man/`.
+- **Peut (périmètre) :** `_targets.R`, `R/pipeline_reel.R` (nouveau), `R/config.R`, `config.yml` (nouvelles clés, `demo` reste `true` par défaut), `docs/pipeline.md`, `inst/quarto/` ou le gabarit du rapport, tests `test-pipeline-reel.R`, `DESCRIPTION`, `NAMESPACE`, `man/`, `.github/workflows/ci.yml` (étape de tests depuis la racine).
 - **Câblé :** pas de `main` ; journal en ajout seul ; `assert_no_fine_extract_on_ifn()` appelée par toute extraction.
 - **Ne doit pas :** versionner une donnée téléchargée ; remplacer une entrée absente par du synthétique en mode réel ; toucher aux tests d'acceptation de la mission 017.
 - **Sources autorisées :** `docs/`, `R/`, journal.
@@ -44,6 +44,9 @@ _Délégation totale._
   - la variable d'environnement `SYLVOSTATION_REEL_DIR`, si elle est posée, désigne un dossier de sorties déjà produit que les tests relisent ;
   - sorties sans préfixe `synth_` : `etat_de_preuve.csv`, `types.tif`, `rapport.qmd` / `rapport.html` ;
   - libellé exact de l'état de preuve pour une entrée manquante : « non atteint (entrée absente) » (GNSS) ; référence absente : « sautée (entrée absente) » ;
+  - marquage azonal : colonne logique `azonal` dans `legende_types.csv` (un type < 1 % de la surface sans `azonal = TRUE` est fusionné) ;
+  - les tests lancent le mode réel avec `demo: false, offline: true` : aucun téléchargement en test ;
+  - CI : ajouter à `.github/workflows/ci.yml` une étape `devtools::test()` depuis la racine du dépôt (`_targets.R` et `config.yml` sont exclus du paquet construit : sous `R CMD check` seul, les tests d'acceptation sauteraient toujours) ;
   - lis `tests/testthat/test-acceptation-mode-reel.R` (mission 017) : il doit passer sans modification ; s'il faut le changer, dis-le, ne le change pas.
 - Tests sans réseau : cibles réelles exécutées sur les extraits réels de `inst/extdata` avec les fonctions de téléchargement simulées.
 
