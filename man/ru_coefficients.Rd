@@ -4,10 +4,15 @@
 \alias{ru_coefficients}
 \title{Coefficients de réserve en eau par classe de texture IFN}
 \usage{
-ru_coefficients()
+ru_coefficients(source = c("bruand2004", "provisoire"))
+}
+\arguments{
+\item{source}{\code{"bruand2004"} ou \code{"provisoire"}.}
 }
 \value{
-Un vecteur numérique nommé par code de texture, attribut \code{verifie = FALSE}.
+\code{"bruand2004"} : liste \code{haut}, \code{bas} ; \code{"provisoire"} : vecteur nommé par
+code de texture. Dans les deux cas, attributs \code{verifie}, \code{source}, \code{unite}
+(\code{"mm/cm"}).
 }
 \description{
 Table par défaut de \code{\link[=compute_gradients]{compute_gradients()}} : millimètres d'eau utilisable par
@@ -17,16 +22,33 @@ argileux, 4 limon sableux, 5 limon argileux, 6 limon, 7 argile limoneuse,
 8 argile sablo-limoneuse, 9 argile, H texture organique).
 }
 \details{
-\strong{Valeurs à vérifier.} La méthode (réserve utile par pédotransfert à partir de la
-texture, de la profondeur et de la charge en éléments grossiers) s'inspire de
-Jamagne M., Bétrémieux R., Bégon J.C., Mori A. (1977), travaux sur la réserve en
-eau des sols de la région agricole française (référence citée de mémoire,
-non consultée : titre et pagination à vérifier). Les coefficients ci-dessous
-sont des ordres de grandeur \strong{non repris de cette publication} ; ils ne doivent
-pas être utilisés tels quels pour une décision. Remplacer par la table publiée via
-l'argument \code{ru_table} de \code{\link[=compute_gradients]{compute_gradients()}}. \code{H} vaut \code{NA} : la couche organique
-n'est pas comptée (à trancher).
+\strong{\code{source = "bruand2004"} (défaut)} : table publiée. Bruand A., Duval O., Cousin I.
+(2004), « Estimation des propriétés de rétention en eau des sols à partir de la base
+de données SOLHYDRO : une première proposition combinant le type d'horizon, sa
+texture et sa densité apparente », \emph{Étude et Gestion des Sols} 11(3) : 323-332,
+\strong{tableau 2, p. 328}, colonnes « sans prise en compte de la densité apparente »
+(valeurs relues par le relecteur de la mission 013, \code{docs/referentiels.md} § 18).
+On retient la réserve en eau utile \strong{« défaut »} (θ à pF 2,0 moins θ à pF 4,2),
+la plus basse des deux, par prudence. La table distingue l'horizon \strong{A}
+(\code{TEXT1}, horizon supérieur) et les horizons \strong{E, B, C} (\code{TEXT2}) : le résultat
+est une liste \code{list(haut = , bas = )} de deux vecteurs nommés, acceptée par
+l'argument \code{ru_table} de \code{\link[=compute_gradients]{compute_gradients()}}. Attribut \code{verifie = TRUE}.
+
+Trois hypothèses du code, \strong{non publiées} : (1) la correspondance des codes IFN
+avec les classes du triangle de l'Aisne, faite par les noms (1 = S, 2 = SL, 3 = SA,
+4 = LS, 5 = LA, 6 = LM, 7 = AL, 8 = AS, 9 = A ; la légende complète du triangle
+n'est pas dans les pages lues) : \strong{à vérifier} ; (2) \code{TEXT1} est pris pour un
+horizon A, \code{TEXT2} pour un horizon E, B ou C ; (3) la table n'a pas de valeur pour
+A en horizon A, ni pour LS en horizons E, B, C : on prend alors la valeur de
+l'autre type d'horizon de la même classe. Les écarts types de l'article (0,14 à
+0,53 mm/cm) ne sont pas propagés. \code{H} vaut \code{NA} (la couche organique n'est pas
+comptée), \code{0} vaut 0.
+
+\strong{\code{source = "provisoire"}} : ordres de grandeur \strong{non publiés} de la mission
+005 (vecteur unique pour les deux horizons), attribut \code{verifie = FALSE} ; conservés
+pour la comparaison.
 }
 \examples{
 ru_coefficients()
+ru_coefficients("provisoire")
 }

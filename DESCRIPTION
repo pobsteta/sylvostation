@@ -13,7 +13,6 @@ License: GPL (>= 3)
 Encoding: UTF-8
 Language: fr
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
 Imports:
     sf,
     stats,
@@ -42,7 +41,9 @@ Suggests:
     testthat (>= 3.0.0),
     vegan,
     whitebox,
+    readxl,
     withr
 Additional_repositories: https://r-lidar.r-universe.dev
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+Config/roxygen2/version: 8.1.1
