@@ -1,5 +1,12 @@
 # sylvostation
 
+[![CI](https://github.com/pobsteta/sylvostation/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/pobsteta/sylvostation/actions/workflows/ci.yml)
+[![Release](https://github.com/pobsteta/sylvostation/actions/workflows/release.yml/badge.svg)](https://github.com/pobsteta/sylvostation/actions/workflows/release.yml)
+[![Version](https://img.shields.io/github/v/release/pobsteta/sylvostation?label=version)](https://github.com/pobsteta/sylvostation/releases/latest)
+[![Couverture](.github/badges/couverture.svg)](https://github.com/pobsteta/sylvostation/actions/workflows/ci.yml)
+[![R](https://img.shields.io/badge/R-%E2%89%A5%204.1-276DC3)](https://www.r-project.org/)
+[![Licence : GPL-3](https://img.shields.io/badge/licence-GPL--3-blue)](LICENSE.md)
+
 Package R et pipeline `targets` qui produisent, pour une sylvoécorégion (SER) donnée
 par son seul code, un catalogue de stations forestières.
 
@@ -27,5 +34,21 @@ atteints ». Le mode réel (`demo: false`) n'est pas branché. Détails : `docs/
 ## Tests
 
     Rscript -e 'devtools::document(); devtools::test()'
+
+## Versions et releases
+
+Chaque fusion dans `main` est testée par la CI (`R CMD check`, tests des scripts shell). Si la
+CI est verte et que le paquet a changé, une release est publiée automatiquement, avec une
+**version calendaire** `vAAAA.MM.N` : `AAAA.MM` = année et mois (UTC), `N` = compteur du mois,
+sans zéro de remplissage, qui repart à 1 chaque mois (`v2026.11.1`, `v2026.11.2`, puis
+`v2026.12.1`). Le tag annoté est posé sur le commit testé ; la release joint le tarball
+`sylvostation_AAAA.MM.N.tar.gz` (`R CMD build`) et le changelog des commits depuis le tag
+précédent. Rien ne part si seuls `pilotage/`, `docs/`, les `*.md`, le badge ou `tests/` ont
+changé. Dans le dépôt, `DESCRIPTION` porte `Version: AAAA.MM.0` (valeur de développement) ; la
+version publiée est réécrite à la construction du tarball. Installer une version :
+
+    remotes::install_github("pobsteta/sylvostation@v2026.11.1")
+
+Décision : `docs/adr/0005-version-calendaire-release-automatique.md`.
 
 Licence : GPL-3.
