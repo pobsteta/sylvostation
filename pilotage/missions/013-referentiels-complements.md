@@ -6,7 +6,7 @@
 les sources encore « non vérifiées » dont le mode réel a besoin, pour que les missions 014
 à 016 ne codent aucune URL, aucune couche et aucune colonne inventée.
 
-**Redite par l'agent :** _à compléter par l'agent._
+**Redite par l'agent :** vérifier, avec le réseau, les sources encore « non vérifiées » du mode réel et les écrire dans `docs/referentiels.md`, pour que 014 à 016 ne codent ni URL, ni couche, ni colonne inventées.
 
 ## Les trois questions (règle de staffing)
 

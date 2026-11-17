@@ -41,7 +41,7 @@ _Délégation totale._
 - Option `max_tiles` pour un essai court (par ex. 4 dalles) avant la SER entière.
 - **Contrat avec les tests d'acceptation de 017** (décision déléguée du 2026-11-17) :
   - une option `offline: true` (config) fait tourner le mode réel **sans réseau** sur les extraits réels de `inst/extdata` (dalle LAZ, BD Charm-50, IFN, MNT) : c'est ce run qui sert en CI et dans 017 ;
-  - la variable d'environnement `SYLVOSTATION_REEL_DIR`, si elle est posée, désigne un dossier de sorties déjà produit que les tests relisent ;
+  - la variable d'environnement `SYLVOSTATION_REEL_DIR`, si elle est posée, désigne un dossier de travail déjà exécuté (`config.yml`, magasin `_targets/`, sorties) que les tests relisent sans relancer ;
   - sorties sans préfixe `synth_` : `etat_de_preuve.csv`, `types.tif`, `rapport.qmd` / `rapport.html` ;
   - libellé exact de l'état de preuve pour une entrée manquante : « non atteint (entrée absente) » (GNSS) ; référence absente : « sautée (entrée absente) » ;
   - marquage azonal : colonne logique `azonal` dans `legende_types.csv` (un type < 1 % de la surface sans `azonal = TRUE` est fusionné) ;

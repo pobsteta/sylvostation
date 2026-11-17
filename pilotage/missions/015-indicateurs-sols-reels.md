@@ -36,6 +36,9 @@ _Délégation totale._
 
 ## Attendus
 
+Décisions du 2026-11-17 (journal) : valeurs indicatrices de Tichý et al. (Zenodo, CC BY 4.0, référentiels § 14), téléchargées à l'exécution, extrait d'essai admis dans `inst/extdata` ; jointure par nom latin vers TAXREF v13, non-appariés listés ; pH SoilGrids 250 m (§ 18) ; RU Bruand et al. 2004 tableau 2 (§ 18), `ru_verifie = TRUE` (seconde lecture faite par le relecteur de 013), table citée avec sa source.
+
+
 `load_indicator_values(source = c("ecoplant", "baseflor"), path)` : table au format de
 `synth_indicateurs.csv` (jointure TAXREF `CD_NOM` puis `CD_REF`, non-appariés listés) ;
 `ru_coefficients(source)` : table publiée citée ; l'attribut `ru_verifie` passe à TRUE
