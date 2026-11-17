@@ -117,7 +117,7 @@ test_that("TWI fini sur plan et croissant avec la surface drainee", {
   expect_equal(tw[10, 15], log(10 * 10 / 0.1), tolerance = 1e-5)
 })
 
-test_that("hauteur au-dessus du reseau : plan et ruisseau a y connu", {
+test_that("hauteur au-dessus du reseau (HAND) : plan et ruisseau a y connu", {
   d <- make_synth_dtm(nc = 40, res = 10)
   y0 <- 6800000 + 195  # centre d'une rangee de cellules
   ln <- terra::vect(cbind(id = 1, part = 1, x = c(980000, 980400), y = c(y0, y0)),
@@ -126,7 +126,7 @@ test_that("hauteur au-dessus du reseau : plan et ruisseau a y connu", {
   c_n <- terra::cellFromXY(d, cbind(980205, y0 + 50))  # 50 m au nord
   c_s <- terra::cellFromXY(d, cbind(980205, y0 - 50))
   expect_equal(out$hauteur_reseau[c_n][[1]], 5, tolerance = 1e-6)
-  expect_equal(out$hauteur_reseau[c_s][[1]], -5, tolerance = 1e-6)
+  expect_true(is.na(out$hauteur_reseau[c_s][[1]]))   # en aval du reseau : jamais negatif
   out2 <- dt(d, tpi_radii = 50, streams = sf::st_as_sf(ln))
   expect_equal(out2$hauteur_reseau[c_n][[1]], 5, tolerance = 1e-6)
   expect_error(dt(d, streams = terra::vect(cbind(980000, 6800000), crs = "EPSG:2154")),
@@ -208,4 +208,50 @@ test_that("terrain plat : exposition NA, pente nulle", {
   expect_true(all(terra::values(i$pente) == 0))
   expect_true(all(is.na(terra::values(i$exposition_cos))))
   expect_true(all(is.na(terra::values(i$exposition_sin))))
+})
+
+test_that("mrvbf = FALSE (defaut) : NA, avertissement de classe sylvostation_non_calcule", {
+  d <- make_synth_dtm(nc = 20, res = 10)
+  ln <- terra::vect(cbind(id = 1, part = 1, x = c(980000, 980200), y = c(6800100, 6800100)),
+                    type = "lines", crs = "EPSG:2154")   # evite l'avertissement de hauteur_reseau
+  expect_warning(out <- derive_terrain(d, tpi_radii = 50, streams = ln),
+                 "mrvbf", class = "sylvostation_non_calcule")
+  expect_true(all(is.na(terra::values(out$mrvbf))))
+})
+
+test_that(".mrvbf_grass : GRASS absent ou en echec => NA et avertissement, sans erreur", {
+  d <- make_synth_dtm(nc = 10, res = 25)
+  expect_warning(m <- sylvostation:::.mrvbf_grass(d, grass = ""),
+                 class = "sylvostation_non_calcule")
+  expect_true(all(is.na(terra::values(m))))
+  expect_equal(as.vector(terra::ext(m)), as.vector(terra::ext(d)))
+  # un executable qui n'ecrit rien : echec detecte, pas d'erreur
+  faux <- Sys.which("true")
+  skip_if(!nzchar(faux))
+  expect_warning(m2 <- sylvostation:::.mrvbf_grass(d, grass = faux),
+                 "r.valley.bottom", class = "sylvostation_non_calcule")
+  expect_true(all(is.na(terra::values(m2))))
+})
+
+test_that(".grass_has_extension : FALSE sans GRASS", {
+  expect_false(sylvostation:::.grass_has_extension("r.valley.bottom", grass = ""))
+})
+
+test_that("MRVBF GRASS : fond de vallee plat >> versant, grille identique (lent, ~2 min)", {
+  skip_if(!nzchar(Sys.which("grass")), "GRASS absent")
+  skip_if(!sylvostation:::.grass_has_extension("r.valley.bottom"),
+          "extension r.valley.bottom absente (g.extension extension=r.valley.bottom)")
+  skip_if(nzchar(Sys.getenv("SYLVOSTATION_SKIP_GRASS")), "SYLVOSTATION_SKIP_GRASS defini")
+  # vallee : fond plat (x = 980300 +/- 200 m), versants a 0,3 (17 degres)
+  d <- make_synth_dtm(nc = 24, res = 25, fun = function(x, y) {
+    100 + 0.3 * pmax(0, abs(x - 980300) - 200) + 0.002 * (y - 6800000)
+  })
+  m <- sylvostation:::.mrvbf_grass(d)
+  expect_equal(as.vector(terra::ext(m)), as.vector(terra::ext(d)))
+  expect_equal(terra::res(m), terra::res(d))
+  sol <- terra::cellFromXY(d, cbind(980312.5, 6800312.5))     # x = est, y = nord
+  vers <- terra::cellFromXY(d, cbind(980012.5, 6800312.5))
+  expect_equal(unname(terra::xyFromCell(d, sol)[1, ]), c(980312.5, 6800312.5))
+  expect_gt(m[sol][[1]], 1)
+  expect_lt(m[vers][[1]], 0.1)
 })

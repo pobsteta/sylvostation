@@ -8,7 +8,7 @@ gradient hydrique comme indice de contrainte `biljouR` sur climat SAFRAN (ADR 00
 que le gradient hydrique ne repose plus sur une correspondance inventée ni sur la seule
 taille du réservoir.
 
-**Redite par l'agent :** _à compléter par l'agent._
+**Redite par l'agent :** remplacer la correspondance inventée et la RU seule par une chaîne publiée (codes IFN → soiltexture → euptf2 → RU → indice biljouR sur SAFRAN), pour que le gradient hydrique mesure la contrainte subie.
 
 ## Les trois questions (règle de staffing)
 
