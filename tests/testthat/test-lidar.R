@@ -138,3 +138,39 @@ test_that("point_lidar_metrics : points précis, métriques dans le disque", {
   expect_error(point_lidar_metrics(las, mark_ifn(p)), "IFN|700")
   expect_error(point_lidar_metrics(las, p, radius = 0), "radius")
 })
+
+# --- Classes exclues du MHC (mission 014, referentiels § 17) -------------------------
+test_that("MHC : classe 66 exclue, 65 n'est plus citee, sol inchange (2, 9, 66)", {
+  expect_equal(sylvostation:::.CLASSES_EXCLUES_MHC, 66L)
+  expect_equal(sylvostation:::.FILTRE_MHC, "Classification %out% 66")
+  expect_false(grepl("65", sylvostation:::.FILTRE_MHC))
+  expect_equal(sylvostation:::.CLASSES_SOL, c(2L, 9L, 66L))
+})
+
+test_that("run_lasr (lasR) : un point virtuel de classe 66 ne fait pas le MHC", {
+  skip_if_not_installed("lasR")
+  skip_if_not_installed("lidR")
+  # sol plat z = 0 (classe 2) sur 40 m x 40 m, un arbre (classe 5, z = 12) en (10,5 ; 10,5)
+  # et un point virtuel (classe 66, z = 30) en (30,5 ; 30,5), repere local + 1015000/6793000.
+  x0 <- 1015000; y0 <- 6793000
+  g <- expand.grid(x = seq(0.5, 39.5, by = 1), y = seq(0.5, 39.5, by = 1))
+  d <- data.frame(X = c(g$x, 10.5, 30.5) + x0, Y = c(g$y, 10.5, 30.5) + y0,
+                  Z = c(rep(0, nrow(g)), 12, 30),
+                  Classification = c(rep(2L, nrow(g)), 5L, 66L))
+  d$ReturnNumber <- 1L; d$NumberOfReturns <- 1L
+  # classe 66 : LAS 1.4, format de point 6 (classes sur 8 bits)
+  h <- lidR::LASheader(d)
+  h[["Version Minor"]] <- 4L; h[["Point Data Format ID"]] <- 6L
+  h[["Header Size"]] <- 375L; h[["Offset to point data"]] <- 375L
+  las <- suppressWarnings(lidR::LAS(d, header = h, check = FALSE))
+  sf::st_crs(las) <- 2154
+  f <- file.path(tempdir(), "synth_mhc66.las")
+  suppressWarnings(lidR::writeLAS(las, f))
+  out <- file.path(tempdir(), "t_mhc66")
+  r <- run_lasr(f, out, res = 1, ncores = 1, buffer = 0, engine = "lasr")
+  mhc <- terra::rast(r$mhc)
+  arbre <- terra::cellFromXY(mhc, cbind(x0 + 10.5, y0 + 10.5))   # x = est, y = nord
+  virt <- terra::cellFromXY(mhc, cbind(x0 + 30.5, y0 + 30.5))
+  expect_equal(mhc[arbre][[1]], 12, tolerance = 1e-3)
+  expect_true(is.na(mhc[virt][[1]]) || mhc[virt][[1]] < 1)
+})

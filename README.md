@@ -31,6 +31,12 @@ des types, CSV et `rapport.html` (Quarto, tableau « état de preuve » et secti
 Tout y est **synthétique** et les critères d'acceptation du § 7 du brief restent « non
 atteints ». Le mode réel (`demo: false`) n'est pas branché. Détails : `docs/pipeline.md`.
 
+## Dépendance système facultative : GRASS (MRVBF)
+
+Le MRVBF (`derive_terrain(mrvbf = TRUE)`) demande GRASS GIS (>= 8) et son extension
+`r.valley.bottom` (`grass --tmp-project EPSG:2154 --exec g.extension extension=r.valley.bottom`).
+Sans eux, la couche `mrvbf` reste à `NA` avec un avertissement.
+
 ## Tests
 
     Rscript -e 'devtools::document(); devtools::test()'
