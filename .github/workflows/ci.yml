@@ -43,10 +43,19 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          extra-packages: any::rcmdcheck, any::devtools
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
+
+      # Mission 016 : _targets.R et config.yml sont exclus du paquet construit ; sous
+      # R CMD check seul, les tests du mode réel (017, 016) sauteraient toujours. Cette étape
+      # lance la suite depuis la racine du dépôt (mode réel hors ligne, sans réseau).
+      # CLI Quarto : sans lui, le test du rapport du mode réel sauterait.
+      - uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Tests depuis la racine (mode réel hors ligne)
+        run: LC_ALL=C.UTF-8 Rscript -e 'devtools::test(stop_on_failure = TRUE)'
 
   couverture:
     # Seulement sur un push de main, après un check vert. Un échec ici ne casse jamais la CI :

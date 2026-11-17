@@ -165,3 +165,19 @@ Extraits le 2026-11-16, mission 001 (voir `docs/referentiels.md`, § 5 et § 7).
   2003-01-01 au 2004-12-31 (731 jours), colonnes `LAMBX;LAMBY;DATE;PRENEI;PRELIQ;ETP`
   (mm). 21 Ko. Voir `docs/referentiels.md`, § 23.
 - **Licence :** Licence Ouverte 2.0 (`lov2`, champ licence de data.gouv.fr).
+
+## `safran_sim2_12mailles_extrait.csv` (mission 016, RÉEL)
+
+- **Source :** Météo-France, « Données changement climatique - SIM quotidienne »
+  (data.gouv.fr, jeu `6569b27598256cc583c917a7`), fichiers
+  `https://meteofrance.s3.sbg.io.cloud.ovh.net/data/REF_CC/SIM/QUOT_SIM2_2003.csv.gz` et
+  `…_2004.csv.gz`, téléchargés le 2026-11-17 (cache `data/cache/safran/`, hors dépôt).
+  Mention obligatoire : « Source : Météo-France ».
+- **Traitement :** les **12 mailles** qui couvrent l'emprise test (`LAMBX` 9560, 9640, 9720 ×
+  `LAMBY` 23530, 23610, 23690, 23770, Lambert II étendu en hm, liste
+  `data/cache/safran/cellules_emprise.txt`), du 2003-01-01 au 2004-12-31 (8 772 lignes),
+  colonnes d'origine `LAMBX;LAMBY;DATE;PRENEI;PRELIQ;T;ETP` (mm, `T` en °C), sans
+  arrondi. 322 Ko. Commande : lecture de `emprise_2003.csv` et `emprise_2004.csv` du cache
+  par `utils::read.csv2(colClasses = "character")`, sélection des 7 colonnes, écriture `;`.
+  Sert au mode réel hors ligne (`offline: true`, mission 016).
+- **Licence :** Licence Ouverte 2.0 (`lov2`, champ licence de data.gouv.fr).
