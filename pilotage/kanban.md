@@ -14,7 +14,6 @@
 
 ## Validé
 
-- [017-tests-mode-reel](missions/017-tests-mode-reel.md) · cycle 5 · testeur
 
 ## Planifié
 
@@ -25,6 +24,7 @@
 
 ## Terminé
 
+- [017-tests-mode-reel](missions/017-tests-mode-reel.md) · cycle 5 · testeur · 9 tests sautés jusqu'à 016
 - [013-referentiels-complements](missions/013-referentiels-complements.md) · cycle 5 · acquereur · passe 3 des référentiels
 - [012-release-versionnage](missions/012-release-versionnage.md) · cycle 5 · dev · CI, release vAAAA.MM.N, badges
 
