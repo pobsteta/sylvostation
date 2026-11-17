@@ -39,6 +39,12 @@ _Délégation totale._
 - Cibles réelles : SER → emprise + tampon → grille ; tableau d'assemblage → dalles → `run_lasr` par blocs de 3 × 3 (ADR/journal 003), reprise si interrompu (cibles dynamiques par dalle) ; terrain ; géologie BD Charm-50 ; IFN (GRECO) ; sols ; GBIF (`occ_search` sans compte, `occ_download` si identifiants en variables d'environnement) ; indicateurs réels (015) ; modèles, typologie, clé, validation, sorties.
 - Entrées optionnelles : `gnss_path`, `reference_path` dans `config.yml` ; absentes → critères « non atteint (entrée absente) » dans l'état de preuve.
 - Option `max_tiles` pour un essai court (par ex. 4 dalles) avant la SER entière.
+- **Contrat avec les tests d'acceptation de 017** (décision déléguée du 2026-11-17) :
+  - une option `offline: true` (config) fait tourner le mode réel **sans réseau** sur les extraits réels de `inst/extdata` (dalle LAZ, BD Charm-50, IFN, MNT) : c'est ce run qui sert en CI et dans 017 ;
+  - la variable d'environnement `SYLVOSTATION_REEL_DIR`, si elle est posée, désigne un dossier de sorties déjà produit que les tests relisent ;
+  - sorties sans préfixe `synth_` : `etat_de_preuve.csv`, `types.tif`, `rapport.qmd` / `rapport.html` ;
+  - libellé exact de l'état de preuve pour une entrée manquante : « non atteint (entrée absente) » (GNSS) ; référence absente : « sautée (entrée absente) » ;
+  - lis `tests/testthat/test-acceptation-mode-reel.R` (mission 017) : il doit passer sans modification ; s'il faut le changer, dis-le, ne le change pas.
 - Tests sans réseau : cibles réelles exécutées sur les extraits réels de `inst/extdata` avec les fonctions de téléchargement simulées.
 
 ## Valeur provisoire (chiffre, réglage)
