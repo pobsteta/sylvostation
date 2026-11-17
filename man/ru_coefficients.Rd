@@ -32,15 +32,19 @@ On retient la réserve en eau utile \strong{« défaut »} (θ à pF 2,0 moins �
 la plus basse des deux, par prudence. La table distingue l'horizon \strong{A}
 (\code{TEXT1}, horizon supérieur) et les horizons \strong{E, B, C} (\code{TEXT2}) : le résultat
 est une liste \code{list(haut = , bas = )} de deux vecteurs nommés, acceptée par
-l'argument \code{ru_table} de \code{\link[=compute_gradients]{compute_gradients()}}. Attribut \code{verifie = TRUE}.
+l'argument \code{ru_table} de \code{\link[=compute_gradients]{compute_gradients()}}. Attribut \code{verifie = TRUE} (le
+tableau lui-même est relu).
 
 Trois hypothèses du code, \strong{non publiées} : (1) la correspondance des codes IFN
-avec les classes du triangle de l'Aisne, faite par les noms (1 = S, 2 = SL, 3 = SA,
-4 = LS, 5 = LA, 6 = LM, 7 = AL, 8 = AS, 9 = A ; la légende complète du triangle
-n'est pas dans les pages lues) : \strong{à vérifier} ; (2) \code{TEXT1} est pris pour un
-horizon A, \code{TEXT2} pour un horizon E, B ou C ; (3) la table n'a pas de valeur pour
-A en horizon A, ni pour LS en horizons E, B, C : on prend alors la valeur de
-l'autre type d'horizon de la même classe. Les écarts types de l'article (0,14 à
+avec les classes du triangle de l'Aisne, faite par les noms (la légende complète du
+triangle n'est pas dans les pages lues) : \strong{à vérifier, provisoire}. Un code
+ambigu prend la \strong{moyenne} des classes candidates qui ont une valeur : 4 = LS (LLS
+sans valeur), 5 = LA, LAS, LSA, 6 = LL, LM, LMS (LL sans valeur), 9 = A, ALO (A sans
+valeur en horizon A) ; 1 = S, 2 = SL, 3 = SA, 7 = AL, 8 = AS. Attribut
+\code{correspondance_verifiee = FALSE} : tant qu'il l'est, \code{compute_gradients()} rend
+\code{ru_verifie = FALSE} ; (2) \code{TEXT1} est pris pour un horizon A, \code{TEXT2} pour un
+horizon E, B ou C ; (3) LS n'a pas de valeur en horizons E, B, C : on prend alors la
+valeur de l'horizon A (repli signalé). Les écarts types de l'article (0,14 à
 0,53 mm/cm) ne sont pas propagés. \code{H} vaut \code{NA} (la couche organique n'est pas
 comptée), \code{0} vaut 0.
 

@@ -113,7 +113,7 @@ read_tichy <- function(path) {
 #'   son nom (celui du `CD_REF` v18) est apparié à la source ; **repli** pour un taxon
 #'   infra-spécifique (sous-espèce, variété) sur son binôme. Une ligne par code résolu,
 #'   `cd_ref` = le code **tel que donné** (jointure directe avec `flore$CD_REF`),
-#'   colonnes `cd_ref_taxref` (v18) et `appariement` (`"nom"` ou `"binome"`).
+#'   colonnes `cd_ref_taxref` (v18) et `appariement` (`"nom"`, `"binome"`, `"synonyme"` ou `"agregat"`).
 #'
 #' Les non-appariés ne sont jamais supprimés en silence : attribut `non_apparies`
 #' (`data.frame` ; en mode `taxa`, colonnes `cd_ref`, `nom`, `rang`, `motif`).
@@ -125,6 +125,12 @@ read_tichy <- function(path) {
 #'   dépôt) ou de l'extrait CSV, voir [read_tichy()].
 #' @param taxref `data.frame` de [read_taxref()] ou chemin du fichier TAXREF.
 #' @param taxa Codes à résoudre (facultatif), voir plus haut.
+#' @param agregats En mode `taxa` seulement, `TRUE` par défaut : à défaut d'autre
+#'   appariement, une espèce ou un taxon infra-spécifique s'apparie à l'agrégat
+#'   « binôme aggr. » de la source (`appariement = "agregat"`, `nom` = libellé de
+#'   l'agrégat). **Approximation signalée** : l'agrégat englobe plusieurs espèces
+#'   proches (par exemple *Dryopteris carthusiana* aggr. englobe *D. dilatata*, dont
+#'   l'écologie diffère) ; la valeur est celle de l'agrégat, pas de l'espèce.
 #' @param synonymes En mode `taxa` seulement. `FALSE` (défaut, prudent) : le nom retenu
 #'   est celui du `CD_REF` v18. `TRUE` : à défaut, les **synonymes** TAXREF de rang espèce
 #'   (autres `LB_NOM` de même `CD_REF`) sont essayés ; `appariement` vaut alors
@@ -138,7 +144,7 @@ read_tichy <- function(path) {
 #' head(ind)
 #' @export
 load_indicator_values <- function(source = c("tichy", "ecoplant", "baseflor"), path, taxref,
-                                  taxa = NULL, synonymes = FALSE) {
+                                  taxa = NULL, synonymes = FALSE, agregats = TRUE) {
   source <- match.arg(source)
   if (source == "baseflor") {
     stop("Baseflor n'est pas joignable (HTTP 403, colonnes non lues) : voir ",
@@ -194,7 +200,15 @@ load_indicator_values <- function(source = c("tichy", "ecoplant", "baseflor"), p
         }
       }
     }
+    if (isTRUE(agregats)) {
+      # repli "binome aggr." (agregats de Tichy) pour une espece ou un taxon infra-specifique
+      cand <- is.na(pos) & !is.na(nom) & rang %in% c("ES", infra)
+      j <- match(paste0(.binome(nom[cand]), " aggr."), ti$taxon)
+      pos[which(cand)[!is.na(j)]] <- j[!is.na(j)]
+      mode[which(cand)[!is.na(j)]] <- "agregat"
+    }
     ok <- !is.na(pos)
+    nom[!is.na(mode) & mode == "agregat"] <- ti$taxon[pos[!is.na(mode) & mode == "agregat"]]
     out <- data.frame(cd_ref = suppressWarnings(as.numeric(taxa[ok])), nom = nom[ok],
                       ti[pos[ok], val, drop = FALSE], synthetic = FALSE,
                       cd_ref_taxref = suppressWarnings(as.numeric(ref18$CD_REF[ok])),

@@ -112,19 +112,23 @@ test_that("taux d'appariement des 100 placettes IFN reelles (extraits reels)", {
   m <- indicator_match_rate(fl, ind)
   # chiffres mesures sur les fichiers complets (Zenodo v2, TAXREF v18), 2026-11-17
   expect_equal(m$n_especes, 269)
-  expect_equal(m$n_apparies, 173)
-  expect_equal(m$taux_especes, 173 / 269)
+  expect_equal(m$n_apparies, 185)
+  expect_equal(m$taux_especes, 185 / 269)
   expect_equal(m$n_occurrences, 2238)
-  expect_equal(as.integer(m$par_appariement[c("nom", "binome")]), c(137L, 36L))
+  expect_equal(as.integer(m$par_appariement[c("nom", "binome", "agregat")]), c(137L, 36L, 12L))
   # tous les non-apparies sont listes, avec leur nom, leur rang et un motif
-  expect_equal(nrow(m$non_apparies), 269 - 173)
+  expect_equal(nrow(m$non_apparies), 269 - 185)
   expect_false(anyNA(m$non_apparies$motif))
   expect_equal(sum(m$non_apparies$n_releves) + round(m$taux_occurrences * 2238), 2238 + 0)
+  expect_equal(ind$ph[ind$nom == "Hedera helix aggr."], 6.2)   # agregat de la source
   # le mode prudent n'utilise aucun synonyme
   expect_false("synonyme" %in% ind$appariement)
   s <- load_indicator_values("tichy", tichy_ext(), taxref_ext(), taxa = fl$CD_REF,
                              synonymes = TRUE)
-  expect_equal(indicator_match_rate(fl, s)$n_apparies, 179)
+  expect_equal(indicator_match_rate(fl, s)$n_apparies, 191)
+  # sans repli sur les agregats : retour aux 173 de la premiere version
+  sa <- load_indicator_values("tichy", tichy_ext(), taxref_ext(), taxa = fl$CD_REF, agregats = FALSE)
+  expect_equal(indicator_match_rate(fl, sa)$n_apparies, 173)
 })
 
 test_that("indicator_match_rate : entrées refusées, taux calculé à la main", {
@@ -156,16 +160,24 @@ test_that("ru_coefficients() : tableau 2 de Bruand et al. (2004), colonne défau
   expect_match(attr(ru, "source"), "Bruand")
   expect_named(ru, c("haut", "bas"))
   # valeurs du tableau, lues sur le PDF : S 0,60 (A) / 0,73 (BC) ; LM 2,13 / 2,07 ; AL 1,36 / 1,13
-  expect_equal(unname(ru$haut[c("1", "6", "7")]), c(0.60, 2.13, 1.36))
-  expect_equal(unname(ru$bas[c("1", "6", "7")]), c(0.73, 2.07, 1.13))
+  expect_equal(unname(ru$haut[c("1", "7")]), c(0.60, 1.36))
+  expect_equal(unname(ru$bas[c("1", "7")]), c(0.73, 1.13))
+  # codes ambigus : moyenne des classes candidates qui ont une valeur (provisoire)
+  expect_equal(unname(ru$haut["6"]), mean(c(2.13, 1.83)))        # LM, LMS (LL sans valeur)
+  expect_equal(unname(ru$bas["6"]), mean(c(2.07, 1.96)))
+  expect_equal(unname(ru$haut["5"]), mean(c(1.73, 1.67, 1.43)))  # LA, LAS, LSA
+  expect_equal(unname(ru$bas["5"]), mean(c(1.49, 1.48, 1.27)))
+  expect_equal(unname(ru$haut["9"]), 1.24)                       # A sans valeur en horizon A : ALO
+  expect_equal(unname(ru$bas["9"]), mean(c(0.93, 1.12)))         # A, ALO
   # reperes : 0 sans terre fine, H non compte, repli documente pour les cases "-"
   expect_equal(unname(ru$haut["0"]), 0)
   expect_true(is.na(ru$haut["H"]) && is.na(ru$bas["H"]))
-  expect_equal(unname(ru$haut["9"]), 0.93)   # A en horizon A : "-" -> valeur E,B,C
-  expect_equal(unname(ru$bas["4"]), 1.62)    # LS en E,B,C : "-" -> valeur A
+  expect_equal(unname(ru$bas["4"]), 1.62)    # LS en E,B,C : "-" -> valeur de l'horizon A (repli)
+  expect_false(attr(ru, "correspondance_verifiee"))
   # codes IFN couverts
   expect_setequal(names(ru$haut), c("0", as.character(1:9), "H"))
-  expect_equal(unname(attr(ru, "correspondance")["8"]), "AS")
+  expect_equal(attr(ru, "correspondance")[["8"]], "AS")
+  expect_equal(attr(ru, "correspondance")[["6"]], c("LL", "LM", "LMS"))
 })
 
 test_that("ru_coefficients(\"provisoire\") : ancien vecteur, non vérifié", {
@@ -175,11 +187,12 @@ test_that("ru_coefficients(\"provisoire\") : ancien vecteur, non vérifié", {
   expect_error(ru_coefficients("autre"))
 })
 
-test_that("compute_gradients : RU de Bruand calculée à la main, ru_verifie = TRUE", {
+test_that("compute_gradients : RU de Bruand calculée à la main, ru_verifie = FALSE (correspondance non sourcée)", {
   g <- compute_gradients(make_synth_ifn(), make_synth_indic())
-  expect_true(attr(g, "ru_verifie"))
-  # P1 : 20 cm de limon (A 2,13) + 40 cm de sable limoneux (bas 1,16), 20 % de cailloux
-  expect_equal(g$ru_mm[1], (20 * 2.13 + 40 * 1.16) * 0.8)
+  expect_false(attr(g, "ru_verifie"))             # table relue, correspondance non sourcée
+  expect_false(attr(g, "correspondance_verifiee"))
+  # P1 : 20 cm de limon (A : moyenne LM, LMS) + 40 cm de sable limoneux (bas 1,16), 20 % de cailloux
+  expect_equal(g$ru_mm[1], (20 * mean(c(2.13, 1.83)) + 40 * 1.16) * 0.8)
   # P3 : 50 cm de limon sableux sous un seul horizon -> `bas` (repli 1,62), sans cailloux
   expect_equal(g$ru_mm[3], 50 * 1.62)
   # P4 : 40 cm de sable (bas 0,73), 100 % de cailloux -> 0
@@ -191,4 +204,12 @@ test_that("compute_gradients : RU de Bruand calculée à la main, ru_verifie = T
   expect_false(attr(g0, "ru_verifie"))
   expect_error(compute_gradients(make_synth_ifn(), make_synth_indic(),
                                  ru_table = list(haut = 1)), "haut")
+})
+
+test_that("ru_verifie : vrai seulement si table publiee ET correspondance sourcee", {
+  ru <- ru_coefficients()
+  attr(ru, "correspondance_verifiee") <- TRUE
+  g <- compute_gradients(make_synth_ifn(), make_synth_indic(), ru_table = ru)
+  expect_true(attr(g, "ru_verifie"))
+  expect_true(attr(g, "correspondance_verifiee"))
 })

@@ -250,15 +250,19 @@ unmatched_taxa <- function(flore, indicateurs) {
 #' la plus basse des deux, par prudence. La table distingue l'horizon **A**
 #' (`TEXT1`, horizon supérieur) et les horizons **E, B, C** (`TEXT2`) : le résultat
 #' est une liste `list(haut = , bas = )` de deux vecteurs nommés, acceptée par
-#' l'argument `ru_table` de [compute_gradients()]. Attribut `verifie = TRUE`.
+#' l'argument `ru_table` de [compute_gradients()]. Attribut `verifie = TRUE` (le
+#' tableau lui-même est relu).
 #'
 #' Trois hypothèses du code, **non publiées** : (1) la correspondance des codes IFN
-#' avec les classes du triangle de l'Aisne, faite par les noms (1 = S, 2 = SL, 3 = SA,
-#' 4 = LS, 5 = LA, 6 = LM, 7 = AL, 8 = AS, 9 = A ; la légende complète du triangle
-#' n'est pas dans les pages lues) : **à vérifier** ; (2) `TEXT1` est pris pour un
-#' horizon A, `TEXT2` pour un horizon E, B ou C ; (3) la table n'a pas de valeur pour
-#' A en horizon A, ni pour LS en horizons E, B, C : on prend alors la valeur de
-#' l'autre type d'horizon de la même classe. Les écarts types de l'article (0,14 à
+#' avec les classes du triangle de l'Aisne, faite par les noms (la légende complète du
+#' triangle n'est pas dans les pages lues) : **à vérifier, provisoire**. Un code
+#' ambigu prend la **moyenne** des classes candidates qui ont une valeur : 4 = LS (LLS
+#' sans valeur), 5 = LA, LAS, LSA, 6 = LL, LM, LMS (LL sans valeur), 9 = A, ALO (A sans
+#' valeur en horizon A) ; 1 = S, 2 = SL, 3 = SA, 7 = AL, 8 = AS. Attribut
+#' `correspondance_verifiee = FALSE` : tant qu'il l'est, `compute_gradients()` rend
+#' `ru_verifie = FALSE` ; (2) `TEXT1` est pris pour un horizon A, `TEXT2` pour un
+#' horizon E, B ou C ; (3) LS n'a pas de valeur en horizons E, B, C : on prend alors la
+#' valeur de l'horizon A (repli signalé). Les écarts types de l'article (0,14 à
 #' 0,53 mm/cm) ne sont pas propagés. `H` vaut `NA` (la couche organique n'est pas
 #' comptée), `0` vaut 0.
 #'
@@ -283,22 +287,35 @@ ru_coefficients <- function(source = c("bruand2004", "provisoire")) {
       verifie = FALSE, source = "provisoire (non publié)", unite = "mm/cm"))
   }
   # Bruand et al. 2004, tableau 2, p. 328 : reserve utile "defaut" (mm/cm),
-  # sans prise en compte de Da. NA = "-" dans l'article (pas de valeur).
+  # sans prise en compte de Da, 15 classes du triangle de l'Aisne.
+  # NA = "-" dans l'article (pas de valeur).
   b <- data.frame(
-    ifn   = c("1", "2",  "3",  "4",  "5",  "6",  "7",  "8",  "9"),
-    aisne = c("S", "SL", "SA", "LS", "LA", "LM", "AL", "AS", "A"),
-    haut  = c(0.60, 1.31, 1.28, 1.62, 1.73, 2.13, 1.36, 1.73, NA),   # horizon A
-    bas   = c(0.73, 1.16, 1.03, NA,   1.49, 2.07, 1.13, 0.95, 0.93), # horizons E, B, C
+    aisne = c("ALO", "AL", "AS", "A", "LA", "LAS", "LSA", "LM", "LMS", "LS", "LLS", "LL",
+              "SA", "SL", "S"),
+    haut  = c(1.24, 1.36, 1.73, NA, 1.73, 1.67, 1.43, 2.13, 1.83, 1.62, NA, NA,
+              1.28, 1.31, 0.60),   # horizon A
+    bas   = c(1.12, 1.13, 0.95, 0.93, 1.49, 1.48, 1.27, 2.07, 1.96, NA, NA, NA,
+              1.03, 1.16, 0.73),   # horizons E, B, C
     stringsAsFactors = FALSE)
-  haut <- ifelse(is.na(b$haut), b$bas, b$haut)   # repli : autre type d'horizon
-  bas  <- ifelse(is.na(b$bas), b$haut, b$bas)
-  haut <- stats::setNames(c(0, haut, NA_real_), c("0", b$ifn, "H"))
-  bas  <- stats::setNames(c(0, bas,  NA_real_), c("0", b$ifn, "H"))
-  structure(list(haut = haut, bas = bas), verifie = TRUE,
+  # Correspondance code IFN -> classes candidates (PROVISOIRE, non publiee, par les noms) :
+  # un code ambigu prend la moyenne des classes candidates qui ont une valeur.
+  corr <- list("1" = "S", "2" = "SL", "3" = "SA", "4" = c("LS", "LLS"),
+               "5" = c("LA", "LAS", "LSA"), "6" = c("LL", "LM", "LMS"),
+               "7" = "AL", "8" = "AS", "9" = c("A", "ALO"))
+  moy <- function(classes, col) {
+    v <- b[[col]][match(classes, b$aisne)]
+    if (all(is.na(v))) NA_real_ else mean(v, na.rm = TRUE)
+  }
+  haut <- vapply(corr, moy, numeric(1), col = "haut")
+  bas  <- vapply(corr, moy, numeric(1), col = "bas")
+  haut2 <- ifelse(is.na(haut), bas, haut)   # repli : valeur de l'autre type d'horizon
+  bas2  <- ifelse(is.na(bas), haut, bas)    # (code 4, LS en horizons E, B, C : valeur de A)
+  haut <- stats::setNames(c(0, haut2, NA_real_), c("0", names(corr), "H"))
+  bas  <- stats::setNames(c(0, bas2,  NA_real_), c("0", names(corr), "H"))
+  structure(list(haut = haut, bas = bas), verifie = TRUE, correspondance_verifiee = FALSE,
             source = paste("Bruand, Duval et Cousin (2004), Etude et Gestion des Sols 11(3),",
                            "323-332, tableau 2 p. 328, colonne defaut, sans Da"),
-            unite = "mm/cm",
-            correspondance = stats::setNames(b$aisne, b$ifn))
+            unite = "mm/cm", correspondance = corr)
 }
 
 # Valide `ru_table` : vecteur nomme, ou liste(haut, bas) de vecteurs nommes
@@ -397,7 +414,9 @@ ru_coefficients <- function(source = c("bruand2004", "provisoire")) {
 #'   IFN : 1000 (brief technique, étape 5 : climat et pH agrégés à 1 km).
 #' @param ru_table Vecteur nommé de coefficients mm/cm par code de texture, ou liste
 #'   `haut`, `bas` (horizon supérieur `TEXT1`, horizon inférieur `TEXT2`), voir
-#'   [ru_coefficients()]. L'attribut `ru_verifie` du résultat reprend `verifie`.
+#'   [ru_coefficients()]. `ru_verifie` du résultat vaut `TRUE` seulement
+#'   si `verifie` est vrai et si `correspondance_verifiee` n'est pas faux ; l'attribut
+#'   `correspondance_verifiee` est repris tel quel.
 #' @return Un `sf` (Lambert-93) : `id_placette`, `CAMPAGNE`, `IDP`, `source`,
 #'   `loc_precision_m`, `n_taxa_indic`, `grad_ph`, `grad_azote`, `grad_trophique`,
 #'   `ru_mm`, `engorg_prof_cm`, `engorgement` et, si `climat`, les colonnes
@@ -475,7 +494,11 @@ compute_gradients <- function(ifn, indicateurs = NULL, climat = NULL,
     out$coarse_p_etp_sv <- cl$p_etp_sv
     out$coarse_t_moy <- cl$t_moy
   }
-  attr(out, "ru_verifie") <- isTRUE(attr(ru_table, "verifie"))  # table publiee : TRUE
+  # vrai seulement si la table est publiee ET la correspondance codes IFN -> classes
+  # de l'Aisne est sourcee (attribut absent = table sans correspondance a verifier : vrai)
+  cv <- attr(ru_table, "correspondance_verifiee")
+  attr(out, "ru_verifie") <- isTRUE(attr(ru_table, "verifie")) && (is.null(cv) || isTRUE(cv))
+  attr(out, "correspondance_verifiee") <- if (is.null(cv)) NA else isTRUE(cv)
   attr(out, "methode_trophique") <- methode
   attr(out, "taxa_non_apparies") <- non_app
   out

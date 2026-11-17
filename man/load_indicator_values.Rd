@@ -9,7 +9,8 @@ load_indicator_values(
   path,
   taxref,
   taxa = NULL,
-  synonymes = FALSE
+  synonymes = FALSE,
+  agregats = TRUE
 )
 }
 \arguments{
@@ -29,6 +30,13 @@ est celui du \code{CD_REF} v18. \code{TRUE} : à défaut, les \strong{synonymes}
 (autres \code{LB_NOM} de même \code{CD_REF}) sont essayés ; \code{appariement} vaut alors
 \code{"synonyme"}. Risque : un synonyme TAXREF peut être un nom mal appliqué (même
 libellé, autre taxon dans la source) ; à n'utiliser qu'en le disant.}
+
+\item{agregats}{En mode \code{taxa} seulement, \code{TRUE} par défaut : à défaut d'autre
+appariement, une espèce ou un taxon infra-spécifique s'apparie à l'agrégat
+« binôme aggr. » de la source (\code{appariement = "agregat"}, \code{nom} = libellé de
+l'agrégat). \strong{Approximation signalée} : l'agrégat englobe plusieurs espèces
+proches (par exemple \emph{Dryopteris carthusiana} aggr. englobe \emph{D. dilatata}, dont
+l'écologie diffère) ; la valeur est celle de l'agrégat, pas de l'espèce.}
 }
 \value{
 Un \code{data.frame}, attributs \code{source}, \code{licence}, \code{non_apparies}.
@@ -52,7 +60,7 @@ TAXREF v18 du nom (en cas de synonymes de la source sur un même \code{cd_ref}, 
 son nom (celui du \code{CD_REF} v18) est apparié à la source ; \strong{repli} pour un taxon
 infra-spécifique (sous-espèce, variété) sur son binôme. Une ligne par code résolu,
 \code{cd_ref} = le code \strong{tel que donné} (jointure directe avec \code{flore$CD_REF}),
-colonnes \code{cd_ref_taxref} (v18) et \code{appariement} (\code{"nom"} ou \code{"binome"}).
+colonnes \code{cd_ref_taxref} (v18) et \code{appariement} (\code{"nom"}, \code{"binome"}, \code{"synonyme"} ou \code{"agregat"}).
 }
 
 Les non-appariés ne sont jamais supprimés en silence : attribut \code{non_apparies}

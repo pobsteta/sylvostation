@@ -10,6 +10,7 @@
 479;"Alnus glutinosa";;;9.2;5.9;6.3;
 582;"Anagallis tenella";;;8.9;4.8;2;
 641;"Anemone nemorosa";;;5.9;5.2;;
+697;"Anthoxanthum odoratum aggr.";;;;;3.2;
 945;"Arum maculatum";;;6;7.3;7.4;
 1039;"Asplenium trichomanes";;;4.1;;2.9;
 1149;"Athyrium filix-femina";;;;5.3;5.6;
@@ -44,10 +45,13 @@
 2402;"Crataegus monogyna";;;4.4;;;
 2638;"Cytisus scoparius";;;4.5;3.3;3.1;
 2647;"Dactylis glomerata";;;;;;
+2713;"Deschampsia cespitosa aggr.";;;;;;
 2811;"Digitalis lutea";;;5;6.8;5;
 2813;"Digitalis purpurea";;;5.2;3;;
 2817;"Digitaria sanguinalis";;;3.7;5.6;;
 2908;"Drymochloa sylvatica";;;5.6;;5.6;
+2910;"Dryopteris affinis aggr.";;;;4.6;4.8;
+2912;"Dryopteris carthusiana aggr.";;;;3.6;;
 2915;"Dryopteris filix-mas";;;;5.3;5.6;
 2988;"Elymus caninus";;;6.3;7.1;7.1;
 3030;"Epilobium montanum";;;5.5;5.8;5.4;
@@ -59,7 +63,9 @@
 3549;"Filipendula ulmaria";;;7.9;5.8;5;
 3559;"Fragaria vesca";;;4.9;6.8;5;
 3568;"Fraxinus excelsior";;;6.7;7.3;6.6;
+3655;"Galeopsis tetrahit aggr.";;;;;6.5;
 3662;"Galium aparine";;;;6.3;7.6;
+3707;"Galium mollugo aggr.";;;4.3;6.8;;
 3715;"Galium odoratum";;;5.4;6.3;5.3;
 3730;"Galium rotundifolium";;;5.3;;;
 3735;"Galium saxatile";;;5.5;2.2;2.6;
@@ -68,6 +74,7 @@
 3923;"Geum urbanum";;;5.7;6.8;7;
 3939;"Glechoma hederacea";;;5.9;6.3;6.9;
 3969;"Gnaphalium sylvaticum";;;;3.8;;
+4030;"Hedera helix aggr.";;;5.3;6.2;;
 4146;"Heracleum sphondylium";;;5.5;6.6;7.2;
 4197;"Hieracium lachenalii";;;5;4;2.4;
 4198;"Hieracium laevigatum";;;5;3.1;2.2;
@@ -84,6 +91,7 @@
 4411;"Impatiens parviflora";;;5.4;6.6;6.7;
 4517;"Jacobaea vulgaris";;;3.8;6.6;5;
 4527;"Juglans regia";;;5.3;7.1;6.3;
+4537;"Juncus bufonius aggr.";;;;;;
 4543;"Juncus conglomeratus";;;7.6;4.4;3.6;
 4544;"Juncus effusus";;;8;4.5;3.8;
 4567;"Juncus tenuis";;;6.2;5;4.8;
@@ -139,8 +147,11 @@
 6787;"Quercus robur";;;5.7;5;;
 6808;"Ranunculus bulbosus";;;3.9;6.5;2.9;
 6874;"Ranunculus repens";;;7.3;5.8;6.5;
+6981;"Ribes rubrum aggr.";;;7.4;6.3;6.1;
 6987;"Robinia pseudoacacia";;;4.4;6.4;7.5;
 7011;"Rosa arvensis";;;;7;4.7;
+7014;"Rosa canina aggr.";;;;7;;
+7077;"Rubus fruticosus aggr.";;;;;;
 7083;"Rubus idaeus";;;5.5;5.8;;
 7119;"Rumex acetosa";;;;;;
 7120;"Rumex acetosella";;;3.7;;2;
@@ -168,6 +179,7 @@
 8547;"Urtica dioica";;;;6.9;8.5;
 8563;"Vaccinium myrtillus";;;;1.9;2.5;
 8567;"Vaccinium vitis-idaea";;;4.8;2;1.9;
+8675;"Veronica chamaedrys aggr.";;;4.6;6.5;4.9;
 8687;"Veronica montana";;;;;6;
 8690;"Veronica officinalis";;;4.7;3.1;3.3;
 8761;"Vicia sepium";;;5;6.5;5.3;
