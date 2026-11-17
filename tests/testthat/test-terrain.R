@@ -26,9 +26,8 @@ inner <- function(r, k = 3) terra::crop(r, terra::ext(r) - k * terra::res(r)[1])
 test_that("synth_dtm.tif est synthetique, en EPSG:2154, origine multiple de 50 m", {
   skip_if(!nzchar(synth_path()))
   d <- terra::rast(synth_path())
-  # Le GeoTIFF commité ne porte pas la balise `synthetic` (terra 1.9.50 : seule
-  # AREA_OR_POINT est lue) ; la synthéticité est portée par le préfixe du nom de fichier.
   expect_true(startsWith(basename(synth_path()), "synth_"))
+  expect_equal(sylvostation:::.get_metag(d, "synthetic"), "TRUE")
   assert_crs_2154(d)
   e <- terra::ext(d)
   expect_equal(unname(e$xmin %% 50), 0); expect_equal(unname(e$ymin %% 50), 0)

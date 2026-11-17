@@ -39,6 +39,9 @@ test_that("run_lasr (lasR) : MNT et MHC à 1 m alignés, rognés à la dalle, va
   v <- terra::values(mhc, na.rm = TRUE)
   expect_gt(length(v), 0.8 * terra::ncell(mhc))
   expect_true(min(v) > -2 && max(v) < 60)
+  # aucune valeur nodata non déclarée (~ -2.147e7) ne subsiste dans les produits écrits
+  expect_false(any(terra::values(mnt, na.rm = TRUE) < -1e6))
+  expect_false(any(terra::values(mhc, na.rm = TRUE) < -1e6))
   tm <- attr(r, "timing")
   expect_equal(tm$engine, "lasr")
   expect_lt(tm$download_s, 0.5)

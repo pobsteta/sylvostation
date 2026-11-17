@@ -19,6 +19,11 @@
 # Écrit un raster rogné à l'emprise de la dalle (lasR déborde d'une cellule sur le bord).
 .write_tile_raster <- function(r, tile_id, dest) {
   if (!is.na(tile_id)) r <- terra::crop(r, .tile_extent(tile_id))
+  # lasR (0.21.0 au moins) peut laisser des cellules à une valeur nodata (~ -2.147e7)
+  # non déclarée dans le GeoTIFF : on les convertit en NA, quelle que soit la version.
+  flag <- suppressWarnings(terra::NAflag(r))
+  r <- terra::ifel(r <= -1e6, NA, r)
+  if (length(flag) && !all(is.na(flag))) r <- terra::ifel(r == flag[1L], NA, r)
   terra::writeRaster(r, dest, overwrite = TRUE, datatype = "FLT4S",
                      gdal = c("COMPRESS=DEFLATE", "PREDICTOR=3"))
   dest
