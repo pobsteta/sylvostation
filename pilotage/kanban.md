@@ -17,6 +17,9 @@
 
 ## Planifié
 
+- [020-sources-descente-echelle-hydrique](missions/020-sources-descente-echelle-hydrique.md) · depuis le cycle 5 · acquereur
+- [021-descente-echelle-hydrique](missions/021-descente-echelle-hydrique.md) · après 020 · depuis le cycle 5 · dev
+
 - [018-execution-ser-pilote](missions/018-execution-ser-pilote.md) · après 016, 017 · dev
 
 ## Terminé
