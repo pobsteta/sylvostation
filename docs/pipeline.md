@@ -5,7 +5,7 @@ pas évident dans le code ; les décisions restent dans `docs/adr/`.
 
 ## Mode démo (`demo: true`)
 
-Sans réseau. Emprise : carré de 2 500 m au sud-ouest de `emprise_test` (100 x 100 cellules
+Sans réseau. Emprise : carré de 2 500 m au sud-ouest de `emprise_test` (125 x 125 cellules
 de `resolution_m` (20 m), Lambert-93, origine multiple de 20 m ; ADR 0007). Ce qui est **réel réduit** : contour SER
 simplifié, extrait BD Charm-50, 100 placettes IFN. Tout le reste est **synthétique**
 (fonctions `synth_demo_*` de `R/demo.R`) : MNT (plan de `synth_dtm.tif` + relief lisse),
@@ -90,7 +90,7 @@ topographie module l'**ETP** par le rayonnement reçu par la pente, jamais la r�
 
 - `solar_factor()` : k(x, mois) = G `r.sun`(pente, exposition, ombres) / G `r.sun`(plat,
   sans ombres), ciel clair, 12 jours types, sur l'altitude de `terrain` (environ
-  une minute pour 225 dalles ; plus de deux heures à 5 m, mesuré). Pourtour de la grille :
+  5 min pour 225 dalles à 20 m, 301 s mesurés pour 562 500 cellules, mission 025 ; plus de deux heures à 5 m, mesuré). Pourtour de la grille :
   `NA` (pente inconnue).
 - `hydric_stress_grid()` : rg = SSI × 0,01 × k, ETP de Penman de `biljouR`, P et RU de la
   maille SAFRAN, BILJOU ; plat de référence par la même formule (k = 1) ; table par

@@ -63,13 +63,8 @@ tar_option_set(format = tar_format(
 ))
 
 extdata <- function(...) system.file("extdata", ..., package = "sylvostation")
-# Maille de comparaison a la reference (50 m) : multiple entier de resolution_m (compare_gradients),
-# soit le plus petit multiple commun (20 m -> 100 m ; ADR 0007).
-res_comparaison <- local({
-  a <- cfg$resolution_m; b <- 50
-  while (abs(b %% a) > 1e-9 && abs(a %% b) > 1e-9) { b <- b + 50 }
-  max(a, b)
-})
+# Maille de comparaison a la reference (50 m) : plus petit multiple commun (20 m -> 100 m ; ADR 0007).
+res_comparaison <- sylvostation::comparison_res(cfg$resolution_m)
 rapport_modele <- function() system.file("rapport", "rapport.qmd", package = "sylvostation")
 
 # Emprise de demonstration : carre de 2 500 m au sud-ouest de l'emprise test

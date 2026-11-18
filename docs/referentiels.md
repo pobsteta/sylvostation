@@ -585,6 +585,9 @@ write.table(out, "ifn_texture_dictionnaire.csv", sep = ";", quote = TRUE, row.na
 
 ## 25. Descente d'échelle hydrique : moduler BILJOU par la topographie
 
+> Note du 2026-11-18 : ce paragraphe a été rédigé pour la grille de 25 m. Depuis l'ADR 0007, lire
+> `resolution_m` (20 m) ; les mesures historiques à 25 m sont laissées telles quelles.
+
 - **Décision éclairée :** quelle grandeur la mission 021 module par la topographie (RU, ETP,
   rayonnement, apports latéraux) pour la carte de l'indice `Istress` à 25 m, par quelle
   équation, sans coefficient inventé.

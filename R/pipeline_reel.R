@@ -526,6 +526,27 @@ real_grid <- function(emprise, dtm, res) {
   build_grid(c(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax), res)
 }
 
+#' Maille de comparaison à la référence
+#'
+#' Plus petit multiple commun de `resolution_m` et de la maille de la référence (50 m) :
+#' [compare_gradients()] exige un multiple entier de notre maille. 20 donne 100, 25 donne 50,
+#' 30 donne 150 (ADR 0007).
+#'
+#' @param resolution_m Résolution de la grille (m), nombre entier positif.
+#' @param ref_m Maille de la référence (m), 50 par défaut.
+#' @return Un nombre (m).
+#' @examples
+#' comparison_res(20)
+#' @export
+comparison_res <- function(resolution_m, ref_m = 50) {
+  ok <- function(x) is.numeric(x) && length(x) == 1L && !is.na(x) && x > 0 && x == round(x)
+  if (!ok(resolution_m) || !ok(ref_m)) {
+    stop("`resolution_m` et `ref_m` doivent \u00eatre des entiers positifs (m).", call. = FALSE)
+  }
+  pgcd <- function(a, b) if (b == 0) a else pgcd(b, a %% b)
+  resolution_m / pgcd(resolution_m, ref_m) * ref_m
+}
+
 #' Dérivés du terrain ramenés à la grille
 #'
 #' Calcule les dérivés de [derive_terrain()] sur le MNT à 5 m (avec MRVBF et réseau

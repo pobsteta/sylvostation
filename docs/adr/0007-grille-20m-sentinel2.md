@@ -4,7 +4,8 @@
 - **Statut :** acceptée (décision de Pascal du 2026-11-18, mission 025) ; remplace l'ADR 0004 pour la
   maille de sortie (les dérivés de terrain restent calculés à 5 m puis résumés dans la cellule)
 - **Proposée par :** Pascal (« oui on part sur 20m aligné sentinel 2 »)
-- **Tranchée par :** Pascal
+- **Tranchée par :** 20 m alignée : tranchée par Pascal le 2026-11-18 ; comparaison à 100 m et
+  rééchantillonnage du MNT synthétique : décidés par l'orchestrateur par délégation
 
 ## La décision en une phrase
 
@@ -41,7 +42,9 @@ projet « EPSG:2154 partout » et avec les autres couches ; (2) 20 m en Lambert-
 - **Référence à 50 m** (Gégout et al. 2008) : 50 n'est plus un multiple de 20, l'agrégation
   2 x 2 de l'ADR 0004 disparaît. La comparaison se fait à 100 m (plus petit multiple commun de
   `resolution_m` et de 50 ; `res_comparaison` de `_targets.R`) : notre grille est agrégée 5 x 5,
-  la référence est ramenée à 100 m par interpolation bilinéaire. Prix : comparaison moins fine.
+  la référence est ramenée à 100 m par interpolation bilinéaire (sur une grille alignée, la
+  bilinéaire de 50 m vers 100 m équivaut à la moyenne 2 x 2 : pas de changement de méthode).
+  Calcul : `comparison_res()`. Prix : comparaison moins fine.
 - **Seuil de précision d'extraction fine** `loc_precision_m` <= 25 m : inchangé (c'est une
   précision de localisation, pas la maille).
 - **Noms** : `hydrique_25m.tif` devient `hydrique.tif` ; la couche `grad_hydrique_25m` devient
