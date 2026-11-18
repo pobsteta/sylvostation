@@ -209,3 +209,5 @@
 2026-11-18 · Claude (orchestrateur) · 030 · aller-retour 1/3 ; délégué : niveaux de localisation 2 et 3 refusés · réversible.
 2026-11-18 · acquereur · 030 · aller-retour 1/3 : § 27 corrigé (30 % au-delà de 1 km dont 10 % au-delà de 10 km, recommandation écrite, seul le niveau 1 convertible à 500 m, méridien de Paris cité, datum NTF à vérifier).
 2026-11-18 · Claude (orchestrateur) · 030 · intégrée : SOPHY écarté pour la calibration ; la composante régionale reste sur l'IFN seul.
+2026-11-18 · Claude (orchestrateur) · 018 · écart · attendu : run 225 dalles en cours (processus 1364788) · vu : processus disparu, tar.log arrêté à 16:34 après le premier bloc LiDAR (38 min 50 s, en cache) ; agents 027, 028, 029 de la session précédente arrêtés (027 : modifications non commitées ; 028 : c43f796 non relu ; 029 : code non commité dans son worktree) · vérifié : ps, tar.log, git status des worktrees · décision : reprise après la fin des tests marculus qui chargent la machine.
+2026-11-18 · Pascal · 018 · cap · relances reportées · pourquoi : « attends que les tests marculus soient terminés avant de lancer » · fait : attente posée sur les processus Gradle.
