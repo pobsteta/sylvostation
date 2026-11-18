@@ -123,3 +123,15 @@ test_that("un point connu tombe dans la bonne cellule de la grille Lambert-93", 
 test_that("les constantes de variables sont cohérentes", {
   expect_length(intersect(tolower(FINE_VARIABLES), tolower(COARSE_VARIABLES)), 0)
 })
+
+test_that("couches de la carte hydrique de 25 m : fines (mission 021)", {
+  noms <- c(sprintf("k_%02d", 1:12), "k_sv", "is_topo", "nj_topo", "is_plat", "grad_hydrique_25m")
+  expect_true(all(noms %in% FINE_VARIABLES))
+  expect_true(sylvostation:::.is_fine("k_autre"))   # prefixe k_
+  # l'indice des placettes (maille SAFRAN, sans k) reste a maille large : pas fin
+  expect_false(any(c("is_biljou", "nj_stress", "grad_hydrique") %in% FINE_VARIABLES))
+  p <- mark_ifn(data.frame(x = 1015500, y = 6793500))
+  for (v in noms) expect_error(assert_no_fine_extract_on_ifn(p, v), "IFN")
+  ok <- data.frame(x = 1015500, y = 6793500, loc_precision_m = 5)
+  for (v in noms) expect_true(assert_no_fine_extract_on_ifn(ok, v))
+})

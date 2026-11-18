@@ -531,7 +531,9 @@ empty_layers <- function(r) {
 #'
 #' Lit un ou plusieurs CSV (`;`, décimale point, `.csv` ou `.csv.gz`) au format de
 #' meteo.data.gouv.fr (docs/referentiels.md, § 23) et garde `LAMBX`, `LAMBY`, `DATE`,
-#' `PRENEI`, `PRELIQ`, `ETP` et, s'il existe, `T`.
+#' `PRENEI`, `PRELIQ`, `ETP` et, s'ils existent, `T` (°C), `FF` (vent, m/s), `HU`
+#' (humidité relative, %) et `SSI` (rayonnement, J/cm², cumul quotidien ; unités du
+#' document « Données quotidiennes SIM » de Météo-France du 2026-03-31, mission 021).
 #'
 #' @param paths Chemins des fichiers.
 #' @return Un `data.frame`.
@@ -552,7 +554,7 @@ read_safran <- function(paths) {
       stop("Colonnes SAFRAN absentes de ", basename(p), " : ",
            paste(setdiff(req, names(d)), collapse = ", "), call. = FALSE)
     }
-    d <- d[, intersect(c(req, "T"), names(d)), drop = FALSE]
+    d <- d[, intersect(c(req, "T", "FF", "HU", "SSI"), names(d)), drop = FALSE]
     for (v in setdiff(names(d), "DATE")) d[[v]] <- suppressWarnings(as.numeric(d[[v]]))
     d
   }
@@ -1064,7 +1066,10 @@ real_type_legend <- function(legend) {
 #'   `greco`, `mrvbf` (couche calculée ?), `empty_layers`, `hydro_n`, `methode_hydrique`, `n_gbif`
 #'   (`NA` hors ligne), `soils` (logique), `forest_mask` (logique), `n_cells`,
 #'   `n_types`, `key` (logique), `gnss` (logique), `reference` (logique),
-#'   `taxref_version`, `safran_annees`.
+#'   `taxref_version`, `safran_annees`, et pour la carte hydrique de 25 m (mission 021)
+#'   `methode_hydrique_carte`, `k_methode`, `ru_origine` (texte), `ecart_moyen_abs`,
+#'   `ecart_max_abs`, `n_controle`. Sans `methode_hydrique_carte`, la ligne « 6 bis » dit
+#'   que la carte n'a pas été calculée.
 #' @return Un `data.frame` : `etape`, `etat`, `dans_ce_run`, `detail`.
 #' @examples
 #' evidence_table_real(list(offline = TRUE, ser_code = "D11", n_tiles = 1, n_ifn = 100,
@@ -1099,6 +1104,7 @@ evidence_table_real <- function(f) {
       paste0("Trophique : valeurs indicatrices de Tich\u00fd et al. 2023 (TAXREF v", g("taxref_version"),
              ") ; hydrique : BILJOU sur SAFRAN (m\u00e9thode ", g("methode_hydrique"),
              ", ann\u00e9es ", g("safran_annees"), ") ; bioclimat : axe 1 de P - ETP (avril-septembre) et T.")),
+    .evidence_hydric_grid(f, reel, e),
     if (off || is.na(n_gbif)) {
       e("7. Points d'ancrage (GBIF)", "non ex\u00e9cut\u00e9",
         "Hors ligne : pas d'extrait GBIF r\u00e9el (un DOI exige un t\u00e9l\u00e9chargement occ_download avec compte).",
@@ -1116,6 +1122,9 @@ evidence_table_real <- function(f) {
       dans = if (isTRUE(g("forest_mask"))) "oui" else "non"),
     e("10. Mod\u00e8les, validation crois\u00e9e spatiale, zone d'applicabilit\u00e9", reel,
       paste0("Composante r\u00e9gionale seulement : placettes IFN et pr\u00e9dicteurs \u00e0 maille large (climat SAFRAN). ",
+             if (!is.null(f$methode_hydrique_carte)) paste0(
+               "Hydrique : la carte est l'indice Istress de 25 m calcul\u00e9 (ligne 6 bis) ; le mod\u00e8le ",
+               "r\u00e9gional hydrique ne sert qu'\u00e0 la validation crois\u00e9e. ") else "",
              if (off || is.na(n_gbif)) "Composante locale (pr\u00e9dicteurs fins, ancrages GBIF) non ex\u00e9cut\u00e9e." else
                "Composante locale trophique sur les ancrages GBIF.")),
     e("11. Typologie (seuils, fusion des types rares)", reel,
@@ -1145,6 +1154,50 @@ evidence_table_real <- function(f) {
     },
     e("17. Sorties et rapport", reel, "Fichiers sans pr\u00e9fixe synth_ (aucun jeu fabriqu\u00e9).")
   )
+}
+
+# Ligne « 6 bis » de l'etat de preuve : carte hydrique de 25 m (mission 021).
+.evidence_hydric_grid <- function(f, reel, e) {
+  m <- f$methode_hydrique_carte
+  etape <- "6 bis. Carte hydrique de 25 m (BILJOU, rayonnement de la pente)"
+  if (is.null(m)) {
+    return(e(etape, "non ex\u00e9cut\u00e9", "Carte hydrique de 25 m non calcul\u00e9e.", dans = "non"))
+  }
+  chiffre <- function(x) if (is.null(x) || !length(x) || is.na(x)) "NA" else format(signif(x, 3))
+  quoi <- switch(m,
+    biljou_topo = paste0("ETP de Penman (biljouR) sur le rayonnement SAFRAN (SSI, J/cm2) ",
+                         "multipli\u00e9 par k (r.sun, ciel clair)"),
+    biljou_climatique = paste0("repli : k = 1 (GRASS absent), ETP de Penman (biljouR) sur le ",
+                               "rayonnement SAFRAN, sans modulation topographique"),
+    climatique_etp_safran = paste0("repli : colonnes SAFRAN T, FF, HU ou SSI absentes, BILJOU ",
+                                   "sur l'ETP SAFRAN, sans k"),
+    repli_ru = "repli : SAFRAN ou biljouR absent, la r\u00e9serve utile tient lieu d'indice",
+    m)
+  # etat \u00ab repli \u00bb des que la carte n'est pas modulee par le rayonnement r.sun
+  etat <- if (identical(m, "biljou_topo")) reel else "repli"
+  e(etape, etat, paste0(
+    "Istress \u00e0 25 m = BILJOU(ETP, P et RU de la maille SAFRAN) ; m\u00e9thode ", m, " (", quoi,
+    ") ; k : ", if (is.null(f$k_methode)) "NA" else f$k_methode,
+    ". Plat de r\u00e9f\u00e9rence par la m\u00eame formule (k = 1). ",
+    "RU uniforme par maille SAFRAN, provisoire : m\u00e9diane euptf2 des placettes IFN de la maille (",
+    if (is.null(f$ru_origine)) "NA" else f$ru_origine,
+    "), jamais modul\u00e9e par la topographie. \u00c9cart de la table au calcul direct (",
+    chiffre(f$n_controle), " cellule(s) de contr\u00f4le) : moyen ", chiffre(f$ecart_moyen_abs),
+    ", maximal ", chiffre(f$ecart_max_abs), " (unit\u00e9s d'Istress). ",
+    "La couche hydric de la carte est -Istress de 25 m. Placettes IFN : Istress sans k, sur la ",
+    "RU de la placette (r\u00e8gle des 700 m) ; carte et placettes ne sont pas \u00e0 la m\u00eame ",
+    "\u00e9chelle (RU de la placette contre m\u00e9diane de la maille, plat contre pente). ",
+    "Les placettes IFN sont discr\u00e9tis\u00e9es avec les seuils de la carte de 25 m alors que leur ",
+    "Istress est calcul\u00e9 sans k : cet \u00e9cart d'\u00e9chelle peut d\u00e9placer des placettes d'un type ",
+    "hydrique \u00e0 l'autre et changer les fusions de types rares (merge_rare) ; le calcul n'est ",
+    "pas corrig\u00e9. TWI, MRVBF et ",
+    "hauteur_reseau sont des pr\u00e9dicteurs du seul mod\u00e8le local trophique (ancrages GBIF) ; la ",
+    "composante hydrique locale passe par Istress seul. Limites : (a) k en ciel clair appliqu\u00e9 au ",
+    "rayonnement nuageux, contraste d'exposition surestim\u00e9 ; (b) ombres du relief hors de ",
+    "l'emprise non vues au bord ; (c) le Penman de biljouR plafonne rg/rso \u00e0 1 : au-del\u00e0, le ",
+    "terme de grandes ondes ne suit plus k ; (d) RU uniforme par maille, provisoire ; (e) aucune ",
+    "validation fran\u00e7aise \u00e0 25 m (adaptation non valid\u00e9e de Dyer 2009) ; apports lat\u00e9raux et ",
+    "engorgement non capt\u00e9s. Valeurs provisoires : r\u00e9f\u00e9rentiels \u00a7 25.5."))
 }
 
 #' Points d'ancrage GBIF : mailles de bioindication et prédicteurs

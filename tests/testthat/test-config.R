@@ -51,3 +51,16 @@ test_that("`demo` est facultatif (FALSE par défaut) et doit être booléen", {
   expect_true(read_config(ecrire_config(list(demo = TRUE)))$demo)
   expect_error(read_config(ecrire_config(list(demo = "oui"))), "demo")
 })
+
+test_that("cles de la carte hydrique de 25 m : defauts provisoires et controles", {
+  cfg <- read_config(ecrire_config())
+  expect_equal(cfg$solar_linke, 3)
+  expect_equal(cfg$solar_albedo, 0.2)
+  expect_equal(cfg$solar_step_h, 0.5)
+  expect_equal(cfg$hydric_pas_k, 0.02)
+  expect_equal(cfg$hydric_n_controle, 30)
+  expect_error(read_config(ecrire_config(list(solar_linke = -1))), "solar_linke")
+  expect_error(read_config(ecrire_config(list(solar_albedo = 1.5))), "solar_albedo")
+  expect_error(read_config(ecrire_config(list(hydric_pas_k = 0))), "hydric_pas_k")
+  expect_error(read_config(ecrire_config(list(hydric_n_controle = 2.5))), "hydric_n_controle")
+})

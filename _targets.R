@@ -343,6 +343,25 @@ if (!isTRUE(cfg$demo)) {
     tar_target(ifn_gradients, sylvostation::ifn_real_gradients(
       ifn, indicateurs, climat, safran, ru_source = cfg$ru_source, annees = annees)),
 
+    # --- carte hydrique de 25 m (mission 021) : k r.sun, RU par maille, BILJOU --------
+    # k = rayonnement r.sun (ciel clair) de la pente / plat ; variable fine, grille seule
+    tar_target(solar_k, {
+      k <- sylvostation::solar_factor(terrain[["altitude"]], linke = cfg$solar_linke,
+                                      albedo = cfg$solar_albedo, step = cfg$solar_step_h,
+                                      nprocs = cfg$lidar_ncores)
+      list(k = k, methode = attr(k, "methode"), repli = attr(k, "repli"))
+    }),
+    # RU uniforme par maille SAFRAN (provisoire) : mediane euptf2 des placettes IFN
+    tar_target(ru_mailles, sylvostation::ru_by_safran_cell(
+      ifn_gradients, safran, emprise = sf::st_bbox(terra::ext(grid), crs = sf::st_crs(2154)))),
+    tar_target(hydric_grid, {
+      h <- sylvostation::hydric_stress_grid(
+        solar_k$k, ru_mailles, safran, altitude = terrain[["altitude"]], annees = annees,
+        pas_k = cfg$hydric_pas_k, n_controle = cfg$hydric_n_controle, k_methode = solar_k$methode)
+      list(r = h, methode = attr(h, "methode"), ecart = attr(h, "ecart"),
+           mailles = attr(h, "mailles"), repli = attr(h, "repli"))
+    }),
+
     # --- predicteurs, ancrages GBIF (en ligne), modeles ---------------------------------
     tar_target(soils, if (is.null(src$soils)) NULL else
       sylvostation::stack_soil_layers(src$soils, grid)),
@@ -395,13 +414,17 @@ if (!isTRUE(cfg$demo)) {
     }),
     tar_target(gradient_map, {
       b <- sylvostation::apply_bioclim(predictors, attr(ifn_gradients, "bioclim_axis"))
-      r <- c(maps$trophic[["pred"]], maps$hydric[["pred"]], b)
+      # hydrique : -Istress de 25 m calcule (mission 021) ; le modele regional hydrique
+      # (placettes IFN) ne sert qu'a la validation croisee
+      r <- c(maps$trophic[["pred"]], hydric_grid$r[["grad_hydrique_25m"]], b)
       names(r) <- c("trophic", "hydric", "bioclim")
       if (!is.null(forest)) r <- terra::mask(r, forest[["foret"]])
       r
     }),
+    # incertitude des cartes modelisees : trophique seul (la carte hydrique est calculee,
+    # l'incertitude du modele regional hydrique ne la decrit pas)
     tar_target(uncertainty, {
-      r <- do.call(c, lapply(grad_reg, function(g) {
+      r <- do.call(c, lapply("trophic", function(g) {
         nm <- intersect(c("sd_cv", "aoa"), names(maps[[g]]))
         x <- maps[[g]][[nm]]
         names(x) <- paste0(nm, "_", g)
@@ -505,7 +528,15 @@ if (!isTRUE(cfg$demo)) {
       forest_mask = !is.null(forest), n_cells = nrow(cells), n_types = nrow(type_legend),
       key = !is.null(key), gnss = !is.null(gnss_validation), reference = !is.null(src$reference),
       taxref_version = cfg$taxref_version,
-      safran_annees = paste(range(as.integer(substr(safran$DATE, 1, 4))), collapse = "-")))),
+      safran_annees = paste(range(as.integer(substr(safran$DATE, 1, 4))), collapse = "-"),
+      methode_hydrique_carte = hydric_grid$methode, k_methode = solar_k$methode,
+      ru_origine = paste(sprintf("%s : %s mm, %s", ru_mailles$maille, round(ru_mailles$ru_mm),
+                                 ru_mailles$origine), collapse = " ; "),
+      n_controle = if (NROW(hydric_grid$ecart)) sum(hydric_grid$ecart$n_controle) else NA,
+      ecart_moyen_abs = if (NROW(hydric_grid$ecart)) {
+        stats::weighted.mean(hydric_grid$ecart$ecart_moyen_abs, hydric_grid$ecart$n_controle)
+      } else NA,
+      ecart_max_abs = if (NROW(hydric_grid$ecart)) max(hydric_grid$ecart$ecart_max_abs) else NA))),
     tar_target(outputs, {
       tabs <- list(types = type_table, especes_indicatrices = indicator, fertilite = fertility,
                    cle_terrain = key_lines, cle_resume = key_summary,
@@ -517,6 +548,10 @@ if (!isTRUE(cfg$demo)) {
       if (!is.null(comparison_table)) {
         tabs$comparaison_gradients <- comparison_table
       }
+      # carte hydrique de 25 m (mission 021) : ecart table / calcul direct, RU par maille
+      if (NROW(hydric_grid$ecart)) tabs$hydrique_ecart_table <- hydric_grid$ecart
+      tabs$hydrique_mailles <- if (is.null(hydric_grid$mailles)) ru_mailles else
+        merge(ru_mailles, hydric_grid$mailles, by = "maille", all.x = TRUE)
       w <- sylvostation::write_outputs(
         out_dir = cfg$out_dir, ser_code = cfg$ser_code,
         types = type_map$raster, type_legend = type_legend,
@@ -524,7 +559,10 @@ if (!isTRUE(cfg$demo)) {
         tables = tabs, evidence = evidence, synthetic = FALSE)
       # table attributaire jointe aux polygones (EPSG:2154), sans couche sans geometrie
       sylvostation::write_types_gpkg_real(w$fichier[basename(w$fichier) == "types.gpkg"], type_table)
-      w$fichier
+      # couches de la carte hydrique (Istress de la pente et du plat, k_sv, RU de la maille)
+      wh <- sylvostation::write_hydric_grid(hydric_grid$r, cfg$out_dir, cfg$ser_code,
+                                            forest = forest, synthetic = FALSE)
+      c(w$fichier, wh$fichier)
     }, format = "file"),
     # comparaison a la reference : seulement si reference_path est fourni
     tar_target(comparison_table, if (is.null(src$reference)) NULL else {

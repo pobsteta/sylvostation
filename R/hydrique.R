@@ -515,3 +515,513 @@ hydric_stress <- function(x, safran = NULL, ru_col = "ru_mm", annees = NULL,
   attr(out, "parametres") <- param
   out
 }
+
+# ---- Descente d'echelle hydrique (mission 021) ------------------------------------------
+
+# SSI SAFRAN en MJ m-2 j-1. Unite verifiee le 2026-11-18 : J/cm2, cumul quotidien
+# ]00UTC-00UTC], libelle « Rayonnement visible » (Meteo-France, « Donnees quotidiennes
+# SIM », document du 2026-03-31, params.pdf du cache SAFRAN). 1 J/cm2 = 0,01 MJ/m2.
+.ssi_mj <- function(ssi) ssi * 0.01
+
+# Rayonnement extraterrestre journalier sur le plat (MJ m-2 j-1), FAO-56 (Allen et al.
+# 1998, eq. 21), meme formule que biljouR::penman_pet().
+.ra_mj <- function(doy, lat) {
+  phi <- lat * pi / 180
+  dr <- 1 + 0.033 * cos(2 * pi / 365 * doy)
+  decl <- 0.409 * sin(2 * pi / 365 * doy - 1.39)
+  ws <- acos(pmax(pmin(-tan(phi) * tan(decl), 1), -1))
+  24 * 60 / pi * 0.082 * dr * (ws * sin(phi) * sin(decl) + cos(phi) * cos(decl) * sin(ws))
+}
+
+# Controle de plausibilite : un rayonnement au sol ne depasse pas le rayonnement
+# extraterrestre du jour (avertissement sinon : unite ou donnee douteuse).
+.check_ssi <- function(rg_mj, doy, lat) {
+  trop <- which(rg_mj > .ra_mj(doy, lat))
+  if (length(trop)) {
+    warning(length(trop), " jour(s) SAFRAN avec SSI sup\u00e9rieur au rayonnement ",
+            "extraterrestre : unit\u00e9 (J/cm2) ou donn\u00e9e \u00e0 v\u00e9rifier.", call. = FALSE)
+  }
+  invisible(length(trop))
+}
+
+# Noms SAFRAN sans suffixe `_Q` (fichiers de meteo.data.gouv.fr), colonnes numeriques.
+.safran_norm <- function(safran) {
+  s <- as.data.frame(safran)
+  for (v in c("PRELIQ", "PRENEI", "ETP", "T", "FF", "HU", "SSI")) {
+    q <- paste0(v, "_Q")
+    if (!v %in% names(s) && q %in% names(s)) names(s)[names(s) == q] <- v
+  }
+  for (v in intersect(c("LAMBX", "LAMBY", "PRELIQ", "PRENEI", "ETP", "T", "FF", "HU", "SSI"),
+                      names(s))) {
+    s[[v]] <- suppressWarnings(as.numeric(s[[v]]))
+  }
+  s
+}
+
+# Maille SAFRAN la plus proche, vectorisee pour une grille (x = est, y = nord).
+.maille_proche_vec <- function(x, y, mailles, dmax = 8000 * sqrt(2) / 2 + 1) {
+  best <- rep(Inf, length(x))
+  out <- rep(NA_character_, length(x))
+  for (j in seq_len(nrow(mailles))) {
+    d <- sqrt((mailles$x[j] - x)^2 + (mailles$y[j] - y)^2)
+    p <- d < best
+    best[p] <- d[p]
+    out[p] <- mailles$maille[j]
+  }
+  out[best > dmax] <- NA_character_
+  out
+}
+
+#' Réserve utile uniforme par maille SAFRAN (médiane des placettes IFN)
+#'
+#' Réserve utile **provisoire** de la carte hydrique de 25 m (mission 021) : aucune
+#' source ne donne la réserve utile à 25 m (`docs/referentiels.md` § 25.3), et aucune
+#' modulation topographique publiée n'a été trouvée (§ 25.2) ; la réserve utile est donc
+#' **uniforme dans chaque maille SAFRAN de 8 km**, égale à la médiane des réserves utiles
+#' (euptf2, [ru_from_texture()]) des placettes IFN de la maille. Une maille sans placette
+#' prend la médiane des placettes des mailles de l'emprise, sinon celle de toutes les
+#' placettes fournies (GRECO), et la colonne `origine` le dit. Jamais de modulation par la
+#' topographie.
+#'
+#' Le rattachement d'une placette à sa maille de 8 km est une opération à maille large,
+#' permise aux placettes IFN ([assert_no_fine_extract_on_ifn()] avec `coarse_safran`).
+#'
+#' @param points `sf` de points (EPSG:2154), par exemple les placettes IFN, avec la
+#'   colonne `ru_col`.
+#' @param safran `data.frame` SIM2 (colonnes `LAMBX`, `LAMBY`).
+#' @param emprise Emprise de la carte (bbox, `sf` ou `c(xmin, ymin, xmax, ymax)`,
+#'   EPSG:2154) : mailles dont le centre est à moins d'une demi-diagonale (5,7 km).
+#'   `NULL` : toutes les mailles de `safran`.
+#' @param ru_col Colonne de réserve utile (mm).
+#' @return `data.frame` : `maille`, `ru_mm`, `n_placettes`, `origine`, `statut`.
+#' @examples
+#' s <- read_safran(system.file("extdata", "safran_sim2_12mailles_extrait.csv",
+#'                               package = "sylvostation"))
+#' m <- sylvostation:::.mailles_safran(s)
+#' p <- mark_ifn(sf::st_as_sf(data.frame(ru_mm = c(80, 120), x = m$x[1:2], y = m$y[1:2]),
+#'                            coords = c("x", "y"), crs = 2154))
+#' ru_by_safran_cell(p, s)
+#' @export
+ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm") {
+  if (!inherits(points, "sf")) stop("`points` doit \u00eatre un sf de points.", call. = FALSE)
+  assert_crs_2154(points)
+  if (!ru_col %in% names(points)) stop("Colonne `", ru_col, "` absente de `points`.", call. = FALSE)
+  assert_no_fine_extract_on_ifn(points, "coarse_safran")
+  if (!is.data.frame(safran) || !all(c("LAMBX", "LAMBY") %in% names(safran))) {
+    stop("`safran` doit avoir les colonnes LAMBX et LAMBY.", call. = FALSE)
+  }
+  mailles <- .mailles_safran(.safran_norm(safran))
+  xy <- sf::st_coordinates(points)   # x = est, y = nord
+  ma <- .maille_proche(xy[, 1], xy[, 2], mailles)
+  ru <- suppressWarnings(as.numeric(points[[ru_col]]))
+  ok <- is.finite(ru) & ru > 0
+  if (!any(ok)) stop("Aucune placette avec une r\u00e9serve utile positive.", call. = FALSE)
+  if (!is.null(emprise)) {
+    b <- .as_bbox(emprise)
+    m <- 8000 * sqrt(2) / 2
+    mailles <- mailles[mailles$x >= b[["xmin"]] - m & mailles$x <= b[["xmax"]] + m &
+                         mailles$y >= b[["ymin"]] - m & mailles$y <= b[["ymax"]] + m, , drop = FALSE]
+  }
+  if (!nrow(mailles)) stop("Aucune maille SAFRAN sur l'emprise.", call. = FALSE)
+  emp <- ok & ma %in% mailles$maille
+  med_emp <- if (any(emp)) stats::median(ru[emp]) else NA_real_
+  med_tout <- stats::median(ru[ok])
+  lignes <- lapply(mailles$maille, function(m) {
+    i <- ok & ma %in% m
+    if (any(i)) {
+      data.frame(maille = m, ru_mm = stats::median(ru[i]), n_placettes = sum(i),
+                 origine = "placettes de la maille", stringsAsFactors = FALSE)
+    } else if (!is.na(med_emp)) {
+      data.frame(maille = m, ru_mm = med_emp, n_placettes = 0L,
+                 origine = "m\u00e9diane des mailles de l'emprise", stringsAsFactors = FALSE)
+    } else {
+      data.frame(maille = m, ru_mm = med_tout, n_placettes = 0L,
+                 origine = "m\u00e9diane de toutes les placettes (GRECO)", stringsAsFactors = FALSE)
+    }
+  })
+  out <- do.call(rbind, lignes)
+  out$statut <- "provisoire (mission 021) : RU uniforme par maille SAFRAN"
+  out
+}
+
+# Meteo BILJOU d'une maille avec l'ETP de Penman (biljouR) sur un rayonnement
+# rg = SSI x 0,01 x k(mois) ; kprof : 12 facteurs mensuels.
+.meteo_topo <- function(sm, kprof, lat, alt) {
+  mois <- as.integer(substr(as.character(sm$DATE), 5, 6))
+  d <- data.frame(DATE = sm$DATE, PRELIQ = sm$PRELIQ, PRENEI = sm$PRENEI, T = sm$T,
+                  FF = sm$FF, HU = sm$HU, RG = .ssi_mj(sm$SSI) * kprof[mois])
+  biljouR::safran_to_meteo(d, cols = list(date = "DATE", rain_liq = "PRELIQ",
+                                          rain_sol = "PRENEI", tmean = "T", rg = "RG",
+                                          wind = "FF", rh = "HU"),
+                           compute_pet = TRUE, latitude = lat, altitude = alt)
+}
+
+# Interpolation lineaire a une dimension, constante hors des noeuds.
+.interp1 <- function(x, y, xout) {
+  ok <- is.finite(x) & is.finite(y)
+  if (!any(ok)) return(rep(NA_real_, length(xout)))
+  if (sum(ok) == 1L || length(unique(x[ok])) == 1L) return(rep(mean(y[ok]), length(xout)))
+  stats::approx(x[ok], y[ok], xout = xout, rule = 2, ties = mean)$y
+}
+
+# Table (RU x k) : lineaire en k pour chaque RU, puis lineaire en RU.
+.interp_table <- function(knodes, U, tab, kc, uc) {
+  V <- matrix(NA_real_, length(kc), length(U))
+  for (j in seq_along(U)) V[, j] <- .interp1(knodes, tab[j, ], kc)
+  if (length(U) == 1L) return(V[, 1])
+  j <- findInterval(uc, U, all.inside = TRUE)
+  t <- pmin(pmax((uc - U[j]) / (U[j + 1] - U[j]), 0), 1)
+  n <- seq_along(kc)
+  V[cbind(n, j)] * (1 - t) + V[cbind(n, j + 1)] * t
+}
+
+#' Carte de l'indice de contrainte hydrique à 25 m : BILJOU modulé par le rayonnement
+#'
+#' Descente d'échelle de l'indice `Istress` de BILJOU (ADR 0006) par la méthode A de
+#' `docs/referentiels.md` § 25.4 (adaptation **non validée** de Dyer 2009) : l'ETP est
+#' modulée par le rayonnement reçu par la pente ; ni la réserve utile, ni TWI, ni MRVBF,
+#' ni HAND n'entrent dans BILJOU (ils restent des prédicteurs à part).
+#'
+#' Pour chaque cellule `x` de la grille, dans sa maille SAFRAN (8 km) :
+#' 1. rayonnement du jour `d` : rg(x, d) = SSI(maille, d) × 0,01 × k(x, mois de d)
+#'    (SSI en J/cm², unité vérifiée dans le document « Données quotidiennes SIM » de
+#'    Météo-France du 2026-03-31 ; k de [solar_factor()]). Ce document nomme `SSI`
+#'    « Rayonnement visible » : il est lu ici comme le rayonnement global de courte
+#'    longueur d'onde, **à vérifier** ; la hauteur du vent `FF` (10 m supposés par
+#'    `biljouR`) est aussi **à vérifier** ;
+#' 2. ETP de Penman de `biljouR` ([biljouR::safran_to_meteo()] avec `compute_pet = TRUE` :
+#'    `penman_pet(T, rg, wind_to_2m(FF, 10), HU, doy, latitude, altitude)`) ; latitude du
+#'    centre de la maille, altitude = moyenne de `altitude` dans la maille (**provisoire**) ;
+#' 3. `Istress(x)` = BILJOU(ETP(x), P(maille), RU(maille)) ;
+#' 4. **plat de référence** (`is_plat`) par la même formule avec k = 1 : l'écart
+#'    `is_topo - is_plat` est purement topographique (l'ETP SAFRAN, Penman-Monteith,
+#'    n'est pas la référence).
+#'
+#' **Table par maille.** BILJOU ne tourne pas cellule par cellule (environ 2 s par
+#' passe sur 30 ans). Chaque cellule reçoit un facteur scalaire `k_sv`, moyenne de ses 12
+#' facteurs mensuels pondérée par le rayonnement SAFRAN moyen des jours de la saison de
+#' BILJOU (`budburst` à `leaf_fall`) ; les cellules sont classées par pas de `pas_k`, et
+#' BILJOU tourne une fois par classe avec le profil mensuel moyen de la classe, et par
+#' réserve utile (une seule valeur si la RU est uniforme par maille, sinon une suite de
+#' pas `pas_ru`). Chaque cellule est interpolée linéairement en `k_sv` puis en RU.
+#' **Écart mesuré** : sur `n_controle` cellules tirées dans chaque maille, BILJOU tourne
+#' avec le vrai profil de 12 facteurs ; l'écart à la table est rendu (attribut `ecart`),
+#' sans seuil bloquant.
+#'
+#' **Points** (`points`, `sf` en EPSG:2154) : calcul direct, sans table, pour des points
+#' précis (relevés GNSS, points au sol). [assert_no_fine_extract_on_ifn()] est appelée
+#' d'abord : **k n'est jamais appliqué aux placettes IFN** (localisées à 700 m), dont
+#' l'indice reste celui de [hydric_stress()], sans k.
+#'
+#' **Replis** (attribut `methode`, avertissement) : `"biljou_topo"` (k de `r.sun`) ;
+#' `"biljou_climatique"` (k = 1, GRASS absent) ; `"climatique_etp_safran"` (colonnes
+#' `T`, `FF`, `HU` ou `SSI` absentes : BILJOU sur l'ETP SAFRAN, sans k) ; `"repli_ru"`
+#' (SAFRAN ou `biljouR` absent : la réserve utile).
+#'
+#' Valeurs **provisoires** (§ 25.5) : ciel clair pour k, passage de Turc au Penman de
+#' `biljouR`, Linke 3,0, albédo 0,2, jours de Klein, RU uniforme par maille, pas des
+#' suites, altitude moyenne de la maille ; paramètres de végétation de [hydric_stress()].
+#'
+#' @param k `SpatRaster` à 12 couches (EPSG:2154), de [solar_factor()].
+#' @param ru Réserve utile : `data.frame` (`maille`, `ru_mm`) de [ru_by_safran_cell()],
+#'   ou `SpatRaster` (mm) sur la grille de `k`.
+#' @param safran `data.frame` SIM2 quotidien avec `LAMBX`, `LAMBY`, `DATE`, `PRELIQ`,
+#'   `PRENEI`, `T`, `FF`, `HU`, `SSI` (suffixe `_Q` accepté), ou `NULL`.
+#' @param points `NULL` (grille) ou `sf` de points précis (EPSG:2154).
+#' @param altitude `SpatRaster` d'altitude (m) sur la grille, ou `NULL` (0 m).
+#' @param annees Années à garder (`NULL` : toutes).
+#' @param lai_max,forest_type,budburst,leaf_fall Paramètres de [biljouR::biljou_run()].
+#' @param pas_k Pas des classes de `k_sv` (provisoire).
+#' @param pas_ru Pas de la suite de RU si `ru` est un raster.
+#' @param n_controle Cellules de contrôle par maille (calcul direct).
+#' @param seed Graine du tirage des cellules de contrôle.
+#' @param k_methode Méthode de `k` (`attr(k, "methode")` par défaut).
+#' @return Grille : `SpatRaster` `is_topo`, `nj_topo`, `is_plat`, `k_sv`, `ru_maille`,
+#'   `grad_hydrique_25m` (= `-is_topo`, plus haut = plus humide). Points : `points` avec ces
+#'   colonnes et `maille_safran`. Attributs `methode`, `k_methode`, `ecart`, `mailles`,
+#'   `parametres`, `sens`, `repli`.
+#' @examples
+#' \donttest{
+#' s <- read_safran(system.file("extdata", "safran_sim2_12mailles_extrait.csv",
+#'                               package = "sylvostation"))
+#' m <- sylvostation:::.mailles_safran(s)[1, ]
+#' k <- terra::rast(xmin = m$x - 50, xmax = m$x + 50, ymin = m$y - 50, ymax = m$y + 50,
+#'                  resolution = 50, crs = "EPSG:2154", nlyrs = 12)
+#' terra::values(k) <- matrix(c(1.3, 1, 1, 0.7), 4, 12)
+#' names(k) <- sprintf("k_%02d", 1:12)
+#' h <- hydric_stress_grid(k, data.frame(maille = m$maille, ru_mm = 100), s, n_controle = 2)
+#' terra::values(h)
+#' }
+#' @export
+hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = NULL,
+                               annees = NULL, lai_max = 6, forest_type = "broadleaved",
+                               budburst = 110, leaf_fall = 300, pas_k = 0.02, pas_ru = 10,
+                               n_controle = 30, seed = 1, k_methode = attr(k, "methode")) {
+  if (!inherits(k, "SpatRaster") || terra::nlyr(k) != 12L) {
+    stop("`k` doit \u00eatre un SpatRaster \u00e0 12 couches (solar_factor()).", call. = FALSE)
+  }
+  assert_crs_2154(k)
+  if (is.null(k_methode)) k_methode <- "inconnue"
+  pts <- !is.null(points)
+  if (pts) {
+    if (!inherits(points, "sf")) stop("`points` doit \u00eatre un sf de points.", call. = FALSE)
+    assert_crs_2154(points)
+    # regle bloquante : k est une variable fine, jamais aux placettes IFN
+    assert_no_fine_extract_on_ifn(points, names(k))
+  }
+  if (is.data.frame(ru)) {
+    if (!all(c("maille", "ru_mm") %in% names(ru))) {
+      stop("`ru` doit avoir les colonnes maille et ru_mm (ru_by_safran_cell()).", call. = FALSE)
+    }
+  } else if (inherits(ru, "SpatRaster")) {
+    assert_crs_2154(ru)
+    if (!terra::compareGeom(ru, k, stopOnError = FALSE)) {
+      stop("`ru` (raster) doit \u00eatre sur la grille de `k`.", call. = FALSE)
+    }
+  } else {
+    stop("`ru` doit \u00eatre un data.frame (maille, ru_mm) ou un SpatRaster.", call. = FALSE)
+  }
+  if (!is.null(altitude)) assert_crs_2154(altitude)
+  if (!is.numeric(pas_k) || length(pas_k) != 1L || !(pas_k > 0)) {
+    stop("`pas_k` doit \u00eatre un nombre positif.", call. = FALSE)
+  }
+  param <- list(lai_max = lai_max, forest_type = forest_type, budburst = budburst,
+                leaf_fall = leaf_fall, pas_k = pas_k, pas_ru = pas_ru, n_controle = n_controle,
+                rg = "SSI x 0,01 x k (SSI en J/cm2, v\u00e9rifi\u00e9 2026-11-18)",
+                etp = "Penman biljouR (penman_pet, vent ramen\u00e9 \u00e0 2 m depuis 10 m)",
+                statut = "provisoire (r\u00e9f\u00e9rentiels \u00a7 25.5, mission 021)")
+
+  # cellules ou points : coordonnees (x = est, y = nord), facteurs, RU
+  if (pts) {
+    xy <- sf::st_coordinates(points)
+    K <- as.matrix(terra::extract(k, xy[, 1:2, drop = FALSE])[, names(k), drop = FALSE])
+  } else {
+    xy <- terra::xyFromCell(k, seq_len(terra::ncell(k)))
+    K <- terra::values(k, mat = TRUE)
+  }
+  colnames(K) <- NULL
+  valid <- stats::complete.cases(K)
+
+  noms <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille", "grad_hydrique_25m")
+  rendre <- function(res, methode, ecart = NULL, mailles = NULL, repli = NULL) {
+    if (pts) {
+      out <- points
+      for (v in noms) out[[v]] <- res[, v]
+      out$maille_safran <- ma
+    } else {
+      out <- terra::rast(k, nlyrs = length(noms))
+      terra::values(out) <- res[, noms]
+      names(out) <- noms
+    }
+    attr(out, "methode") <- methode
+    attr(out, "k_methode") <- k_methode
+    attr(out, "ecart") <- ecart
+    attr(out, "mailles") <- mailles
+    attr(out, "parametres") <- param
+    attr(out, "sens") <- .SENS_HYDRIQUE
+    attr(out, "repli") <- repli
+    out
+  }
+  res <- matrix(NA_real_, nrow(K), length(noms), dimnames = list(NULL, noms))
+
+  raison <- NULL
+  if (is.null(safran)) raison <- "climat SAFRAN absent"
+  else if (!.has_pkg("biljouR")) raison <- "paquet biljouR absent"
+  s <- if (is.null(safran)) NULL else .safran_norm(safran)
+  mailles <- if (is.null(s)) NULL else .mailles_safran(s)
+  ma <- if (is.null(mailles)) rep(NA_character_, nrow(K)) else
+    .maille_proche_vec(xy[, 1], xy[, 2], mailles)
+  ru_c <- if (is.data.frame(ru)) ru$ru_mm[match(ma, ru$maille)] else {
+    if (pts) terra::extract(ru, xy[, 1:2, drop = FALSE])[, 1] else terra::values(ru, mat = FALSE)
+  }
+  if (is.data.frame(ru) && is.null(mailles)) ru_c <- rep(NA_real_, nrow(K))
+  res[, "ru_maille"] <- ru_c
+  if (!is.null(raison)) {
+    warning("Carte hydrique en repli sur la r\u00e9serve utile : ", raison, ".", call. = FALSE)
+    res[, "grad_hydrique_25m"] <- ru_c
+    return(rendre(res, "repli_ru", repli = raison))
+  }
+
+  requis <- c("LAMBX", "LAMBY", "DATE", "PRELIQ", "PRENEI")
+  if (!all(requis %in% names(s))) {
+    stop("`safran` doit avoir les colonnes : ", paste(requis, collapse = ", "), ".", call. = FALSE)
+  }
+  if (!is.null(annees)) {
+    s <- s[as.integer(substr(as.character(s$DATE), 1, 4)) %in% annees, , drop = FALSE]
+    if (!nrow(s)) stop("Aucune journ\u00e9e SAFRAN pour les ann\u00e9es demand\u00e9es.", call. = FALSE)
+  }
+  cle <- paste(s$LAMBX, s$LAMBY, sep = "_")
+  bio <- list(lai_max = lai_max, forest_type = forest_type, budburst = budburst,
+              leaf_fall = leaf_fall)
+
+  # repli : sans T, FF, HU ou SSI, pas de Penman ; BILJOU sur l'ETP SAFRAN, sans k
+  clim <- c("T", "FF", "HU", "SSI")
+  absent <- clim[vapply(clim, function(v) !v %in% names(s) || all(is.na(s[[v]])), logical(1))]
+  if (length(absent)) {
+    if (!"ETP" %in% names(s)) {
+      stop("`safran` n'a ni T, FF, HU, SSI ni ETP.", call. = FALSE)
+    }
+    msg <- paste0("colonnes SAFRAN absentes ou vides (", paste(absent, collapse = ", "),
+                  ") : BILJOU sur l'ETP SAFRAN, sans k")
+    warning("Carte hydrique sans modulation topographique : ", msg, ".", call. = FALSE)
+    for (m in unique(stats::na.omit(ma))) {
+      i <- which(ma == m & valid & is.finite(ru_c) & ru_c > 0)
+      if (!length(i)) next
+      sm <- s[cle == m, , drop = FALSE]
+      met <- biljouR::safran_to_meteo(sm, cols = list(date = "DATE", rain_liq = "PRELIQ",
+                                                     rain_sol = "PRENEI", pet = "ETP"))
+      U <- sort(unique(ru_c[i]))
+      r <- .biljou_ru(met, U, bio)
+      res[i, "is_topo"] <- .interp1(U, r[, "is"], ru_c[i])
+      res[i, "nj_topo"] <- .interp1(U, r[, "nj"], ru_c[i])
+    }
+    res[, "is_plat"] <- res[, "is_topo"]
+    res[, "grad_hydrique_25m"] <- -res[, "is_topo"]
+    return(rendre(res, "climatique_etp_safran", repli = msg))
+  }
+
+  # altitude de chaque maille : moyenne des cellules du raster `altitude` dans la maille
+  alt_m <- stats::setNames(rep(0, nrow(mailles)), mailles$maille)
+  if (!is.null(altitude)) {
+    axy <- terra::xyFromCell(altitude, seq_len(terra::ncell(altitude)))
+    av <- terra::values(altitude, mat = FALSE)
+    am <- .maille_proche_vec(axy[, 1], axy[, 2], mailles)
+    moy <- tapply(av, am, mean, na.rm = TRUE)
+    moy <- moy[is.finite(moy)]
+    alt_m[names(moy)] <- moy
+  }
+  lat_m <- sf::st_coordinates(sf::st_transform(sf::st_as_sf(mailles, coords = c("x", "y"),
+                                                            crs = 2154), 4326))[, 2]
+  ecarts <- list()
+  infos <- list()
+  if (exists(".Random.seed", envir = globalenv())) {
+    old <- get(".Random.seed", envir = globalenv())
+    on.exit(assign(".Random.seed", old, envir = globalenv()), add = TRUE)
+  }
+  set.seed(seed)
+  for (m in unique(stats::na.omit(ma))) {
+    i <- which(ma == m & valid & is.finite(ru_c) & ru_c > 0)
+    if (!length(i)) next
+    sm <- s[cle == m, , drop = FALSE]
+    sm <- sm[order(sm$DATE), , drop = FALSE]
+    lat <- lat_m[mailles$maille == m]
+    alt <- unname(alt_m[m])
+    doy <- as.integer(format(as.Date(as.character(sm$DATE), "%Y%m%d"), "%j"))
+    .check_ssi(.ssi_mj(sm$SSI), doy, lat)
+    # poids mensuels : rayonnement SAFRAN des jours de la saison BILJOU
+    mois <- as.integer(substr(as.character(sm$DATE), 5, 6))
+    sv <- doy >= budburst & doy <= leaf_fall
+    w <- vapply(1:12, function(j) sum(sm$SSI[sv & mois == j], na.rm = TRUE), numeric(1))
+    if (sum(w) <= 0) w <- rep(1, 12)
+    w <- w / sum(w)
+    kc <- as.numeric(K[i, , drop = FALSE] %*% w)
+    res[i, "k_sv"] <- kc
+    U <- sort(unique(ru_c[i]))
+    if (!is.data.frame(ru) && length(U) > 1L) {
+      U <- seq(pas_ru * floor(min(U) / pas_ru), pas_ru * ceiling(max(U) / pas_ru), by = pas_ru)
+      U <- U[U > 0]
+    }
+    plat <- .biljou_ru(.meteo_topo(sm, rep(1, 12), lat, alt), U, bio)
+    res[i, "is_plat"] <- .interp1(U, plat[, "is"], ru_c[i])
+    if (pts) {
+      # points : calcul direct, profil propre a chaque point
+      for (c in i) {
+        r <- .biljou_ru(.meteo_topo(sm, K[c, ], lat, alt), ru_c[c], bio)
+        res[c, c("is_topo", "nj_topo")] <- r[1, c("is", "nj")]
+      }
+      infos[[m]] <- data.frame(maille = m, latitude = lat, altitude = alt, n_cellules = length(i),
+                               n_noeuds_k = NA_integer_, n_noeuds_ru = length(U))
+      next
+    }
+    cl <- floor(kc / pas_k)
+    grp <- sort(unique(cl))
+    prof <- t(vapply(grp, function(g) colMeans(K[i[cl == g], , drop = FALSE]), numeric(12)))
+    knodes <- as.numeric(prof %*% w)
+    tab_is <- tab_nj <- matrix(NA_real_, length(U), length(grp))
+    for (g in seq_along(grp)) {
+      r <- .biljou_ru(.meteo_topo(sm, prof[g, ], lat, alt), U, bio)
+      tab_is[, g] <- r[, "is"]
+      tab_nj[, g] <- r[, "nj"]
+    }
+    # noeud du plat (k = 1) : deja calcule
+    knodes <- c(knodes, 1)
+    tab_is <- cbind(tab_is, plat[, "is"])
+    tab_nj <- cbind(tab_nj, plat[, "nj"])
+    res[i, "is_topo"] <- .interp_table(knodes, U, tab_is, kc, ru_c[i])
+    res[i, "nj_topo"] <- .interp_table(knodes, U, tab_nj, kc, ru_c[i])
+    # ecart a un calcul direct sur un echantillon de cellules
+    ctl <- if (n_controle > 0) i[sample.int(length(i), min(n_controle, length(i)))] else integer(0)
+    if (length(ctl)) {
+      direct <- vapply(ctl, function(c) {
+        .biljou_ru(.meteo_topo(sm, K[c, ], lat, alt), ru_c[c], bio)[1, "is"]
+      }, numeric(1))
+      e <- res[ctl, "is_topo"] - direct
+      ecarts[[m]] <- data.frame(maille = m, n_controle = length(ctl),
+                                is_direct_moyen = mean(direct),
+                                ecart_moyen_abs = mean(abs(e)), ecart_max_abs = max(abs(e)),
+                                ecart_relatif = if (mean(abs(direct)) > 0)
+                                  mean(abs(e)) / mean(abs(direct)) else NA_real_)
+    }
+    infos[[m]] <- data.frame(maille = m, latitude = lat, altitude = alt, n_cellules = length(i),
+                             n_noeuds_k = length(knodes), n_noeuds_ru = length(U))
+  }
+  res[, "grad_hydrique_25m"] <- -res[, "is_topo"]
+  methode <- if (identical(k_methode, "climatique")) "biljou_climatique" else "biljou_topo"
+  ecart <- if (length(ecarts)) do.call(rbind, ecarts) else
+    data.frame(maille = character(), n_controle = integer(), is_direct_moyen = numeric(),
+               ecart_moyen_abs = numeric(), ecart_max_abs = numeric(), ecart_relatif = numeric())
+  rownames(ecart) <- NULL
+  inf <- if (length(infos)) do.call(rbind, infos) else NULL
+  if (!is.null(inf)) rownames(inf) <- NULL
+  rendre(res, methode, ecart = ecart, mailles = inf,
+         repli = if (methode == "biljou_climatique") "k = 1 (GRASS absent)" else NULL)
+}
+
+#' Écrire les couches de la carte hydrique de 25 m
+#'
+#' Écrit `hydrique_25m.tif` dans `out_dir/<ser_code>/` (couches `is_topo`, `nj_topo`,
+#' `is_plat`, `k_sv`, `ru_maille` de [hydric_stress_grid()]), en **COG** si le pilote
+#' GDAL `COG` est disponible, sinon en GeoTIFF tuilé compressé, comme [write_outputs()].
+#' Si `synthetic = TRUE`, le fichier est préfixé `synth_` (CLAUDE.md). Les cellules hors
+#' de `forest` (couche `foret` de [forest_mask()]) sont mises à `NA`.
+#'
+#' @param r `SpatRaster` de [hydric_stress_grid()] (EPSG:2154).
+#' @param out_dir Dossier racine des sorties.
+#' @param ser_code Code SER (sous-dossier).
+#' @param forest `NULL` ou `SpatRaster` du masque forestier (couche `foret`).
+#' @param synthetic `TRUE` pour préfixer le fichier par `synth_`.
+#' @param cog Demander un COG.
+#' @return Un `data.frame` (`fichier`, `format`), de façon invisible.
+#' @examples
+#' r <- terra::rast(xmin = 1015500, xmax = 1015550, ymin = 6793500, ymax = 6793550,
+#'                  resolution = 25, crs = "EPSG:2154", nlyrs = 5)
+#' terra::values(r) <- matrix(1, 4, 5)
+#' names(r) <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille")
+#' w <- write_hydric_grid(r, tempdir(), "D11", synthetic = TRUE)
+#' basename(w$fichier)
+#' @export
+write_hydric_grid <- function(r, out_dir, ser_code, forest = NULL, synthetic = FALSE,
+                              cog = TRUE) {
+  couches <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille")
+  if (!inherits(r, "SpatRaster") || !all(couches %in% names(r))) {
+    stop("`r` doit \u00eatre un SpatRaster de hydric_stress_grid() (couches ",
+         paste(couches, collapse = ", "), ").", call. = FALSE)
+  }
+  assert_crs_2154(r)
+  if (!is.character(out_dir) || length(out_dir) != 1L || !nzchar(out_dir)) {
+    stop("`out_dir` doit \u00eatre un chemin.", call. = FALSE)
+  }
+  if (!is.character(ser_code) || length(ser_code) != 1L || !nzchar(ser_code)) {
+    stop("`ser_code` doit \u00eatre un code SER.", call. = FALSE)
+  }
+  h <- r[[couches]]
+  if (!is.null(forest)) {
+    assert_crs_2154(forest)
+    h <- terra::mask(h, forest[["foret"]])
+  }
+  dir <- file.path(out_dir, ser_code)
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  f <- file.path(dir, paste0(if (isTRUE(synthetic)) "synth_" else "", "hydrique_25m.tif"))
+  fmt <- .write_raster_cog(h, f, cog)
+  invisible(data.frame(fichier = f, format = fmt, stringsAsFactors = FALSE))
+}

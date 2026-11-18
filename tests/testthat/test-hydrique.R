@@ -297,3 +297,211 @@ test_that("hydric_stress : grille de RU, interpolation par maille SAFRAN", {
   expect_true(all(is.na(v0[, c("is_biljou", "nj_stress")])))
   expect_equal(v0[, "grad_hydrique"], c(60, 150, 0, 65))   # repli : la RU
 })
+
+# ---- carte hydrique de 25 m (mission 021) ------------------------------------------
+# Extrait SAFRAN reel de 12 mailles (2003-2004) avec T, FF, HU, SSI (Licence Ouverte 2.0).
+
+safran12 <- function() {
+  read_safran(system.file("extdata", "safran_sim2_12mailles_extrait.csv", package = "sylvostation"))
+}
+
+# Grille de facteurs k (12 couches) de 2 x 2 cellules de 50 m centree en (x0, y0),
+# Lambert-93 ; une ligne de `prof` par cellule (ordre de terra : nord-ouest d'abord).
+grille_k <- function(x0, y0, prof) {
+  k <- terra::rast(xmin = x0 - 50, xmax = x0 + 50, ymin = y0 - 50, ymax = y0 + 50,
+                   resolution = 50, crs = "EPSG:2154", nlyrs = 12)
+  if (ncol(prof) == 1L) prof <- matrix(prof, nrow(prof), 12)
+  terra::values(k) <- prof
+  names(k) <- sprintf("k_%02d", 1:12)
+  k
+}
+
+# profils mensuels : versant sud (k > 1 en hiver), plat, versant nord (k < 1)
+K_SUD <- c(2.2, 1.8, 1.4, 1.15, 1.05, 1, 1, 1.05, 1.2, 1.5, 2, 2.3)
+K_NORD <- c(0.25, 0.4, 0.6, 0.8, 0.85, 0.85, 0.85, 0.8, 0.7, 0.5, 0.3, 0.25)
+
+test_that(".ssi_mj, .ra_mj, .check_ssi : unite J/cm2 et plausibilite", {
+  expect_equal(sylvostation:::.ssi_mj(136.3), 1.363)
+  # rayonnement extraterrestre a 48 degres N : environ 41,6 MJ/m2 au solstice d'ete
+  # (FAO-56, tableau 2.6 : 41,7 a 48 degres N en juin), environ 10 a la mi-janvier
+  ra <- sylvostation:::.ra_mj(c(172, 17), 48)
+  expect_equal(ra[1], 41.6, tolerance = 0.01)
+  expect_true(ra[2] > 8 && ra[2] < 12)
+  expect_warning(sylvostation:::.check_ssi(50, 172, 48), "extraterrestre")
+  expect_silent(sylvostation:::.check_ssi(30, 172, 48))
+  # l'extrait reel ne depasse jamais le rayonnement extraterrestre
+  s <- safran12()
+  doy <- as.integer(format(as.Date(as.character(s$DATE), "%Y%m%d"), "%j"))
+  expect_silent(sylvostation:::.check_ssi(sylvostation:::.ssi_mj(s$SSI), doy, 48.1))
+})
+
+test_that("ru_by_safran_cell : mediane par maille, sinon emprise, sinon GRECO ; jamais fin", {
+  s <- safran12()
+  a <- centre_maille_l93(9640, 23690)
+  b <- centre_maille_l93(9560, 23530)
+  p <- mark_ifn(points_l93(c(a[1], a[1] + 1000, a[1] - 2000, b[1]), c(a[2], a[2], a[2], b[2]),
+                           c(60, 100, 200, 40)))
+  r <- ru_by_safran_cell(p, s)
+  expect_equal(nrow(r), 12)
+  expect_equal(r$ru_mm[r$maille == "9640_23690"], 100)       # mediane de 60, 100, 200
+  expect_equal(r$n_placettes[r$maille == "9640_23690"], 3)
+  expect_equal(r$ru_mm[r$maille == "9560_23530"], 40)
+  vide <- r[r$n_placettes == 0, ]
+  expect_true(all(vide$ru_mm == 80))                          # mediane des 4 placettes
+  expect_true(all(vide$origine == "médiane des mailles de l'emprise"))
+  expect_true(all(grepl("provisoire", r$statut)))
+  # emprise autour de la seule maille 9720_23770, sans placette : mediane de la GRECO
+  e <- centre_maille_l93(9720, 23770)
+  r2 <- ru_by_safran_cell(p, s, emprise = c(e[1] - 100, e[2] - 100, e[1] + 100, e[2] + 100))
+  expect_identical(r2$maille, "9720_23770")
+  expect_equal(r2$ru_mm, 80)
+  expect_identical(r2$origine, "médiane de toutes les placettes (GRECO)")
+  expect_error(ru_by_safran_cell(sf::st_transform(p, 4326), s), "2154")
+  expect_error(ru_by_safran_cell(p, s, ru_col = "ru"), "absente")
+  expect_error(ru_by_safran_cell(points_l93(a[1], a[2], 0), s), "positive")
+})
+
+test_that("hydric_stress_grid : k = 1 donne le plat ; versant sud > plat > versant nord", {
+  skip_if_not_installed("biljouR")
+  s <- safran12()
+  c0 <- centre_maille_l93(9640, 23690)
+  k <- grille_k(c0[1], c0[2], rbind(K_SUD, 1, 1, K_NORD))
+  ru <- data.frame(maille = "9640_23690", ru_mm = 100)
+  h <- hydric_stress_grid(k, ru, s, n_controle = 4)
+  expect_s4_class(h, "SpatRaster")
+  expect_identical(names(h), c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille",
+                               "grad_hydrique_25m"))
+  expect_identical(attr(h, "methode"), "biljou_topo")
+  expect_equal(attr(h, "sens"), "plus haut = plus humide")
+  v <- terra::values(h)
+  expect_equal(v[2:3, "is_topo"], v[2:3, "is_plat"])         # k = 1 : le plat
+  expect_equal(v[2:3, "k_sv"], c(1, 1))
+  expect_true(v[1, "k_sv"] > 1 && v[4, "k_sv"] < 1)
+  expect_gt(v[1, "is_topo"], v[2, "is_topo"])                 # sud plus contraint
+  expect_lt(v[4, "is_topo"], v[2, "is_topo"])                 # nord moins contraint
+  expect_equal(v[, "grad_hydrique_25m"], -v[, "is_topo"])
+  expect_true(all(v[, "ru_maille"] == 100))                   # RU uniforme de la maille
+  # le plat = BILJOU sur l'ETP de Penman de biljouR (SSI x 0,01), meme formule
+  sm <- s[s$LAMBX == 9640 & s$LAMBY == 23690, ]
+  lat <- sf::st_coordinates(sf::st_transform(sf::st_sfc(sf::st_point(c0), crs = 2154), 4326))[2]
+  met <- biljouR::safran_to_meteo(
+    data.frame(DATE = sm$DATE, PRELIQ = sm$PRELIQ, PRENEI = sm$PRENEI, T = sm$T, FF = sm$FF,
+               HU = sm$HU, RG = sm$SSI * 0.01),
+    cols = list(date = "DATE", rain_liq = "PRELIQ", rain_sol = "PRENEI", tmean = "T",
+                rg = "RG", wind = "FF", rh = "HU"), compute_pet = TRUE, latitude = lat)
+  run <- biljouR::biljou_run(met, biljouR::biljou_soil(100), lai_max = 6,
+                             forest_type = "broadleaved", budburst = 110, leaf_fall = 300)
+  expect_equal(unname(v[2, "is_plat"]), mean(biljouR::biljou_indices(run)$Istress))
+  # ecart table / calcul direct : mesure et rendu
+  e <- attr(h, "ecart")
+  expect_identical(names(e), c("maille", "n_controle", "is_direct_moyen", "ecart_moyen_abs",
+                               "ecart_max_abs", "ecart_relatif"))
+  expect_equal(e$n_controle, 4)
+  expect_lt(e$ecart_max_abs, 1e-8)        # profils exacts des noeuds : ecart nul
+  m <- attr(h, "mailles")
+  expect_equal(m$n_cellules, 4)
+  expect_equal(m$altitude, 0)             # pas d'altitude fournie
+})
+
+test_that("hydric_stress_grid : table sur des profils varies, ecart mesure faible", {
+  skip_if_not_installed("biljouR")
+  s <- safran12()
+  c0 <- centre_maille_l93(9640, 23690)
+  # 36 cellules : melange continu entre versant nord et versant sud
+  r <- terra::rast(xmin = c0[1] - 150, xmax = c0[1] + 150, ymin = c0[2] - 150,
+                   ymax = c0[2] + 150, resolution = 50, crs = "EPSG:2154", nlyrs = 12)
+  t <- seq(0, 1, length.out = 36)
+  terra::values(r) <- outer(1 - t, K_NORD) + outer(t, K_SUD)
+  names(r) <- sprintf("k_%02d", 1:12)
+  alt <- r[[1]] * 0 + 600
+  h <- hydric_stress_grid(r, data.frame(maille = "9640_23690", ru_mm = 80), s, altitude = alt,
+                          pas_k = 0.05, n_controle = 6, seed = 3)
+  v <- terra::values(h)
+  expect_true(all(diff(v[, "k_sv"]) > 0))
+  expect_true(all(diff(v[, "is_topo"]) >= -1e-8))   # Istress croit avec k
+  e <- attr(h, "ecart")
+  expect_equal(e$n_controle, 6)
+  expect_lt(e$ecart_relatif, 0.05)
+  expect_equal(attr(h, "mailles")$altitude, 600)
+  # la graine ne touche pas au generateur aleatoire de l'appelant
+  set.seed(42)
+  a <- stats::runif(1)
+  set.seed(42)
+  invisible(hydric_stress_grid(r, data.frame(maille = "9640_23690", ru_mm = 80), s,
+                               pas_k = 0.2, n_controle = 1))
+  expect_equal(stats::runif(1), a)
+})
+
+test_that("hydric_stress_grid : RU en raster, table sur une suite de RU", {
+  skip_if_not_installed("biljouR")
+  s <- safran12()
+  c0 <- centre_maille_l93(9640, 23690)
+  k <- grille_k(c0[1], c0[2], rbind(1, 1, 1, 1))
+  ru <- k[[1]]
+  terra::values(ru) <- c(60, 80, 65, 0)
+  h <- hydric_stress_grid(k, ru, s, n_controle = 0)
+  v <- terra::values(h)
+  p <- hydric_stress_grid(k, data.frame(maille = "9640_23690", ru_mm = 60), s, n_controle = 0)
+  expect_equal(v[1, "is_topo"], terra::values(p)[1, "is_topo"])   # noeud exact (pas de 10)
+  expect_true(v[3, "is_topo"] <= v[1, "is_topo"] && v[3, "is_topo"] >= v[2, "is_topo"])
+  expect_true(is.na(v[4, "is_topo"]))                              # RU nulle
+  expect_equal(nrow(attr(h, "ecart")), 0)
+})
+
+test_that("hydric_stress_grid : points precis en calcul direct ; placettes IFN refusees", {
+  skip_if_not_installed("biljouR")
+  s <- safran12()
+  c0 <- centre_maille_l93(9640, 23690)
+  k <- grille_k(c0[1], c0[2], rbind(K_SUD, 1, 1, K_NORD))
+  ru <- data.frame(maille = "9640_23690", ru_mm = 100)
+  # point connu (x = est, y = nord) dans la cellule nord-ouest (versant sud)
+  xy <- c(c0[1] - 25, c0[2] + 25)
+  expect_equal(terra::cellFromXY(k, rbind(xy)), 1)
+  ifn <- mark_ifn(points_l93(xy[1], xy[2], 100))
+  expect_error(hydric_stress_grid(k, ru, s, points = ifn), "IFN")   # regle des 700 m
+  flou <- points_l93(xy[1], xy[2], 100)                             # precision absente
+  expect_error(hydric_stress_grid(k, ru, s, points = flou), "loc_precision_m")
+  gnss <- points_l93(xy[1], xy[2], 100)
+  gnss$loc_precision_m <- 5
+  p <- hydric_stress_grid(k, ru, s, points = gnss)
+  g <- terra::values(hydric_stress_grid(k, ru, s, n_controle = 0))
+  expect_identical(p$maille_safran, "9640_23690")
+  expect_equal(p$is_topo, unname(g[1, "is_topo"]))
+  expect_equal(p$is_plat, unname(g[1, "is_plat"]))
+  expect_equal(p$grad_hydrique_25m, -p$is_topo)
+})
+
+test_that("hydric_stress_grid : replis signales (k = 1, SAFRAN sans SSI, SAFRAN absent)", {
+  skip_if_not_installed("biljouR")
+  c0 <- centre_maille_l93(9640, 23690)
+  k <- grille_k(c0[1], c0[2], rbind(1, 1, 1, 1))
+  ru <- data.frame(maille = "9640_23690", ru_mm = c(100))
+  h <- hydric_stress_grid(k, ru, safran12(), n_controle = 0, k_methode = "climatique")
+  expect_identical(attr(h, "methode"), "biljou_climatique")
+  expect_match(attr(h, "repli"), "GRASS")
+  # SAFRAN sans T, FF, HU, SSI : BILJOU sur l'ETP SAFRAN, sans k (= hydric_stress)
+  s1 <- safran_extrait()
+  c1 <- centre_maille_l93(9640, 23690)
+  k1 <- grille_k(c1[1], c1[2], rbind(K_SUD, 1, 1, K_NORD))
+  expect_warning(h1 <- hydric_stress_grid(k1, ru, s1), "sans modulation")
+  expect_identical(attr(h1, "methode"), "climatique_etp_safran")
+  v1 <- terra::values(h1)
+  ref <- hydric_stress(points_l93(c1[1], c1[2], 100), s1)
+  expect_equal(v1[, "is_topo"], rep(ref$is_biljou, 4))
+  expect_equal(v1[, "is_plat"], v1[, "is_topo"])
+  # SAFRAN absent : la reserve utile
+  expect_warning(h0 <- hydric_stress_grid(k, ru, NULL), "repli")
+  expect_identical(attr(h0, "methode"), "repli_ru")
+  expect_true(all(is.na(terra::values(h0)[, "is_topo"])))
+})
+
+test_that("hydric_stress_grid : controles des entrees", {
+  c0 <- centre_maille_l93(9640, 23690)
+  k <- grille_k(c0[1], c0[2], rbind(1, 1, 1, 1))
+  ru <- data.frame(maille = "9640_23690", ru_mm = 100)
+  expect_error(hydric_stress_grid(k[[1:3]], ru), "12 couches")
+  expect_error(hydric_stress_grid(terra::project(k, "EPSG:4326"), ru), "2154")
+  expect_error(hydric_stress_grid(k, data.frame(a = 1)), "maille")
+  expect_error(hydric_stress_grid(k, 100), "data.frame")
+  expect_error(hydric_stress_grid(k, ru, pas_k = 0), "pas_k")
+})

@@ -50,6 +50,15 @@ ru_source: euptf2
 # Climat SAFRAN (SIM2) : période provisoire ; saison de végétation avril-septembre (provisoire).
 safran_annees: [1996, 2025]
 saison_vegetation: [4, 9]
+# Carte hydrique de 25 m (mission 021) : k = rayonnement r.sun (ciel clair) de la pente /
+# plat, ETP Penman biljouR sur SSI x k. Valeurs provisoires (referentiels § 25.5), à geler
+# avant la phase 1 : trouble de Linke, albédo, pas de temps de r.sun (h), pas des classes
+# de k et nombre de cellules de contrôle (calcul direct) par maille SAFRAN.
+solar_linke: 3.0
+solar_albedo: 0.2
+solar_step_h: 0.5
+hydric_pas_k: 0.02
+hydric_n_controle: 30
 # Départements BD Charm-50 de l'emprise (référentiels § 5) : liste explicite.
 bdcharm_departements: ["067", "068", "088"]
 ifn_archive_url: "https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip"

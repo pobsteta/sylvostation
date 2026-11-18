@@ -364,3 +364,137 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
   warning(structure(class = c("sylvostation_non_calcule", "warning", "condition"),
                     list(message = msg, call = NULL)))
 }
+
+# Azimut de l'exposition (degres depuis le nord, sens horaire : convention de terra et de
+# `exposition_cos/sin`) vers la convention de GRASS `r.sun` (degres depuis l'est, sens
+# antihoraire : 90 = nord, 180 = ouest, 270 = sud ; `r.sun --help`, GRASS 8.4.2,
+# « 270 is south »). Formule : (450 - azimut) mod 360 ; NA conserve.
+.aspect_to_rsun <- function(az) {
+  (450 - az) %% 360
+}
+
+#' Facteur topographique de rayonnement mensuel (GRASS `r.sun`, ciel clair)
+#'
+#' Pour chaque cellule `x` et chaque mois `j` (jour type de Klein 1977) :
+#' k(x, j) = G(x ; pente, exposition, ombres portées) / G(x ; pente 0, sans ombres), où
+#' G est le rayonnement global journalier (`glob_rad`, direct + diffus + réfléchi,
+#' Wh m⁻² j⁻¹) de GRASS `r.sun` (Šúri et Hofierka 2004) **en ciel clair** (`coeff_bh`,
+#' `coeff_dh` absents). C'est la méthode A de `docs/referentiels.md` § 25.4 (adaptation
+#' **non validée** de Dyer 2009) : k multiplie le rayonnement SAFRAN dans l'ETP de
+#' [hydric_stress_grid()].
+#'
+#' * Pente et exposition : `terra::terrain` (Horn 1981), comme la couche `pente` de
+#'   [derive_terrain()] ; l'exposition (depuis le nord, sens horaire) est convertie vers
+#'   la convention de `r.sun` (270 = sud) par (450 - azimut) mod 360. Terrain plat :
+#'   pente 0. Pourtour du MNT (pente inconnue) : `NA`.
+#' * Numérateur avec ombres portées (défaut de `r.sun`) ; dénominateur `r.sun -p
+#'   slope_value=0` (plat, sans ombres).
+#' * Valeurs **provisoires** (§ 25.5) : ciel clair, trouble de Linke 3,0, albédo 0,2
+#'   (défauts du manuel), jours types de Klein, pas de 0,5 h. Les ombres portées par le
+#'   relief situé hors du MNT fourni ne sont pas vues (bord de l'emprise).
+#' * **Repli** : sans GRASS (`grass` introuvable) ou si `r.sun` échoue, k = 1 partout
+#'   (méthode « climatique », attribut `methode`), avertissement de classe
+#'   `sylvostation_non_calcule`.
+#'
+#' Coût mesuré (GRASS 8.4.2, 3 fils, 2026-11-18, mission 021) : 4,1 s par jour type
+#' avec ombres et 0,9 s pour le plat sur 360 000 cellules de 25 m (225 dalles), soit
+#' environ une minute pour les 12 mois ; plus de 10 minutes par jour à 5 m.
+#'
+#' k est une variable **fine** (`k_01` à `k_12`, voir [FINE_VARIABLES]) : jamais aux
+#' placettes IFN ([assert_no_fine_extract_on_ifn()]).
+#'
+#' @param dtm `SpatRaster` à une couche, EPSG:2154, maille carrée (25 m dans le pipeline),
+#'   altitudes en mètres.
+#' @param days Jours de l'année des 12 mois (jours types de Klein 1977).
+#' @param linke,albedo Trouble de Linke et albédo de `r.sun` (provisoires).
+#' @param step Pas de temps de `r.sun` (heures, provisoire).
+#' @param nprocs Nombre de fils de `r.sun`.
+#' @param grass Exécutable GRASS (`""` : absent, repli).
+#' @return `SpatRaster` à 12 couches `k_01` à `k_12` sur la grille de `dtm`, attributs
+#'   `methode` (`"r.sun"` ou `"climatique"`), `repli` (raison du repli) et `parametres`.
+#' @examples
+#' f <- system.file("extdata", "synth_dtm.tif", package = "sylvostation")
+#' d <- terra::rast(f)   # surface synthétique
+#' k <- suppressWarnings(solar_factor(d, grass = ""))   # sans GRASS : repli k = 1
+#' attr(k, "methode")
+#' @export
+solar_factor <- function(dtm, days = .JOURS_TYPES, linke = 3, albedo = 0.2, step = 0.5,
+                         nprocs = 1, grass = Sys.which("grass")) {
+  .check_dtm(dtm)
+  if (!is.numeric(days) || length(days) != 12L || anyNA(days) || any(days < 1 | days > 365)) {
+    stop("`days` doit contenir 12 jours de l'ann\u00e9e (1 \u00e0 365).", call. = FALSE)
+  }
+  param <- list(ciel = "clair", linke = linke, albedo = albedo, step_h = step,
+                jours = days, statut = "provisoire (r\u00e9f\u00e9rentiels \u00a7 25.5)")
+  noms <- sprintf("k_%02d", 1:12)
+  repli <- function(msg) {
+    .warn_non_calcule(paste0("Facteur de rayonnement k = 1 (m\u00e9thode climatique) : ", msg))
+    un <- terra::ifel(is.na(dtm), NA, 1)
+    out <- terra::rast(rep(list(un), 12))
+    names(out) <- noms
+    attr(out, "methode") <- "climatique"
+    attr(out, "repli") <- msg
+    attr(out, "parametres") <- param
+    out
+  }
+  if (!nzchar(grass)) return(repli("GRASS GIS (`grass`) introuvable, \u00e0 installer."))
+
+  names(dtm) <- "z"
+  slope <- terra::terrain(dtm, "slope", unit = "degrees", neighbors = 8)
+  az <- terra::terrain(dtm, "aspect", unit = "degrees", neighbors = 8)
+  asp <- terra::ifel(slope == 0, 270, .aspect_to_rsun(az))   # plat : exposition sans effet
+
+  dir <- tempfile("rsun_")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  f <- function(n) file.path(dir, n)
+  terra::writeRaster(dtm, f("dem.tif"), datatype = "FLT8S")
+  terra::writeRaster(slope, f("slope.tif"), datatype = "FLT8S")
+  terra::writeRaster(asp, f("aspect.tif"), datatype = "FLT8S")
+  cmd <- c("set -e",
+           paste0("r.in.gdal input='", f("dem.tif"), "' output=dem --quiet"),
+           paste0("r.in.gdal input='", f("slope.tif"), "' output=sl --quiet"),
+           paste0("r.in.gdal input='", f("aspect.tif"), "' output=as --quiet"),
+           "g.region raster=dem")
+  for (i in 1:12) {
+    opts <- paste0(" linke_value=", linke, " albedo_value=", albedo, " day=", days[i],
+                   " step=", step, " nprocs=", nprocs, " --quiet --overwrite")
+    out_g <- f(sprintf("g%02d.tif", i))
+    out_p <- f(sprintf("p%02d.tif", i))
+    cmd <- c(cmd,
+             paste0("r.sun elevation=dem slope=sl aspect=as glob_rad=g", i, opts),
+             paste0("r.sun -p elevation=dem slope_value=0 glob_rad=p", i, opts),
+             paste0("r.out.gdal input=g", i, " output='", out_g,
+                    "' format=GTiff type=Float64 --overwrite --quiet -c -m"),
+             paste0("r.out.gdal input=p", i, " output='", out_p,
+                    "' format=GTiff type=Float64 --overwrite --quiet -c -m"))
+  }
+  writeLines(cmd, f("run.sh"))
+  res <- suppressWarnings(system2(grass, c("--tmp-project", shQuote(f("dem.tif")), "--exec",
+                                           "sh", shQuote(f("run.sh"))),
+                                  stdout = TRUE, stderr = TRUE))
+  sorties <- f(c(sprintf("g%02d.tif", 1:12), sprintf("p%02d.tif", 1:12)))
+  if (!all(file.exists(sorties))) {
+    return(repli(paste0("\u00e9chec de GRASS `r.sun` : ",
+                        paste(utils::tail(res, 2), collapse = " "))))
+  }
+  n <- terra::ncell(dtm)
+  vals <- vapply(1:12, function(i) {
+    g <- terra::rast(sorties[i])
+    p <- terra::rast(sorties[12 + i])
+    if (!all(c(terra::nrow(g), terra::ncol(g)) == c(terra::nrow(dtm), terra::ncol(dtm)))) {
+      return(rep(NA_real_, n))
+    }
+    gv <- terra::values(g, mat = FALSE)
+    pv <- terra::values(p, mat = FALSE)
+    ifelse(is.finite(gv) & is.finite(pv) & pv > 0, gv / pv, NA_real_)
+  }, numeric(n))
+  if (all(is.na(vals))) return(repli("grille de sortie de GRASS diff\u00e9rente de celle du MNT."))
+  vals[is.na(terra::values(slope, mat = FALSE)), ] <- NA_real_   # pourtour : pente inconnue
+  out <- terra::rast(dtm, nlyrs = 12)
+  terra::values(out) <- vals
+  names(out) <- noms
+  attr(out, "methode") <- "r.sun"
+  attr(out, "parametres") <- param
+  out
+}

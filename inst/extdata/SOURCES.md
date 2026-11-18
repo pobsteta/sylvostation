@@ -166,7 +166,7 @@ Extraits le 2026-11-16, mission 001 (voir `docs/referentiels.md`, § 5 et § 7).
   (mm). 21 Ko. Voir `docs/referentiels.md`, § 23.
 - **Licence :** Licence Ouverte 2.0 (`lov2`, champ licence de data.gouv.fr).
 
-## `safran_sim2_12mailles_extrait.csv` (mission 016, RÉEL)
+## `safran_sim2_12mailles_extrait.csv` (missions 016 et 021, RÉEL)
 
 - **Source :** Météo-France, « Données changement climatique - SIM quotidienne »
   (data.gouv.fr, jeu `6569b27598256cc583c917a7`), fichiers
@@ -176,8 +176,16 @@ Extraits le 2026-11-16, mission 001 (voir `docs/referentiels.md`, § 5 et § 7).
 - **Traitement :** les **12 mailles** qui couvrent l'emprise test (`LAMBX` 9560, 9640, 9720 ×
   `LAMBY` 23530, 23610, 23690, 23770, Lambert II étendu en hm, liste
   `data/cache/safran/cellules_emprise.txt`), du 2003-01-01 au 2004-12-31 (8 772 lignes),
-  colonnes d'origine `LAMBX;LAMBY;DATE;PRENEI;PRELIQ;T;ETP` (mm, `T` en °C), sans
-  arrondi. 322 Ko. Commande : lecture de `emprise_2003.csv` et `emprise_2004.csv` du cache
-  par `utils::read.csv2(colClasses = "character")`, sélection des 7 colonnes, écriture `;`.
-  Sert au mode réel hors ligne (`offline: true`, mission 016).
+  colonnes d'origine `LAMBX;LAMBY;DATE;PRENEI;PRELIQ;T;FF;SSI;HU;ETP`, sans arrondi.
+  Unités : document Météo-France intitulé « Données quotidiennes SIM » (2 pages, créé le
+  2026-03-31), lu dans le cache local `data/cache/safran/params.pdf` (hors dépôt) ;
+  **adresse de téléchargement à vérifier** (voir `docs/referentiels.md` § 25.8) : précipitations et ETP en mm, `T` en °C (moyenne quotidienne), `FF` en m/s
+  (vent moyen quotidien), `HU` en % (humidité relative moyenne), `SSI` en **J/cm²**
+  (« rayonnement visible », cumul quotidien ]00UTC-00UTC]). 458 Ko.
+  Mission 016 : 7 colonnes (sans `FF`, `SSI`, `HU`). Mission 021 (2026-11-18) : `FF`, `SSI`
+  et `HU` ajoutées, mêmes lignes, mêmes valeurs pour les 7 colonnes d'origine (vérifié
+  colonne par colonne). Commande : lecture de `emprise_2003.csv` et `emprise_2004.csv` du
+  cache par `utils::read.csv2(colClasses = "character")`, sélection des 10 colonnes,
+  écriture `;`. Sert au mode réel hors ligne (`offline: true`) et à la carte hydrique de
+  25 m (`hydric_stress_grid()`).
 - **Licence :** Licence Ouverte 2.0 (`lov2`, champ licence de data.gouv.fr).

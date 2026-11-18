@@ -12,5 +12,6 @@ FINE_VARIABLES
 \description{
 Variables dont la résolution est bien plus fine que la précision de localisation
 des placettes de l'IFN (700 m). La correspondance est insensible à la casse. Les
-noms commençant par \code{lidar_}, \code{mnt_} ou \code{mhc_} sont aussi considérés comme fins.
+noms commençant par \code{lidar_}, \code{mnt_}, \code{mhc_} ou \code{k_} (facteur de rayonnement,
+mission 021) sont aussi considérés comme fins.
 }
