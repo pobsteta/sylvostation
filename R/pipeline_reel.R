@@ -559,6 +559,8 @@ comparison_res <- function(resolution_m, ref_m = 50) {
 #' @param streams Réseau (`sf` de lignes) ou `NULL`.
 #' @param mrvbf Calculer le MRVBF (`TRUE` en mode réel).
 #' @param tpi_radii Rayons du TPI (m).
+#' @param mrvbf_res Maille (m) du calcul du MRVBF, passée à [derive_terrain()] (`mrvbf_res`,
+#'   `mrvbf_res_m` de `config.yml`) ; `NULL` = maille du MNT.
 #' @return Un `SpatRaster` sur `grid` : couches de [derive_terrain()] et `altitude`
 #'   (couches éventuellement vides : voir [empty_layers()]).
 #' @examples
@@ -569,12 +571,14 @@ comparison_res <- function(resolution_m, ref_m = 50) {
 #' suppressWarnings(names(real_terrain(d, g, mrvbf = FALSE)))
 #' }
 #' @export
-real_terrain <- function(dtm, grid, streams = NULL, mrvbf = TRUE, tpi_radii = c(100, 300)) {
+real_terrain <- function(dtm, grid, streams = NULL, mrvbf = TRUE, tpi_radii = c(100, 300),
+                         mrvbf_res = NULL) {
   assert_crs_2154(grid)
   # marge de NA pour que la fenetre du plus grand TPI tienne dans le raster (petite emprise)
   n <- ceiling(max(tpi_radii) / terra::res(dtm)[1])
   d <- terra::extend(dtm, n)
-  t5 <- derive_terrain(d, tpi_radii = tpi_radii, streams = streams, mrvbf = mrvbf)
+  t5 <- derive_terrain(d, tpi_radii = tpi_radii, streams = streams, mrvbf = mrvbf,
+                        mrvbf_res = mrvbf_res)
   t5 <- terra::crop(t5, dtm)
   alt <- dtm
   names(alt) <- "altitude"

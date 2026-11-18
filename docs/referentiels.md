@@ -1228,14 +1228,22 @@ Sensibilité du HAND à une densification (MNT à 5 m, cuvettes franchies) :
 
 ### 28.4 Vallons des 4 dalles à confronter à une vue QGIS (Lambert-93, x = est, y = nord)
 
-Toponymes : champ `TopoOH` de TOPAGE (aucun autre nom de lieu dans les données).
+Dalles du run (convention LiDAR HD, § 2 : la dalle `XXXX-YYYY` couvre x de XXXX à XXXX+1 km et
+y de YYYY-1 à YYYY km) : `1013-6798` (x 1013-1014, y 6797-6798), `1014-6797` (y 6796-6797),
+`1014-6798` (y 6797-6798), `1014-6799` (y 6798-6799) ; emprise du MNT lue sur le raster :
+x 1 013 000-1 015 000, y 6 796 000-6 799 000. (Les dalles `1013-6803` à `1014-6804` citées dans
+d'autres notes sont d'un autre jeu, hors de ces 4 dalles.) Toponymes : champ `TopoOH` de
+TOPAGE. Valeurs lues sur les rasters de MRVBF (cellule de 5 m contenant le point, `terra::extract`),
+altitude lue sur le MNT :
 
-| Lieu | x (est) | y (nord) | Altitude | MRVBF 5 m | MRVBF 20 m |
-|---|---|---|---|---|---|
-| Ruisseau le Strengbach, fond de vallon (26 cellules de 20 m >= 1,5 aux deux mailles, toutes sur ce ruisseau) | 1 013 470 | 6 797 810 | 735 m | 3,65 | 2,78 |
-| Ruisseau l'Adelsbach | 1 014 790 | 6 798 790 | 539 m | 2,25 | 1,22 |
-| Ruisseau le Muesbach | 1 014 330 | 6 796 730 | 609 m | 1,30 | 1,07 |
-| Crête (contrôle, point haut éloigné de tout réseau) | 1 014 390 | 6 796 090 | 904 m | 0,00 | 0,00 |
+| Lieu | x (est) | y (nord) | Dalle | Cellule de 5 m (index) | Altitude | MRVBF 5 m (44,2 %) | MRVBF 20 m (18,4 %) |
+|---|---|---|---|---|---|---|---|
+| Ruisseau le Strengbach, fond de vallon (26 cellules de 20 m >= 1,5 aux deux mailles, toutes sur ce ruisseau) | 1 013 470 | 6 797 810 | 1013-6798 | 95 295 | 735,2 m | 3,97 | 2,84 |
+| Ruisseau l'Adelsbach | 1 014 790 | 6 798 790 | 1014-6799 | 17 159 | 538,5 m | 2,87 | 1,51 |
+| Ruisseau le Muesbach | 1 014 330 | 6 796 730 | 1014-6797 | 181 867 | 608,4 m | 1,15 | 1,25 |
+| Crête (contrôle : point haut à plus de 150 m de tout tronçon) | 1 014 390 | 6 796 090 | 1014-6797 | 233 079 | 904,8 m | 0,00 | 0,00 |
 
-Valeurs à la maille de la grille (20 m, moyenne). À confronter : le fond du Strengbach doit
-apparaître comme un fond plat bordé de versants ; la crête ne doit pas l'être.
+Les cellules sont indexées sur le MNT de 5 m (1 ligne = 400 cellules, du nord au sud). À
+confronter : le fond du Strengbach doit apparaître comme un fond plat bordé de versants, la
+crête non. Les moyennes à 20 m de la grille (Strengbach 3,65 à 5 m, 2,78 à 20 m) diffèrent
+de ces valeurs de cellule.

@@ -52,6 +52,17 @@ test_that("`demo` est facultatif (FALSE par défaut) et doit être booléen", {
   expect_error(read_config(ecrire_config(list(demo = "oui"))), "demo")
 })
 
+test_that("mrvbf_res_m : defaut = resolution_m, valeur lue, controle (mission 027)", {
+  expect_equal(read_config(ecrire_config())$mrvbf_res_m, 20)
+  expect_equal(read_config(ecrire_config(list(resolution_m = 25)))$mrvbf_res_m, 25)
+  expect_equal(read_config(ecrire_config(list(mrvbf_res_m = 5)))$mrvbf_res_m, 5)
+  expect_error(read_config(ecrire_config(list(mrvbf_res_m = -5))), "mrvbf_res_m")
+  expect_error(read_config(ecrire_config(list(mrvbf_res_m = "20"))), "mrvbf_res_m")
+  f <- testthat::test_path("..", "..", "config.yml")
+  skip_if_not(file.exists(f), "config.yml absent du paquet installé")
+  expect_equal(read_config(f)$mrvbf_res_m, 20)
+})
+
 test_that("cles de la carte hydrique de 25 m : defauts provisoires et controles", {
   cfg <- read_config(ecrire_config())
   expect_equal(cfg$solar_linke, 3)

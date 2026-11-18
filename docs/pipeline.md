@@ -119,8 +119,11 @@ topographie module l'**ETP** par le rayonnement reçu par la pente, jamais la r�
     `t_slope` = 16 % x 2^(log3(25 / maille)), soit 18,4 % à 20 m (**provisoire, à vérifier**
     sous 25 m), `t_vf = 0,3`. Prix mesuré sur les 4 dalles : à 20 m le MRVBF reconnaît moins
     de fonds étroits qu'à 5 m (part >= 0,5 : 7,4 % contre 24,1 %, sur la grille de 20 m).
-    Raccordement `config.yml` (clé `mrvbf_res_m`) et `real_terrain()` : voir la mission
-    suivante ; en attendant, `real_terrain()` calcule à 5 m (44,2 %).
+    La maille est la clé `mrvbf_res_m` de `config.yml` (défaut `resolution_m`, soit 20 ;
+    provisoire, à vérifier), transmise par `real_terrain(mrvbf_res = )`. **Compromis accepté**
+    (décision de l'orchestrateur du 2026-11-18) : les fonds étroits sont moins vus à 20 m
+    qu'à 5 m (4 dalles, maille de 5 m : part >= 1,5 de 7,9 % à 0,8 %, part >= 0,5 de 23,8 %
+    à 7,6 %, réseau >= 0,5 de 68 % à 58 %).
   - *HAND* : franchit les cuvettes du MNT par leur col ; réseau TOPAGE seul, **sans
     densification** (décision de l'orchestrateur du 2026-11-18). Sensibilité mesurée au
     seuil d'accumulation, si l'on densifiait (4 dalles, 5 m) : NA 11,0 % (TOPAGE seul), 7,1 %

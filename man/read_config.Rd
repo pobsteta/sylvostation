@@ -17,7 +17,8 @@ le pipeline tourne sans réseau sur les jeux d'essai synthétiques de \code{inst
 et les clés du mode réel (mission 016, valeurs par défaut si absentes) : \code{offline}
 (\code{FALSE} ; \code{TRUE} = mode réel sans réseau sur les extraits réels de \code{inst/extdata}),
 \code{max_tiles} (\code{NULL} = toutes les dalles), \code{emprise} (\code{"test"} ou \code{"ser"}),
-\code{lidar_block_size} (3), \code{lidar_buffer_m} (20), \code{lidar_ncores} (3),
+\code{mrvbf_res_m} (maille en m du MNT sur lequel le MRVBF est calculé, multiple de 5 ;
+défaut \code{resolution_m} ; provisoire, à vérifier, mission 027), \code{lidar_block_size} (3), \code{lidar_buffer_m} (20), \code{lidar_ncores} (3),
 \code{taxref_version} (\code{"18"}, figée), \code{indicator_source} (\code{"tichy"}), \code{ru_source}
 (\code{"euptf2"}), \code{safran_annees} (1996-2025), \code{saison_vegetation} (mois 4 à 9),
 \code{bdcharm_departements}, \code{gbif_method} (\code{"search"}), \code{forest_mask} (\code{TRUE}),

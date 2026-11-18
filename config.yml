@@ -37,6 +37,10 @@ max_tiles: null
 # test = emprise_test recoupée avec la SER tamponnée (225 dalles) ; ser = SER entière.
 emprise: test
 # Valeurs provisoires (journal, mission 003), à geler avant la phase 1.
+# Maille (m) du MNT sur lequel le MRVBF est calculé (multiple de la maille du MNT, 5 m) ;
+# défaut = resolution_m. Provisoire, à vérifier (mission 027, référentiels § 28.1) : à 20 m le
+# MRVBF voit moins de fonds étroits qu'à 5 m (part >= 1,5 de 7,9 % à 0,8 % sur 4 dalles).
+mrvbf_res_m: 20
 lidar_block_size: 3
 lidar_buffer_m: 20
 lidar_ncores: 3
