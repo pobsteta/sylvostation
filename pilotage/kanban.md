@@ -17,7 +17,7 @@
 - [029-plan-echantillonnage-gnss](missions/029-plan-echantillonnage-gnss.md) · depuis le cycle 5 · dev
 
 - [027-diagnostic-mrvbf-hand](missions/027-diagnostic-mrvbf-hand.md) · depuis le cycle 5 · dev
-- [028-cout-hydrique](missions/028-cout-hydrique.md) · depuis le cycle 5 · dev
+
 
 
 
@@ -30,6 +30,8 @@
 - [023-page-pkgdown-vosges](missions/023-page-pkgdown-vosges.md) · après 018, 022 · depuis le cycle 5 · dev
 
 ## Terminé
+
+- [028-cout-hydrique](missions/028-cout-hydrique.md) · cycle 5 · dev · BILJOU vectorisé ×38 à ×59
 
 - [030-sophy](missions/030-sophy.md) · cycle 5 · acquereur
 
