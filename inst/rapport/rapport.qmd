@@ -6,6 +6,29 @@ format:
     embed-resources: true
     toc: true
     code-fold: true
+  pdf:
+    pdf-engine: xelatex
+    documentclass: article
+    papersize: a4
+    geometry:
+      - margin=2cm
+    toc: false
+    number-sections: true
+    shift-heading-level-by: -1
+    colorlinks: true
+    fig-pos: "H"
+    mainfont: "DejaVu Serif"
+    sansfont: "DejaVu Sans"
+    monofont: "DejaVu Sans Mono"
+    fontsize: 10pt
+    include-in-header:
+      text: |
+        \usepackage{longtable}
+        \usepackage{booktabs}
+        \usepackage{array}
+        \usepackage{etoolbox}
+        \AtBeginEnvironment{longtable}{\footnotesize}
+        \sloppy
 params:
   dossier: "."
   prefixe: "synth_"
@@ -20,22 +43,60 @@ execute:
 ```{r}
 #| label: setup
 #| include: false
-# Gabarit du rapport (missions 010 et 016). Il lit uniquement les fichiers écrits par
-# write_outputs() dans `params$dossier` ; il ne dépend pas du paquet sylvostation.
-# Préfixe `synth_` : mode démo (données fabriquées) ; préfixe vide : mode réel.
+# Gabarit du rapport (missions 010, 016 et 022). Il lit uniquement les fichiers écrits par
+# write_outputs() dans `params$dossier` ; il ne dépend pas du paquet sylvostation et ne
+# calcule rien de nouveau. Deux formats : HTML et PDF (le PDF exige Quarto et LaTeX, voir
+# inst/rapport/rendre_rapport.R). Préfixe `synth_` : mode démo (données fabriquées) ;
+# préfixe vide : mode réel.
 dossier <- params$dossier
 pre <- params$prefixe
+pdf_out <- knitr::is_latex_output()
 lire <- function(nom) {
   f <- file.path(dossier, paste0(pre, nom, ".csv"))
   if (!file.exists(f) || file.size(f) < 2) return(NULL)
   tryCatch(utils::read.delim(f, sep = ";", dec = ".", check.names = FALSE,
                              fileEncoding = "UTF-8"), error = function(e) NULL)
 }
-tab <- function(x, ...) if (is.null(x)) cat("(table absente)\n") else
-  knitr::kable(x, digits = 2, row.names = FALSE, ...)
+# `larg` : largeurs (cm) des colonnes en PDF (NA = colonne étroite, texte long à la ligne)
+tab <- function(x, larg = NULL, ...) {
+  if (is.null(x)) return(cat("(table absente)\n"))
+  if (pdf_out) {
+    # pas de balises de code dans les cellules LaTeX (l'apostrophe inverse y serait une guillemet)
+    x[] <- lapply(x, function(v) if (is.character(v)) gsub("`", "", v, fixed = TRUE) else v)
+    al <- if (is.null(larg)) NULL else ifelse(is.na(larg), "l", paste0(">{\\raggedright\\arraybackslash}p{", larg, "cm}"))
+    knitr::kable(x, digits = 2, row.names = FALSE, format = "latex", booktabs = TRUE,
+                 longtable = TRUE, align = al, linesep = "", ...)
+  } else knitr::kable(x, digits = 2, row.names = FALSE, ...)
+}
 synth <- identical(pre, "synth_")
 hors_ligne <- isTRUE(params$hors_ligne)
 lignes <- function(x) if (is.null(x)) 0L else nrow(x)
+ep <- lire("etat_de_preuve")
+
+# --- cartes : légende, échelle, flèche du nord, système de coordonnées --------------------
+# Les rasters sont en Lambert-93 (EPSG:2154), x = est, y = nord, en mètres.
+raster_ok <- function(nom) file.exists(file.path(dossier, paste0(pre, nom)))
+lire_raster <- function(nom) terra::rast(file.path(dossier, paste0(pre, nom)))
+echelle_nord <- function(r) {
+  larg <- terra::xmax(r) - terra::xmin(r)
+  d <- if (larg >= 4000) 1000 else if (larg >= 1000) 500 else if (larg >= 300) 100 else 25
+  terra::sbar(d, xy = "bottomleft", type = "bar", divs = 2, below = "m", cex = 0.7)
+  terra::north(xy = "topleft", type = 1, cex = 0.8)
+}
+carte_continue <- function(r, titre, col = grDevices::hcl.colors(50, "YlGnBu", rev = TRUE)) {
+  v <- terra::values(r, na.rm = TRUE)
+  if (!length(v)) {
+    graphics::plot.new(); graphics::title(titre)
+    graphics::text(0.5, 0.5, "aucune cellule renseignée"); return(invisible())
+  }
+  rg <- range(v)
+  if (diff(rg) == 0) rg <- rg + c(-1, 1) * max(abs(rg[1]) * 0.01, 1e-6)  # valeur unique
+  terra::plot(r, main = titre, col = col, range = rg, mar = c(3, 3, 2.5, 5),
+              plg = list(cex = 0.7))
+  echelle_nord(r)
+}
+legende_crs <- paste0("Lambert-93 (EPSG:2154), mètres ; x = est, y = nord ; cellules de 25 m ; ",
+                      "nord vers le haut.")
 ```
 
 ```{r}
@@ -54,9 +115,360 @@ if (!synth) cat(paste0(
                          "les résultats sont réels mais **réduits**, ils prouvent que la chaîne ",
                          "s'enchaîne sur données réelles, pas qu'elle est juste. ") else "",
   "Les étapes dont l'entrée manque sont signalées dans l'état de preuve, jamais remplacées.\n:::\n"))
+# PDF : table des matières placée après l'encadré (la mention synthétique reste en tête)
+if (pdf_out) cat("\n```{=latex}\n\\tableofcontents\n\\newpage\n```\n")
 ```
 
 Sylvoécorégion : **`r params$ser_code`**.
+
+Ce document présente, dans l'ordre : les **données d'entrée** (d'où elles viennent, leur
+licence, ce qui en a été utilisé), les **calculs réalisés** (la chaîne de traitement, avec
+ses valeurs provisoires), les **cartes produites** (types de stations, gradient hydrique à
+25 m, incertitude), puis l'état de preuve, les types, la clé de terrain, la validation et
+les limites. Il est produit à partir des seuls fichiers écrits par le pipeline ; aucun
+calcul n'est fait dans le rapport.
+
+## Données d'entrée {#sec-entrees}
+
+Pour chaque source : son **état dans ce run** (réel, réel réduit, synthétique, non
+utilisé ou absent) et le **volume** effectivement utilisé, relevés dans l'état de preuve
+et les tables écrites. Les versions, dates, licences et adresses viennent de
+`inst/extdata/SOURCES.md` et de `docs/referentiels.md` (« à vérifier » quand elles ne
+l'ont pas été).
+
+```{r}
+#| label: sources
+# Cherche la ligne de l'état de preuve dont l'étape correspond au motif.
+ligne_ep <- function(motif) {
+  if (!lignes(ep)) return(NULL)
+  i <- grep(motif, ep$etape, ignore.case = TRUE)
+  if (length(i)) ep[i[1], , drop = FALSE] else NULL
+}
+etat_ep <- function(motif, defaut = "non indiqué") {
+  l <- ligne_ep(motif); if (is.null(l)) defaut else l$etat
+}
+det <- function(motif) { l <- ligne_ep(motif); if (is.null(l)) NA_character_ else l$detail }
+nombre <- function(motif, texte, defaut = "n/d") {
+  if (is.null(texte) || is.na(texte)) return(defaut)
+  m <- regmatches(texte, regexec(motif, texte, perl = TRUE))[[1]]
+  if (length(m) > 1) m[2] else defaut
+}
+mailles <- lire("hydrique_mailles")
+non_app <- lire("taxons_non_apparies")
+n_ifn_txt <- nombre("([0-9]+) placettes", det("Placettes IFN"))
+S <- function(source, etat, volume) data.frame(Source = source, `État` = etat, Volume = volume,
+                                               check.names = FALSE)
+if (synth) {
+  src <- rbind(
+    S("Contour SER (IGN)", "réel réduit", "contour simplifié, SER D11 et D12"),
+    S("LiDAR HD (IGN)", "synthétique", "aucune dalle : MNT fabriqué (synth_dtm.tif)"),
+    S("Placettes IFN (IGN)", "réel réduit", paste0(n_ifn_txt, " placettes (extrait, localisées à 700 m)")),
+    S("BD Charm-50 (BRGM)", "réel réduit", "extrait de l'emprise test (661 polygones, 94 formations)"),
+    S("Climat SAFRAN (Météo-France)", "non utilisé", "climat de 1 km fabriqué en démo"),
+    S("BD TOPAGE (Sandre/OFB)", "non utilisé", "réseau hydrographique non utilisé en démo"),
+    S("TAXREF (MNHN)", "non utilisé", "non utilisé en démo"),
+    S("Valeurs indicatrices (Tichý et al.)", "non utilisé", "valeurs fabriquées (synth_indicateurs.csv)"),
+    S("GBIF", "synthétique", "points d'ancrage fabriqués (synth_occ.csv)"),
+    S("Relevés GNSS", "synthétique", "points fabriqués (synth_gnss.csv)"),
+    S("Carte de référence (AgroParisTech)", "synthétique", "raster fabriqué (synth_reference.tif)"),
+    S("Sols (GlobalSoilMap)", "absent", "non utilisé en démo"))
+} else {
+  off <- hors_ligne
+  mail <- if (lignes(mailles)) paste0(nrow(mailles), " maille(s) SAFRAN dans l'emprise") else "n/d"
+  src <- rbind(
+    S("Contour SER (IGN)", if (off) "réel réduit" else "réel",
+      if (off) "contour simplifié (extrait), SER D11 et D12" else "contour de la SER, tampon de 5 km"),
+    S("LiDAR HD (IGN)", etat_ep("^2\\."),
+      paste0(nombre("([0-9]+) dalle", det("^2\\.")), " dalle(s) traitée(s)",
+             if (off) " ; extrait de 80 m x 80 m (0,3 million de points)" else "")),
+    S("Placettes IFN (IGN)", etat_ep("^5\\."),
+      paste0(n_ifn_txt, " placettes (localisées à 700 m)")),
+    S("BD Charm-50 (BRGM)", etat_ep("^4\\."),
+      if (off) "extrait de l'emprise test (661 polygones, 94 formations)" else
+        "départements 67, 68 et 88 (config.yml)"),
+    S("Climat SAFRAN (Météo-France)", etat_ep("^6\\."),
+      paste0(mail, " ; années ", nombre("années ([0-9-]+)", det("^6\\.")),
+             if (off) " (extrait de 12 mailles)" else "")),
+    S("BD TOPAGE (Sandre/OFB)", etat_ep("^3\\."),
+      paste0(nombre("([0-9]+) tronçon", det("^3\\.")), " tronçon(s) hydrographique(s)")),
+    S("TAXREF (MNHN)", etat_ep("^6\\."),
+      paste0("v", nombre("TAXREF v([0-9]+)", det("^6\\.")), " ; ",
+             if (off) "extrait des taxons de la flore IFN" else "archive complète")),
+    S("Valeurs indicatrices (Tichý et al.)", etat_ep("^6\\."),
+      paste0(if (off) "189 taxons (extrait) ; " else "", "taxons non appariés : ", lignes(non_app))),
+    S("GBIF", etat_ep("^7\\."),
+      if (off) "aucun appel réseau, pas d'extrait (un DOI exige un téléchargement avec compte)" else
+        det("^7\\.")),
+    S("Relevés GNSS", etat_ep("^15\\."), "aucun fichier fourni (gnss_path)"),
+    S("Carte de référence (AgroParisTech)", etat_ep("^16\\."), "rasters non obtenus (reference_path)"),
+    S("Sols (GlobalSoilMap)", etat_ep("^8\\."), "aucune couche fournie (soil_paths)"))
+}
+tab(src, larg = c(4.6, 2.6, 9.6))
+```
+
+```{r}
+#| results: asis
+fiches_src <- c(
+"- **SER** : IGN, sylvoécorégions, `ser_l93.zip`, mise à jour 03/2011, échelle 1/200 000 ; <https://inventaire-forestier.ign.fr/IMG/zip/ser_l93.zip> ; réutilisation libre « sans licence et sans versement de redevance » (IGN).",
+"- **LiDAR HD** : IGN, nuages de points classés (`IGN_AUTO_V5`), dalles publiées par la Géoplateforme ; la dalle de l'extrait est la `1015-6794` (mission `22LHDVosgesRF`, vol du 2022-01-13, édition du 2024-12-20) ; <https://data.geopf.fr/telechargement/download/LiDARHD-NUALID/NUALHD_1-0__LAZ_LAMB93_RF_2024-12-20/LHD_FXX_1015_6794_PTS_LAMB93_IGN69.copc.laz> ; Licence Ouverte 2.0 (Etalab).",
+"- **Placettes IFN** : IGN, Inventaire forestier national, données brutes des campagnes annuelles 2005 et suivantes (archive mise à jour le 2026-10-07, consultée le 2026-11-16) ; <https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip> ; Licence Ouverte Etalab 2.0, citation imposée ; ces données ne doivent pas servir à produire des statistiques d'inventaire. Coordonnées à 700 m près (`loc_precision_m = 700`).",
+"- **BD Charm-50** : BRGM, cartes géologiques à 1/50 000 harmonisées, départements 67, 68 et 88 (archives du 2019-11-22) ; <https://infoterre.brgm.fr/telechargements/BDCharm50/GEO050K_HARM_088.zip> (et `_067`, `_068`) ; aucune licence nommée : métadonnées du BRGM « Aucune condition ne s'applique », « Données ouvertes ».",
+"- **BD TOPAGE** : Sandre/OFB, tronçons hydrographiques, millésime 2025, service WFS <https://services.sandre.eaufrance.fr/geo/topage2025> ; Licence Ouverte Etalab (fiches 2022 à 2024 lues) ; **la licence du millésime 2025 est à vérifier** avant toute republication.",
+"- **TAXREF** : MNHN/PatriNat, version 18 (2025), <https://assets.patrinat.fr/files/referentiel/TAXREF_v18_2025.zip> ; licence Ouverte 2.0 ou `fr-lo` selon la fiche data.gouv.fr, aucune licence sur la page PatriNat (écart signalé). Jointures sur `CD_NOM` puis `CD_REF`.",
+"- **Valeurs indicatrices** : Tichý L., Axmanová I., Dengler J. et al. (2023), *Journal of Vegetation Science* 34, e13168 ; jeu Zenodo version 2.0 (2022-11-07), DOI `10.5281/zenodo.7427088` ; CC BY 4.0 ; réserve : les valeurs de Julve (2015) pour la France seraient en CC BY-SA 2.0 (point non tranché).",
+"- **Climat SAFRAN (SIM2 quotidien)** : Météo-France, fichiers annuels `QUOT_SIM2_AAAA.csv.gz`, <https://meteofrance.s3.sbg.io.cloud.ovh.net/data/REF_CC/SIM/> ; Licence Ouverte 2.0, mention « Source : Météo-France » ; maille de 8 km ; période de calcul 1996-2025 (provisoire).",
+"- **GBIF** (en ligne seulement) : occurrences de plantes vasculaires ; licence propre à chaque jeu (CC BY 4.0, ou CC BY-NC 4.0 pour quatre jeux de l'emprise test, non redistribuables) ; un téléchargement `occ_download` porte un DOI, une recherche `occ_search` n'en a pas.",
+"- **Carte de référence** (Gégout J.-C., Piedallu C., Cornu J.-F., Cluzeau C., 2008) et **relevés GNSS** : non fournis ; ces données ne sont pas sous licence ouverte et n'entrent pas dans le dépôt.")
+cat("Fiches des sources (version, date, licence, adresse ou DOI) :\n\n", paste(fiches_src, collapse = "\n"), "\n", sep = "")
+```
+
+## Calculs réalisés {#sec-calculs}
+
+La chaîne de traitement (`_targets.R`, décrite dans `docs/pipeline.md`) enchaîne les
+étapes suivantes. Le schéma donne l'ordre ; le tableau qui le suit dit, pour chaque étape,
+la méthode, la référence, les **valeurs provisoires** (à geler avant la phase 1) et la
+façon dont la **règle des 700 m** s'y applique : les placettes IFN sont localisées à 700 m
+près, aucune variable fine (LiDAR, pente, position topographique, courbure, TWI) ne leur est
+croisée.
+
+```{r}
+#| label: schema
+#| fig-height: 3.6
+#| fig-width: 7
+#| fig-cap: "Chaîne de traitement : de la dalle LiDAR au catalogue."
+etapes <- c("1  LiDAR HD\nMNT et MHC", "2  Terrain 25 m\nmasque forestier",
+            "3  Gradients des\nplacettes IFN",
+            "4  Modèles, validation\ncroisée, incertitude", "5  Cartes des gradients\n(dont hydrique 25 m)",
+            "6  Typologie\n(seuils, fusions)",
+            "7  Caractérisation\ndes types", "8  Clé de\ndétermination terrain",
+            "9  Validation")
+op <- graphics::par(mar = c(0.2, 0.2, 0.2, 0.2))
+graphics::plot(NA, xlim = c(0, 3), ylim = c(0, 3), axes = FALSE, xlab = "", ylab = "",
+               asp = NA)
+bw <- 0.40; bh <- 0.30
+xs <- rep(c(0.5, 1.5, 2.5), 3); ys <- rep(c(2.5, 1.5, 0.5), each = 3)
+cols <- c("#cfe3f1", "#cfe3f1", "#dfeccf", "#dfeccf", "#dfeccf", "#f5e6c4", "#f5e6c4", "#f5e6c4", "#e7d3e8")
+for (i in seq_along(etapes)) {
+  graphics::rect(xs[i] - bw, ys[i] - bh, xs[i] + bw, ys[i] + bh, col = cols[i], border = "grey30")
+  graphics::text(xs[i], ys[i], etapes[i], cex = 0.72)
+}
+fl <- function(x0, y0, x1, y1) graphics::arrows(x0, y0, x1, y1, length = 0.08, col = "grey20")
+for (i in c(1, 2, 4, 5, 7, 8)) fl(xs[i] + bw, ys[i], xs[i + 1] - bw, ys[i + 1])
+for (r in 1:2) {   # retour à la ligne : de la fin d'une rangée au début de la suivante
+  yb <- ys[3 * r] - bh; yn <- ys[3 * r + 1] + bh; ym <- (yb + yn) / 2
+  graphics::segments(xs[3 * r], yb, xs[3 * r], ym, col = "grey20")
+  graphics::segments(xs[3 * r], ym, xs[3 * r + 1], ym, col = "grey20")
+  fl(xs[3 * r + 1], ym, xs[3 * r + 1], yn)
+}
+graphics::par(op)
+```
+
+```{r}
+#| label: etapes
+etapes_tab <- data.frame(
+  `Étape` = c("1. LiDAR HD, MNT et MHC", "2. Terrain 25 m et masque forestier",
+              "3. Gradients des placettes IFN", "4. Modèles et incertitude",
+              "5. Carte hydrique de 25 m", "6. Typologie", "7. Caractérisation des types",
+              "8. Clé de terrain", "9. Validation"),
+  `Méthode` = c(
+    "`lasR`, une lecture par bloc de 3 x 3 dalles. MNT à 1 m par triangulation des points classés sol (2), eau (9) et points virtuels (66) ; MHC à 1 m (nuage normalisé, hauteur maximale par cellule) ; mosaïque à 5 m.",
+    "Pente, exposition, courbures, TPI, TWI, MRVBF (GRASS) et hauteur au-dessus du réseau TOPAGE, sur la grille de 25 m. Masque : cellule forestière si au moins la moitié de ses pixels de MHC dépasse 5 m.",
+    "Trophique : moyenne des valeurs indicatrices (Tichý) des espèces du relevé. Hydrique : indice de contrainte BILJOU (`biljouR`) sur SAFRAN, réserve utile par la texture IFN (`euptf2`). Bioclimat : axe 1 de P - ETP et de la température.",
+    "Forêt aléatoire (`ranger`), validation croisée spatiale par blocs, zone d'applicabilité (`aoa`), écart-type recalé sur l'erreur de validation croisée (`sd_cv`).",
+    "Istress BILJOU par cellule : ETP de Penman (`biljouR`) sur le rayonnement SAFRAN multiplié par k, rapport du rayonnement `r.sun` (GRASS, ciel clair) de la pente à celui du plat ; réserve utile uniforme par maille SAFRAN. Gradient hydrique = - Istress.",
+    "Classes par quantiles sur chaque gradient, croisement des classes, fusion des types rares avec le plus proche.",
+    "Espèces indicatrices par type (IndVal, `indicspecies`, 99 permutations) ; fertilité : hauteur dominante ramenée à l'âge de référence.",
+    "Arbre de décision (CART, `rpart`) sur les observables notés par l'IFN (pente, position topographique, humus), profondeur limitée.",
+    "R² et RMSE en validation croisée spatiale par blocs, relevés GNSS indépendants, comparaison à la carte de référence."),
+  `Référence` = c(
+    "Brief technique § 5 ; classes LiDAR HD de l'IGN",
+    "Brief technique § 4, étape 2 ; ADR 0004",
+    "Tichý et al. 2023 ; Szabó et al. 2021 (`euptf2`) ; ADR 0006",
+    "Brief technique § 4, étape 5",
+    "Dyer 2009 (adaptation non validée) ; référentiels § 25 ; ADR 0006",
+    "Gégout et al. 2008 (principe par gradients) ; brief § 4, étape 6",
+    "Brief technique § 4, étape 7",
+    "Brief technique § 4, étape 8 et § 7",
+    "Brief technique § 4, étape 9 et § 9"),
+  `Valeurs provisoires` = c(
+    "bloc de 3 x 3 dalles, tampon de 20 m",
+    "maille de 25 m ; seuil de 5 m ; BD Forêt non branchée",
+    "saison avril-septembre ; axe bioclimatique ; paramètres de végétation ; réserve utile (à vérifier)",
+    "500 arbres, 5 plis, graine 1",
+    "trouble de Linke 3,0 ; albédo 0,2 ; pas de 0,5 h ; pas de k 0,02 ; 30 cellules de contrôle par maille ; réserve utile par maille",
+    "seuils par quantiles ; fusion sous 1 % de la surface ou 15 placettes",
+    "âge de référence ; essence",
+    "profondeur 5 ; accord visé 70 %",
+    "repères du brief : R² 0,36 (trophique), 0,43 (hydrique), 0,52 (bioclimat)"),
+  `Règle des 700 m` = c(
+    "Sans objet : le LiDAR n'est jamais croisé aux placettes.",
+    "Grille seule : toute extraction aux placettes IFN est refusée (assertion bloquante).",
+    "Placettes : prédicteurs à maille large seulement (climat de 8 km).",
+    "Modèles des placettes : maille large seulement.",
+    "Variable fine calculée sur la grille seule ; Istress des placettes sans k.",
+    "Les placettes sont discrétisées avec les seuils de la carte.",
+    "Flore et arbres des placettes, aucune variable fine.",
+    "Observables du relevé IFN, sans coordonnées.",
+    "-"),
+  check.names = FALSE)
+tab(etapes_tab, larg = c(2.2, 5.0, 2.7, 2.9, 2.6))
+```
+
+```{r}
+#| results: asis
+if (synth) cat("En mode démonstration, les entrées de ces étapes sont fabriquées (voir l'état de preuve) : la chaîne s'enchaîne, mais aucun résultat n'est un résultat sur données réelles.\n") else
+  cat("Les étapes dont l'entrée manque (GBIF, relevés GNSS, référence AgroParisTech, sols) sont signalées dans l'état de preuve, jamais remplacées.", if (hors_ligne) " Hors ligne, seule la composante régionale à maille large est produite ; le LiDAR et le terrain sont calculés mais n'entrent dans aucun modèle, sauf la couche hydrique de 25 m.", "\n", sep = "")
+```
+
+## Cartes produites {#sec-cartes}
+
+Toutes les cartes sont en **Lambert-93 (EPSG:2154)**, en mètres (x = est, y = nord), sur
+une grille de 25 m, nord vers le haut ; l'échelle et la flèche du nord sont tracées sur
+chaque carte. Les cellules hors forêt (masque forestier) sont vides.
+
+```{r}
+#| results: asis
+if (raster_ok("types.tif")) {
+  r <- lire_raster("types.tif")
+  cat("Emprise cartographiée : ", terra::ncol(r), " x ", terra::nrow(r), " cellules (",
+      round((terra::xmax(r) - terra::xmin(r)) / 1000, 2), " km x ",
+      round((terra::ymax(r) - terra::ymin(r)) / 1000, 2), " km) ; x de ", terra::xmin(r), " à ",
+      terra::xmax(r), ", y de ", terra::ymin(r), " à ", terra::ymax(r), " (EPSG:2154).\n", sep = "")
+  if (!synth && (terra::ncell(r) < 2500)) cat(
+    "\n::: {.callout-important}\n**Carte réduite** : cette emprise est celle de l'extrait hors ligne",
+    " (une dalle LiDAR de 80 m x 80 m) ; elle prouve que la chaîne produit une carte, elle ne",
+    " décrit pas la sylvoécorégion.\n:::\n")
+}
+```
+
+### Carte des types de stations
+
+Types obtenus par croisement de classes aux **seuils provisoires** (quantiles, non
+validés par un écologue), les types rares étant fusionnés avec le plus proche. Le code d'un
+type est `T` (trophique), `H` (hydrique), `B` (bioclimat) suivis du numéro de classe.
+
+```{r}
+#| label: carte-types
+#| fig-height: 5.2
+#| fig-width: 6.5
+#| fig-cap: !expr 'paste0("Carte des types de stations. ", legende_crs)'
+tp <- lire_raster("types.tif")
+leg <- lire("legende_types")
+tp_f <- terra::as.factor(tp)
+levels(tp_f) <- data.frame(id = leg$id, type = leg$type)
+terra::plot(tp_f, main = "Types de stations", col = grDevices::hcl.colors(nrow(leg), "Dark 3"),
+            mar = c(3, 3, 2.5, 7), plg = list(x = "right", cex = 0.65, title = "Type"))
+echelle_nord(tp)
+```
+
+**Limites de cette carte.** Les types viennent de seuils provisoires et de modèles
+régionaux : à l'intérieur d'une maille SAFRAN de 8 km, la carte varie peu. Aucune station
+azonale (alluviale, tourbeuse, éboulis) n'est traitée. La carte oriente le diagnostic et ne
+remplace pas le sondage à la tarière.
+
+### Carte du gradient hydrique à 25 m
+
+L'indice de contrainte hydrique **Istress** (BILJOU) est calculé cellule par cellule :
+plus la valeur est grande, plus la contrainte est forte. Il module l'évapotranspiration
+par le rayonnement reçu par la pente (`is_topo`), jamais la réserve utile. Le facteur
+`k_sv` est le rapport entre le rayonnement reçu par la cellule et celui d'un terrain plat
+(moyenne des 12 facteurs mensuels, pondérée par le rayonnement de la saison de végétation) :
+supérieur à 1, la pente est plus ensoleillée que le plat. Le gradient hydrique de la
+typologie est `- is_topo` (plus haut = plus humide).
+
+```{r}
+#| label: carte-hydrique
+#| fig-height: 3.6
+#| fig-width: 7
+#| fig-cap: !expr 'paste0("Gradient hydrique de 25 m : Istress de la pente (is_topo) et facteur de rayonnement (k_sv). ", legende_crs)'
+if (raster_ok("hydrique_25m.tif")) {
+  h <- lire_raster("hydrique_25m.tif")
+  op <- graphics::par(mfrow = c(1, 2))
+  carte_continue(h[["is_topo"]], "Istress de la pente (is_topo)",
+                 col = grDevices::hcl.colors(50, "YlOrRd", rev = TRUE))
+  carte_continue(h[["k_sv"]], "Facteur de rayonnement (k_sv)",
+                 col = grDevices::hcl.colors(50, "Blue-Red 3"))
+  graphics::par(op)
+} else {
+  graphics::plot.new()
+  graphics::text(0.5, 0.5, "hydrique_25m.tif absent : carte hydrique de 25 m non calculée\n(mode démonstration)")
+}
+```
+
+**Limites de cette carte** (mission 021, adaptation non validée de Dyer 2009) : le facteur
+`k` est calculé en ciel clair et appliqué au rayonnement nuageux, ce qui surestime le
+contraste d'exposition ; les ombres du relief hors de l'emprise ne sont pas vues au bord ;
+la réserve utile est uniforme par maille SAFRAN (provisoire) ; les apports latéraux et
+l'engorgement ne sont pas captés ; aucune validation française à 25 m n'existe. Le pourtour
+de la grille est vide (pente inconnue).
+
+```{r}
+#| results: asis
+hm <- lire("hydrique_ecart_table")
+if (lignes(hm)) {
+  cat("Écart entre la table par classes de `k_sv` et le calcul direct BILJOU sur des cellules de contrôle (unités d'Istress ; sans seuil bloquant) :\n\n")
+  print(tab(hm))
+}
+```
+
+### Carte de l'incertitude
+
+Deux couches par gradient modélisé : l'écart-type de prédiction recalé sur l'erreur de
+validation croisée (`sd_cv`, **niveau d'erreur global**, pas une erreur locale) et la zone
+d'applicabilité du modèle (`aoa` : dans la zone ou hors zone ; hors zone, la prédiction est
+**à ne pas interpréter**).
+
+```{r}
+#| label: carte-incertitude-sd
+#| fig-height: 3.4
+#| fig-width: 7
+#| fig-cap: !expr 'paste0("Incertitude : écart-type de prédiction (sd_cv). ", legende_crs)'
+u <- lire_raster("incertitude.tif")
+sd_l <- grep("^sd_cv", names(u), value = TRUE)
+ao_l <- grep("^aoa", names(u), value = TRUE)
+op <- graphics::par(mfrow = c(1, max(length(sd_l), 1)))
+for (l in sd_l) carte_continue(u[[l]], paste("Écart-type", sub("^sd_cv_", "", l)),
+                               col = grDevices::hcl.colors(50, "Purples 3", rev = TRUE))
+graphics::par(op)
+```
+
+```{r}
+#| label: carte-incertitude-aoa
+#| fig-height: 3.4
+#| fig-width: 7
+#| fig-cap: !expr 'paste0("Zone d’applicabilité du modèle (aoa). ", legende_crs)'
+op <- graphics::par(mfrow = c(1, max(length(ao_l), 1)))
+for (l in ao_l) {
+  a <- terra::as.factor(u[[l]])
+  niv <- terra::levels(a)[[1]]
+  lib <- c(`0` = "hors zone", `1` = "dans la zone")
+  levels(a) <- data.frame(id = niv[[1]], zone = lib[as.character(niv[[1]])])
+  terra::plot(a, main = paste("Applicabilité", sub("^aoa_", "", l)),
+              col = c(`0` = "#d95f02", `1` = "#1b9e77")[as.character(niv[[1]])],
+              mar = c(3, 3, 2.5, 6), plg = list(x = "right", cex = 0.6))
+  echelle_nord(a)
+}
+graphics::par(op)
+```
+
+**Limites de cette carte.** En mode réel, l'incertitude ne couvre que le
+modèle trophique régional ; la carte hydrique est calculée, et l'incertitude du modèle
+régional hydrique ne la décrit pas.
+
+### Gradients prédits
+
+Gradients prédits (unités arbitraires des jeux synthétiques en démonstration).
+
+```{r}
+#| label: carte-gradients
+#| fig-height: 3.4
+#| fig-width: 7
+#| fig-cap: !expr 'paste0("Gradients trophique, hydrique et bioclimatique. ", legende_crs)'
+g <- lire_raster("gradients.tif")
+op <- graphics::par(mfrow = c(1, terra::nlyr(g)))
+for (l in names(g)) carte_continue(g[[l]], l)
+graphics::par(op)
+```
 
 ## État de preuve
 
@@ -64,40 +476,12 @@ Pour chaque étape : ce qui a tourné sur données **réelles**, **réel réduit
 de petite taille) ou **synthétique** (jeu fabriqué).
 
 ```{r}
-tab(lire("etat_de_preuve"))
-```
-
-## Gradients
-
-Gradients prédits (unités arbitraires des jeux synthétiques), puis incertitude : écart-type
-recalé sur l'erreur de validation croisée (`sd_cv`) et zone d'applicabilité (`aoa` : 1 =
-dans la zone ; 0 = hors zone, **à ne pas interpréter**).
-
-```{r}
-#| fig-height: 4
-g <- terra::rast(file.path(dossier, paste0(pre, "gradients.tif")))
-terra::plot(g, main = names(g), nc = 3)
-```
-
-```{r}
-#| fig-height: 6
-u <- terra::rast(file.path(dossier, paste0(pre, "incertitude.tif")))
-terra::plot(u, main = names(u), nc = 3)
+ep_aff <- ep
+if (!is.null(ep_aff)) names(ep_aff) <- c("Étape", "État", "Dans ce run", "Détail")[seq_along(ep_aff)]
+tab(ep_aff, larg = c(3.4, 2.2, 1.6, 8.6))
 ```
 
 ## Types de stations
-
-Types obtenus par croisement de classes aux **seuils provisoires** (quantiles, non
-validés par un écologue), les types rares étant fusionnés avec le plus proche.
-
-```{r}
-#| fig-height: 5
-tp <- terra::rast(file.path(dossier, paste0(pre, "types.tif")))
-leg <- lire("legende_types")
-tp_f <- terra::as.factor(tp)
-levels(tp_f) <- data.frame(id = leg$id, type = leg$type)
-terra::plot(tp_f, main = "Carte des types", col = grDevices::hcl.colors(nrow(leg), "Dark 3"))
-```
 
 ```{r}
 tab(lire("types"))

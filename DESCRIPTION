@@ -45,6 +45,7 @@ Suggests:
     soiltexture,
     targets,
     testthat (>= 3.0.0),
+    tinytex,
     vegan,
     whitebox,
     readxl,
