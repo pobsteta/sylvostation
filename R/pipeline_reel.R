@@ -32,8 +32,8 @@
 #' @param downloader Fonction de téléchargement, de signature de
 #'   [utils::download.file()] (remplaçable dans les tests).
 #' @param retries Nombre total de tentatives (au moins 1). Par défaut l'option
-#'   `sylvostation.download_retries`, sinon 3 (valeur provisoire ; la clé `download_retries`
-#'   de `config.yml` reste à brancher).
+#'   `sylvostation.download_retries`, sinon 3 (valeur provisoire ; en mode réel, `_targets.R`
+#'   pose l'option depuis la clé `download_retries` de `config.yml`).
 #' @param wait Attentes (secondes) avant la 2e, la 3e... tentative ; la dernière valeur
 #'   est répétée si besoin. Défaut : 5, 20, 60 (provisoire).
 #' @param sleeper Fonction d'attente (remplaçable dans les tests).
@@ -48,15 +48,19 @@ fetch_cached <- function(url, dir, offline = FALSE, downloader = utils::download
                          retries = getOption("sylvostation.download_retries", 3L),
                          wait = c(5, 20, 60), sleeper = Sys.sleep) {
   if (!is.character(url) || length(url) != 1L || !nzchar(url)) {
-    stop("`url` doit être une adresse.", call. = FALSE)
+    stop("`url` doit \u00eatre une adresse.", call. = FALSE)
   }
-  if (!is.numeric(retries) || length(retries) != 1L || !is.finite(retries) || retries < 1) {
-    stop("`retries` doit être un entier >= 1.", call. = FALSE)
+  if (!is.numeric(retries) || length(retries) != 1L || !is.finite(retries) || retries < 1 ||
+      retries != round(retries)) {
+    stop("`retries` doit \u00eatre un entier >= 1.", call. = FALSE)
+  }
+  if (!is.numeric(wait) || length(wait) < 1L || anyNA(wait) || any(wait < 0)) {
+    stop("`wait` doit contenir au moins une dur\u00e9e (s) >= 0.", call. = FALSE)
   }
   dest <- file.path(dir, basename(sub("[?#].*$", "", url)))
   if (file.exists(dest) && file.size(dest) > 0) return(dest)
   if (isTRUE(offline)) {
-    stop("Mode hors ligne : téléchargement interdit (", url, ").", call. = FALSE)
+    stop("Mode hors ligne : t\u00e9l\u00e9chargement interdit (", url, ").", call. = FALSE)
   }
   dir.create(dir, recursive = TRUE, showWarnings = FALSE)
   tmp <- paste0(dest, ".part")
@@ -85,19 +89,19 @@ fetch_cached <- function(url, dir, offline = FALSE, downloader = utils::download
     cause <- tryCatch({
       status <- downloader(url, tmp, mode = "wb", quiet = TRUE)
       if (identical(as.integer(status), 0L) && file.exists(tmp)) "" else
-        paste0("état ", paste(status, collapse = ","))
+        paste0("\u00e9tat ", paste(status, collapse = ","))
     }, error = function(e) conditionMessage(e))
     if (!nzchar(cause)) return(invisible(tmp))
     unlink(tmp)
     if (k < retries) {
       w <- wait[min(k, length(wait))]
-      message("Téléchargement en échec (tentative ", k, "/", retries, ") : ", url,
-              " — ", cause, ". Nouvelle tentative dans ", w, " s.")
+      message("T\u00e9l\u00e9chargement en \u00e9chec (tentative ", k, "/", retries, ") : ", url,
+              " \u2014 ", cause, ". Nouvelle tentative dans ", w, " s.")
       sleeper(w)
     }
   }
-  stop("Téléchargement impossible après ", retries, " tentative(s) : ", url,
-       " (dernière cause : ", cause, ").", call. = FALSE)
+  stop("T\u00e9l\u00e9chargement impossible apr\u00e8s ", retries, " tentative(s) : ", url,
+       " (derni\u00e8re cause : ", cause, ").", call. = FALSE)
 }
 
 #' Sources du mode réel (fichiers locaux ou téléchargement)

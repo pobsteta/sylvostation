@@ -25,8 +25,8 @@ fetch_cached(
 \code{\link[utils:download.file]{utils::download.file()}} (remplaçable dans les tests).}
 
 \item{retries}{Nombre total de tentatives (au moins 1). Par défaut l'option
-\code{sylvostation.download_retries}, sinon 3 (valeur provisoire ; la clé \code{download_retries}
-de \code{config.yml} reste à brancher).}
+\code{sylvostation.download_retries}, sinon 3 (valeur provisoire ; en mode réel, \verb{_targets.R}
+pose l'option depuis la clé \code{download_retries} de \code{config.yml}).}
 
 \item{wait}{Attentes (secondes) avant la 2e, la 3e... tentative ; la dernière valeur
 est répétée si besoin. Défaut : 5, 20, 60 (provisoire).}

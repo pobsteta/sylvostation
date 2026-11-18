@@ -810,3 +810,13 @@ test_that("mode réel hors ligne : 0 appel réseau, reprise après interruption,
   expect_true(any(grepl("Composante régionale seulement", ep$detail)))
   expect_true(any(grepl("non atteint (entrée absente)", ep$etat, fixed = TRUE)))
 })
+
+test_that("fetch_cached : retries entier >= 1 et wait non vide (026)", {
+  d <- tempfile("cache")
+  dir.create(d)
+  u <- "https://exemple.invalid/z.csv"
+  expect_error(fetch_cached(u, d, retries = 2.5), "retries")
+  expect_error(fetch_cached(u, d, retries = NA_real_), "retries")
+  expect_error(fetch_cached(u, d, wait = numeric(0)), "wait")
+  expect_error(fetch_cached(u, d, wait = -1), "wait")
+})
