@@ -14,7 +14,7 @@ emprise_test:
 
 # Valeurs provisoires (brief : 10-25 m et 5-10 km), à geler avant la phase 1.
 buffer_m: 5000
-resolution_m: 25
+resolution_m: 20
 
 crs: 2154
 

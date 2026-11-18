@@ -13,9 +13,11 @@ FINE_VARIABLES <- c(
   # couches de derive_terrain() (mission 005)
   "exposition_cos", "exposition_sin", "surface_drainee",
   "tpi_100", "tpi_300", "tpi_1000",
-  # facteur de rayonnement r.sun et indice hydrique de la grille de 25 m (mission 021)
+  # facteur de rayonnement r.sun et indice hydrique de la grille (mission 021). Nom sans
+  # resolution depuis la mission 025 (ancien nom : grad_hydrique_25m). Ce n'est pas
+  # `grad_hydrique`, colonne des placettes IFN (pas une variable fine).
   sprintf("k_%02d", 1:12), "k_sv", "is_topo", "nj_topo", "is_plat",
-  "grad_hydrique_25m"
+  "grad_hydrique_carte"
 )
 
 #' Variables à maille large (autorisées aux placettes IFN)
@@ -212,4 +214,10 @@ assert_crs_2154 <- function(x) {
   }
   if (is.null(names(tags)) || !key %in% names(tags)) return(NULL)
   unname(as.character(tags[[key]]))
+}
+
+# Texte « de 20 m » pour les etats de preuve (resolution_m de config.yml ; NA = non fournie).
+.res_txt <- function(res) {
+  if (is.null(res) || length(res) != 1L || is.na(res)) return("de la r\u00e9solution configur\u00e9e")
+  paste0("de ", format(res, trim = TRUE), " m")
 }

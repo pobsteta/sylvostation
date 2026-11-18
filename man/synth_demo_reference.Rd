@@ -9,7 +9,8 @@ synth_demo_reference(truth, res = 50, noise_sd = 0.3, seed = 3L)
 \arguments{
 \item{truth}{\code{SpatRaster} de \code{\link[=synth_demo_truth]{synth_demo_truth()}}.}
 
-\item{res}{Maille de la référence en mètres (50, comme la carte publiée).}
+\item{res}{Maille de la référence en mètres (50, comme la carte publiée). Si elle n'est
+pas un multiple de la maille de \code{truth} (50 m sur 20 m), moyenne par rééchantillonnage.}
 
 \item{noise_sd}{Bruit ajouté.}
 

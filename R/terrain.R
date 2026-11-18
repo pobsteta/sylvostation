@@ -1,22 +1,22 @@
 #' Agréger un MNT à des résolutions plus grossières
 #'
 #' Agrège un modèle numérique de terrain par la **moyenne** (brief technique, § 4
-#' étape 2 : indices de terrain sur 5 et 25 m, pas sur 1 m). Le facteur d'agrégation
+#' étape 2 : indices de terrain sur 5 m puis résumés à la maille de sortie, pas sur 1 m). Le facteur d'agrégation
 #' doit être entier ; si la maille d'origine est alignée sur un multiple de `res`
-#' (ADR 0004 : origine de la grille de 25 m sur un multiple de 50 m), la grille
+#' (ADR 0007 : grille de `resolution_m`, 20 m, d'origine multiple de 20 m), la grille
 #' agrégée l'est aussi.
 #'
 #' @param dtm `SpatRaster` à une couche, en Lambert-93 (EPSG:2154), à maille carrée.
 #' @param res Résolutions cibles, en mètres. Une résolution égale à celle du MNT le
 #'   renvoie tel quel ; une résolution plus fine est refusée.
-#' @return Une liste nommée (`res_5`, `res_25`, ...) de `SpatRaster`.
+#' @return Une liste nommée (`res_5`, `res_20`, ...) de `SpatRaster`.
 #' @examples
 #' r <- terra::rast(nrows = 100, ncols = 100, xmin = 980000, xmax = 980100,
 #'                  ymin = 6800000, ymax = 6800100, crs = "EPSG:2154")
 #' terra::values(r) <- seq_len(terra::ncell(r))
-#' names(aggregate_dtm(r, res = c(5, 25)))
+#' names(aggregate_dtm(r, res = c(5, 20)))
 #' @export
-aggregate_dtm <- function(dtm, res = c(5, 25)) {
+aggregate_dtm <- function(dtm, res = c(5, 20)) {
   .check_dtm(dtm)
   if (!is.numeric(res) || !length(res) || anyNA(res) || any(res <= 0)) {
     stop("`res` doit \u00eatre un vecteur de r\u00e9solutions positives (m).", call. = FALSE)
@@ -91,7 +91,7 @@ aggregate_dtm <- function(dtm, res = c(5, 25)) {
 #'   de Duffie et Beckman (*Solar Engineering of Thermal Processes*, éq. 1.6.2 et
 #'   1.10.3). Indice relatif d'exposition, non un flux au sol.
 #'
-#' Choisir la résolution en amont avec [aggregate_dtm()] (5 ou 25 m, ADR 0004). Le
+#' Choisir la résolution en amont avec [aggregate_dtm()] (5 m puis `resolution_m`, ADR 0007). Le
 #' pourtour d'une cellule du MNT est `NA` pour la pente, l'exposition et les courbures.
 #'
 #' @param dtm `SpatRaster` à une couche, EPSG:2154, maille carrée, altitudes en mètres.
@@ -398,12 +398,14 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
 #'
 #' Coût mesuré (GRASS 8.4.2, 3 fils, 2026-11-18, mission 021) : 4,1 s par jour type
 #' avec ombres et 0,9 s pour le plat sur 360 000 cellules de 25 m (225 dalles), soit
-#' environ une minute pour les 12 mois ; plus de 10 minutes par jour à 5 m.
+#' environ une minute pour les 12 mois ; plus de 10 minutes par jour à 5 m. Mesure de la
+#' mission 025 (2026-11-18, machine chargée, 1 cœur disponible, 12 mois avec ombres) : 36 s
+#' pour 90 000 cellules de 20 m et 301 s pour 562 500 cellules de 20 m (225 dalles).
 #'
 #' k est une variable **fine** (`k_01` à `k_12`, voir [FINE_VARIABLES]) : jamais aux
 #' placettes IFN ([assert_no_fine_extract_on_ifn()]).
 #'
-#' @param dtm `SpatRaster` à une couche, EPSG:2154, maille carrée (25 m dans le pipeline),
+#' @param dtm `SpatRaster` à une couche, EPSG:2154, maille carrée (`resolution_m` dans le pipeline),
 #'   altitudes en mètres.
 #' @param days Jours de l'année des 12 mois (jours types de Klein 1977).
 #' @param linke,albedo Trouble de Linke et albédo de `r.sun` (provisoires).

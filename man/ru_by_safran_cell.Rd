@@ -22,8 +22,8 @@ EPSG:2154) : mailles dont le centre est à moins d'une demi-diagonale (5,7 km).
 \code{data.frame} : \code{maille}, \code{ru_mm}, \code{n_placettes}, \code{origine}, \code{statut}.
 }
 \description{
-Réserve utile \strong{provisoire} de la carte hydrique de 25 m (mission 021) : aucune
-source ne donne la réserve utile à 25 m (\code{docs/referentiels.md} § 25.3), et aucune
+Réserve utile \strong{provisoire} de la carte hydrique (mission 021) : aucune
+source ne donne la réserve utile à cette échelle (\code{docs/referentiels.md} § 25.3), et aucune
 modulation topographique publiée n'a été trouvée (§ 25.2) ; la réserve utile est donc
 \strong{uniforme dans chaque maille SAFRAN de 8 km}, égale à la médiane des réserves utiles
 (euptf2, \code{\link[=ru_from_texture]{ru_from_texture()}}) des placettes IFN de la maille. Une maille sans placette

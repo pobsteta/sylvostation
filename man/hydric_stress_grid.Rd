@@ -2,7 +2,7 @@
 % Please edit documentation in R/hydrique.R
 \name{hydric_stress_grid}
 \alias{hydric_stress_grid}
-\title{Carte de l'indice de contrainte hydrique à 25 m : BILJOU modulé par le rayonnement}
+\title{Carte de l'indice de contrainte hydrique à la maille de sortie : BILJOU modulé par le rayonnement}
 \usage{
 hydric_stress_grid(
   k,
@@ -51,7 +51,7 @@ ou \code{SpatRaster} (mm) sur la grille de \code{k}.}
 }
 \value{
 Grille : \code{SpatRaster} \code{is_topo}, \code{nj_topo}, \code{is_plat}, \code{k_sv}, \code{ru_maille},
-\code{grad_hydrique_25m} (= \code{-is_topo}, plus haut = plus humide). Points : \code{points} avec ces
+\code{grad_hydrique_carte} (= \code{-is_topo}, plus haut = plus humide). Points : \code{points} avec ces
 colonnes et \code{maille_safran}. Attributs \code{methode}, \code{k_methode}, \code{ecart}, \code{mailles},
 \code{parametres}, \code{sens}, \code{repli}.
 }

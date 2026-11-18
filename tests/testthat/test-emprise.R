@@ -164,3 +164,22 @@ test_that(".tiles_from_meta signale les champs manquants", {
   m$url_npl <- NULL
   expect_error(sylvostation:::.tiles_from_meta(m, emprise_test), "url_npl")
 })
+
+test_that("build_grid a 20 m : bords multiples de 20, point connu dans la bonne cellule (Lambert-93)", {
+  g <- build_grid(c(xmin = 1007003, ymin = 6790010, xmax = 1007181, ymax = 6790099), res = 20)
+  e <- terra::ext(g)
+  expect_equal(unname(as.vector(e)), c(1007000, 1007200, 6790000, 6790100))
+  expect_equal(unname(c(e$xmin, e$xmax, e$ymin, e$ymax) %% 20), c(0, 0, 0, 0))
+  expect_equal(terra::res(g), c(20, 20))
+  expect_equal(terra::crs(g, describe = TRUE)$code, "2154")
+  # x = est 1007050 -> colonne floor(50 / 20) + 1 = 3 ; y = nord 6790030 ->
+  # ligne floor((6790100 - 6790030) / 20) + 1 = 4 (ligne 1 = nord)
+  cel <- terra::cellFromXY(g, cbind(1007050, 6790030))
+  expect_equal(unname(terra::rowColFromCell(g, cel)), cbind(4, 3))
+  # x et y inverses : hors de la grille
+  expect_true(is.na(terra::cellFromXY(g, cbind(6790030, 1007050))))
+  # deux emprises decalees : grilles superposables cellule a cellule
+  g2 <- build_grid(c(xmin = 1007111, ymin = 6790060, xmax = 1007333, ymax = 6790222), 20)
+  expect_equal((terra::xmin(g2) - terra::xmin(g)) %% 20, 0)
+  expect_equal((terra::ymax(g2) - terra::ymax(g)) %% 20, 0)
+})

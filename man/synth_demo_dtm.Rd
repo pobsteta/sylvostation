@@ -7,8 +7,8 @@
 synth_demo_dtm(grid, seed = 1L)
 }
 \arguments{
-\item{grid}{\code{SpatRaster} vide en EPSG:2154 (voir \code{\link[=build_grid]{build_grid()}}), de 25 m, pas plus
-de 240 x 240 cellules.}
+\item{grid}{\code{SpatRaster} vide en EPSG:2154 (voir \code{\link[=build_grid]{build_grid()}}), à \code{resolution_m}, pas plus
+grand que l'emprise de \code{synth_dtm.tif} (6 000 m de côté).}
 
 \item{seed}{Graine du relief aléatoire.}
 }
@@ -17,12 +17,13 @@ Un \code{SpatRaster} à une couche \code{z} (mètres) sur la grille de \code{gri
 }
 \description{
 Prend le plan incliné de \code{inst/extdata/synth_dtm.tif} (surface analytique
-synthétique de 240 x 240 cellules de 25 m), en découpe autant de cellules que
+synthétique de 240 x 240 cellules de 25 m, jeu fabriqué), le ramène par interpolation
+bilinéaire à la maille de \code{grid} (20 m depuis la mission 025), en découpe autant de cellules que
 \code{grid}, replace le résultat \strong{sur l'emprise de \code{grid}} (pour que la démo se situe
 sur le massif test) et y ajoute un relief lisse aléatoire (écart-type 40 m) pour que
 pente, TWI et TPI varient. \strong{Entièrement synthétique} : balise \code{synthetic = TRUE}.
 }
 \examples{
-g <- build_grid(c(xmin = 1007000, ymin = 6790000, xmax = 1008000, ymax = 6791000), 25)
+g <- build_grid(c(xmin = 1007000, ymin = 6790000, xmax = 1008000, ymax = 6791000), 20)
 terra::res(synth_demo_dtm(g))
 }

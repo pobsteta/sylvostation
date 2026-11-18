@@ -16,7 +16,7 @@ cfg_reel <- function(...) {
   base <- list(ser_code = "D11",
                emprise_test = list(xmin = 1007000, ymin = 6790000, xmax = 1022000,
                                    ymax = 6805000, crs = 2154),
-               buffer_m = 5000, resolution_m = 25, crs = 2154, data_dir = "data",
+               buffer_m = 5000, resolution_m = 20, crs = 2154, data_dir = "data",
                laz_dir = "data/laz", out_dir = "data/sorties", ifn_precision_m = 700,
                demo = FALSE, offline = TRUE)
   yaml::write_yaml(utils::modifyList(base, list(...)), f)
@@ -314,7 +314,7 @@ test_that("run_tile_block et mosaic_tiles sur la dalle LiDAR réelle", {
   expect_true(e$xmin <= 1015500 && e$xmax >= 1015580)
   expect_error(mosaic_tiles(f, "mnt", tile_ids = c("1015-6794", "1016-6794")), "manquantes")
   expect_error(mosaic_tiles(character(0), "mnt"), "Aucun")
-  fm <- forest_mask(f, real_grid(sf::st_bbox(e, crs = sf::st_crs(2154)), m, 25))
+  fm <- forest_mask(f, real_grid(sf::st_bbox(e, crs = sf::st_crs(2154)), m, 20))
   expect_identical(names(fm), c("foret", "part_couvert"))
   expect_gt(sum(!is.na(terra::values(fm[["foret"]]))), 0)
 })
@@ -665,7 +665,7 @@ test_that("evidence_table_real : ligne 6 bis de la carte hydrique de 25 m (missi
   expect_true(any(grepl("Composante régionale seulement", e$detail)))
   expect_true(any(grepl("validation croisée", e$detail[grepl("^10", e$etape)])))
   expect_true(all(e$etat[e$dans_ce_run == "oui"] == "réel réduit"))
-  expect_true(grepl("seuils de la carte de 25 m", l$detail, fixed = TRUE))
+  expect_true(grepl("seuils de la carte hydrique", l$detail, fixed = TRUE))
   expect_true(grepl("merge_rare", l$detail, fixed = TRUE))
   # toute autre méthode que biljou_topo : état « repli »
   for (m in c("biljou_climatique", "climatique_etp_safran", "repli_ru")) {
@@ -683,10 +683,10 @@ test_that("write_hydric_grid : COG ou GeoTIFF, prefixe synth_, masque forestier"
   r <- terra::rast(xmin = 1015500, xmax = 1015550, ymin = 6793500, ymax = 6793550,
                    resolution = 25, crs = "EPSG:2154", nlyrs = 6)
   terra::values(r) <- matrix(c(10, 20, 30, 40), 4, 6)
-  names(r) <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille", "grad_hydrique_25m")
+  names(r) <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille", "grad_hydrique_carte")
   d <- tempfile("hyd")
   w <- write_hydric_grid(r, d, "D11")
-  expect_identical(basename(w$fichier), "hydrique_25m.tif")
+  expect_identical(basename(w$fichier), "hydrique.tif")
   expect_true(w$format %in% c("COG", "GTiff"))
   h <- terra::rast(w$fichier)
   expect_identical(names(h), c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille"))
@@ -697,7 +697,7 @@ test_that("write_hydric_grid : COG ou GeoTIFF, prefixe synth_, masque forestier"
   terra::values(foret) <- c(1, NA, 1, NA)
   names(foret) <- "foret"
   ws <- write_hydric_grid(r, d, "D11", forest = foret, synthetic = TRUE)
-  expect_identical(basename(ws$fichier), "synth_hydrique_25m.tif")
+  expect_identical(basename(ws$fichier), "synth_hydrique.tif")
   expect_equal(terra::values(terra::rast(ws$fichier))[, "is_topo"], c(10, NA, 30, NA))
   expect_error(write_hydric_grid(r[[1:2]], d, "D11"), "hydric_stress_grid")
   expect_error(write_hydric_grid(terra::project(r, "EPSG:4326"), d, "D11"), "2154")
@@ -783,10 +783,10 @@ test_that("mode réel hors ligne : 0 appel réseau, reprise après interruption,
   ty <- terra::rast(file.path(out, "types.tif"))
   expect_error(assert_crs_2154(ty), NA)
   e <- terra::ext(ty)
-  expect_equal(c(e$xmin, e$ymax) %% 50, c(xmin = 0, ymax = 0))
+  expect_equal(c(e$xmin, e$ymax) %% cfg$resolution_m, c(xmin = 0, ymax = 0))
   cel <- terra::cellFromXY(ty, cbind(1015540, 6793540))
-  col <- floor((1015540 - e$xmin) / 25) + 1
-  lig <- floor((e$ymax - 6793540) / 25) + 1
+  col <- floor((1015540 - e$xmin) / cfg$resolution_m) + 1
+  lig <- floor((e$ymax - 6793540) / cfg$resolution_m) + 1
   expect_equal(unname(terra::rowColFromCell(ty, cel)[1, ]), unname(c(lig, col)))
   expect_false(is.na(terra::values(ty)[cel, 1]))
 
@@ -819,4 +819,36 @@ test_that("fetch_cached : retries entier >= 1 et wait non vide (026)", {
   expect_error(fetch_cached(u, d, retries = NA_real_), "retries")
   expect_error(fetch_cached(u, d, wait = numeric(0)), "wait")
   expect_error(fetch_cached(u, d, wait = -1), "wait")
+})
+
+test_that("forest_mask a 20 m : la moitie de la cellule suit la resolution de la grille (mission 025)", {
+  # MHC a 1 m ; cellule de 20 m. Colonnes ouest (x < 1015510) boisees : la cellule de
+  # x 1015500-1015520 est boisee a exactement 50 %, celle de 1015520-1015540 a 0 %.
+  chm <- terra::rast(xmin = 1015500, xmax = 1015540, ymin = 6793500, ymax = 6793520,
+                     resolution = 1, crs = "EPSG:2154")
+  xy <- terra::xyFromCell(chm, seq_len(terra::ncell(chm)))  # x = est, y = nord
+  terra::values(chm) <- ifelse(xy[, 1] < 1015510, 10, 1)
+  g <- build_grid(c(1015500, 6793500, 1015540, 6793520), 20)
+  expect_equal(terra::res(g), c(20, 20))
+  m <- forest_mask(chm, g)
+  v <- terra::extract(m, cbind(c(1015510, 1015530), c(6793510, 6793510)))
+  expect_equal(v$part_couvert, c(0.5, 0))
+  expect_equal(v$foret, c(1, NA))   # 50 % : seuil atteint (>=), 0 % : hors foret
+  # a moins de la moitie : non boisee
+  terra::values(chm) <- ifelse(xy[, 1] < 1015509, 10, 1)
+  expect_equal(terra::extract(forest_mask(chm, g), cbind(1015510, 6793510))$foret, NA_real_)
+})
+
+test_that("evidence_table_real et evidence_table : la maille vient de resolution_m (mission 025)", {
+  e20 <- evidence_table_real(list(offline = TRUE, ser_code = "D11", n_tiles = 1, n_ifn = 10,
+                                  gnss = FALSE, reference = FALSE, resolution_m = 20,
+                                  forest_mask = TRUE, n_cells = 5))
+  expect_true(any(grepl("grille de 20 m", e20$detail, fixed = TRUE)))
+  expect_true(any(grepl("Cellule de 20 m", e20$detail, fixed = TRUE)))
+  expect_false(any(grepl("25 m", e20$detail, fixed = TRUE)))
+  e30 <- evidence_table_real(list(offline = TRUE, ser_code = "D11", n_tiles = 1, n_ifn = 10,
+                                  gnss = FALSE, reference = FALSE, resolution_m = 30))
+  expect_true(any(grepl("grille de 30 m", e30$detail, fixed = TRUE)))
+  d <- evidence_table(n_ifn = 3, resolution_m = 20)
+  expect_true(grepl("grille de 20 m", d$detail[1], fixed = TRUE))
 })

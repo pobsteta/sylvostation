@@ -3,7 +3,7 @@ ecrire_config <- function(modif = list()) {
     ser_code = "D11",
     emprise_test = list(xmin = 1007000, ymin = 6790000, xmax = 1022000,
                         ymax = 6805000, crs = 2154),
-    buffer_m = 5000, resolution_m = 25, crs = 2154,
+    buffer_m = 5000, resolution_m = 20, crs = 2154,
     data_dir = "data", laz_dir = "data/laz", out_dir = "data/sorties",
     ifn_precision_m = 700
   )
@@ -63,4 +63,11 @@ test_that("cles de la carte hydrique de 25 m : defauts provisoires et controles"
   expect_error(read_config(ecrire_config(list(solar_albedo = 1.5))), "solar_albedo")
   expect_error(read_config(ecrire_config(list(hydric_pas_k = 0))), "hydric_pas_k")
   expect_error(read_config(ecrire_config(list(hydric_n_controle = 2.5))), "hydric_n_controle")
+})
+
+test_that("config.yml du depot : grille de 20 m (mission 025, ADR 0007)", {
+  f <- testthat::test_path("..", "..", "config.yml")
+  skip_if_not(file.exists(f))
+  cfg <- read_config(f)
+  expect_equal(cfg$resolution_m, 20)
 })

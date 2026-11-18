@@ -22,6 +22,6 @@ Ramène le climat kilométrique sur la grille (bilinéaire) : \code{coarse_p_etp
 \examples{
 s <- read_safran(system.file("extdata", "safran_sim2_12mailles_extrait.csv",
                               package = "sylvostation"))
-g <- build_grid(c(1015500, 6793500, 1015600, 6793600), 25)
+g <- build_grid(c(1015500, 6793500, 1015600, 6793600), 20)
 names(coarse_predictors(safran_climate(s), g))
 }

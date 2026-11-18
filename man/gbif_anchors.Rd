@@ -37,7 +37,7 @@ occ <- sf::st_as_sf(data.frame(x = c(1015510, 1015520), y = 6793510,
                                loc_precision_m = c(5, 12)),
                     coords = c("x", "y"), crs = 2154)
 r <- terra::rast(xmin = 1015500, xmax = 1015600, ymin = 6793500, ymax = 6793600,
-                 resolution = 25, crs = "EPSG:2154", vals = 1)
+                 resolution = 20, crs = "EPSG:2154", vals = 1)
 names(r) <- "pente"
 gbif_anchors(cel, occ, r)$loc_precision_m
 }

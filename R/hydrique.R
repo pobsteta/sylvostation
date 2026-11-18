@@ -574,8 +574,8 @@ hydric_stress <- function(x, safran = NULL, ru_col = "ru_mm", annees = NULL,
 
 #' Réserve utile uniforme par maille SAFRAN (médiane des placettes IFN)
 #'
-#' Réserve utile **provisoire** de la carte hydrique de 25 m (mission 021) : aucune
-#' source ne donne la réserve utile à 25 m (`docs/referentiels.md` § 25.3), et aucune
+#' Réserve utile **provisoire** de la carte hydrique (mission 021) : aucune
+#' source ne donne la réserve utile à cette échelle (`docs/referentiels.md` § 25.3), et aucune
 #' modulation topographique publiée n'a été trouvée (§ 25.2) ; la réserve utile est donc
 #' **uniforme dans chaque maille SAFRAN de 8 km**, égale à la médiane des réserves utiles
 #' (euptf2, [ru_from_texture()]) des placettes IFN de la maille. Une maille sans placette
@@ -675,7 +675,7 @@ ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm") 
   V[cbind(n, j)] * (1 - t) + V[cbind(n, j + 1)] * t
 }
 
-#' Carte de l'indice de contrainte hydrique à 25 m : BILJOU modulé par le rayonnement
+#' Carte de l'indice de contrainte hydrique à la maille de sortie : BILJOU modulé par le rayonnement
 #'
 #' Descente d'échelle de l'indice `Istress` de BILJOU (ADR 0006) par la méthode A de
 #' `docs/referentiels.md` § 25.4 (adaptation **non validée** de Dyer 2009) : l'ETP est
@@ -737,7 +737,7 @@ ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm") 
 #' @param seed Graine du tirage des cellules de contrôle.
 #' @param k_methode Méthode de `k` (`attr(k, "methode")` par défaut).
 #' @return Grille : `SpatRaster` `is_topo`, `nj_topo`, `is_plat`, `k_sv`, `ru_maille`,
-#'   `grad_hydrique_25m` (= `-is_topo`, plus haut = plus humide). Points : `points` avec ces
+#'   `grad_hydrique_carte` (= `-is_topo`, plus haut = plus humide). Points : `points` avec ces
 #'   colonnes et `maille_safran`. Attributs `methode`, `k_methode`, `ecart`, `mailles`,
 #'   `parametres`, `sens`, `repli`.
 #' @examples
@@ -802,7 +802,7 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
   colnames(K) <- NULL
   valid <- stats::complete.cases(K)
 
-  noms <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille", "grad_hydrique_25m")
+  noms <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille", "grad_hydrique_carte")
   rendre <- function(res, methode, ecart = NULL, mailles = NULL, repli = NULL) {
     if (pts) {
       out <- points
@@ -838,7 +838,7 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
   res[, "ru_maille"] <- ru_c
   if (!is.null(raison)) {
     warning("Carte hydrique en repli sur la r\u00e9serve utile : ", raison, ".", call. = FALSE)
-    res[, "grad_hydrique_25m"] <- ru_c
+    res[, "grad_hydrique_carte"] <- ru_c
     return(rendre(res, "repli_ru", repli = raison))
   }
 
@@ -876,7 +876,7 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
       res[i, "nj_topo"] <- .interp1(U, r[, "nj"], ru_c[i])
     }
     res[, "is_plat"] <- res[, "is_topo"]
-    res[, "grad_hydrique_25m"] <- -res[, "is_topo"]
+    res[, "grad_hydrique_carte"] <- -res[, "is_topo"]
     return(rendre(res, "climatique_etp_safran", repli = msg))
   }
 
@@ -965,7 +965,7 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
     infos[[m]] <- data.frame(maille = m, latitude = lat, altitude = alt, n_cellules = length(i),
                              n_noeuds_k = length(knodes), n_noeuds_ru = length(U))
   }
-  res[, "grad_hydrique_25m"] <- -res[, "is_topo"]
+  res[, "grad_hydrique_carte"] <- -res[, "is_topo"]
   methode <- if (identical(k_methode, "climatique")) "biljou_climatique" else "biljou_topo"
   ecart <- if (length(ecarts)) do.call(rbind, ecarts) else
     data.frame(maille = character(), n_controle = integer(), is_direct_moyen = numeric(),
@@ -977,9 +977,9 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
          repli = if (methode == "biljou_climatique") "k = 1 (GRASS absent)" else NULL)
 }
 
-#' Écrire les couches de la carte hydrique de 25 m
+#' Écrire les couches de la carte hydrique
 #'
-#' Écrit `hydrique_25m.tif` dans `out_dir/<ser_code>/` (couches `is_topo`, `nj_topo`,
+#' Écrit `hydrique.tif` dans `out_dir/<ser_code>/` (couches `is_topo`, `nj_topo`,
 #' `is_plat`, `k_sv`, `ru_maille` de [hydric_stress_grid()]), en **COG** si le pilote
 #' GDAL `COG` est disponible, sinon en GeoTIFF tuilé compressé, comme [write_outputs()].
 #' Si `synthetic = TRUE`, le fichier est préfixé `synth_` (CLAUDE.md). Les cellules hors
@@ -994,7 +994,7 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
 #' @return Un `data.frame` (`fichier`, `format`), de façon invisible.
 #' @examples
 #' r <- terra::rast(xmin = 1015500, xmax = 1015550, ymin = 6793500, ymax = 6793550,
-#'                  resolution = 25, crs = "EPSG:2154", nlyrs = 5)
+#'                  resolution = 20, crs = "EPSG:2154", nlyrs = 5)
 #' terra::values(r) <- matrix(1, 4, 5)
 #' names(r) <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille")
 #' w <- write_hydric_grid(r, tempdir(), "D11", synthetic = TRUE)
@@ -1021,7 +1021,7 @@ write_hydric_grid <- function(r, out_dir, ser_code, forest = NULL, synthetic = F
   }
   dir <- file.path(out_dir, ser_code)
   dir.create(dir, recursive = TRUE, showWarnings = FALSE)
-  f <- file.path(dir, paste0(if (isTRUE(synthetic)) "synth_" else "", "hydrique_25m.tif"))
+  f <- file.path(dir, paste0(if (isTRUE(synthetic)) "synth_" else "", "hydrique.tif"))
   fmt <- .write_raster_cog(h, f, cog)
   invisible(data.frame(fichier = f, format = fmt, stringsAsFactors = FALSE))
 }

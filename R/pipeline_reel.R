@@ -123,7 +123,7 @@ fetch_cached <- function(url, dir, offline = FALSE, downloader = utils::download
 #' f <- tempfile(fileext = ".yml")
 #' writeLines(c('ser_code: "D11"',
 #'   "emprise_test: {xmin: 1007000, ymin: 6790000, xmax: 1022000, ymax: 6805000, crs: 2154}",
-#'   "buffer_m: 5000", "resolution_m: 25", "crs: 2154", "data_dir: data",
+#'   "buffer_m: 5000", "resolution_m: 20", "crs: 2154", "data_dir: data",
 #'   "laz_dir: data/laz", "out_dir: data/sorties", "ifn_precision_m: 700",
 #'   "demo: false", "offline: true"), f)
 #' names(real_sources(read_config(f)))
@@ -474,7 +474,7 @@ mosaic_tiles <- function(files, kind = c("mnt", "mhc"), fact = 5, tile_ids = NUL
 #' @examples
 #' chm <- terra::rast(xmin = 1015500, xmax = 1015550, ymin = 6793500, ymax = 6793550,
 #'                    resolution = 1, crs = "EPSG:2154", vals = 10)
-#' g <- build_grid(c(1015500, 6793500, 1015550, 6793550), 25)
+#' g <- build_grid(c(1015500, 6793500, 1015550, 6793550), 20)
 #' forest_mask(chm, g)
 #' @export
 forest_mask <- function(files, grid, height = 5, min_share = 0.5) {
@@ -500,7 +500,7 @@ forest_mask <- function(files, grid, height = 5, min_share = 0.5) {
 
 #' Grille de travail du mode réel
 #'
-#' Grille de `res` m (origine multiple de `res`, ADR 0004) sur l'intersection de
+#' Grille de `res` m (origine multiple de `res`, ADR 0007) sur l'intersection de
 #' l'emprise et de la partie renseignée du MNT (les dalles traitées).
 #'
 #' @param emprise `sfc` de [real_extent()].
@@ -512,7 +512,7 @@ forest_mask <- function(files, grid, height = 5, min_share = 0.5) {
 #'                  resolution = 5, crs = "EPSG:2154", vals = 1)
 #' e <- sf::st_as_sfc(sf::st_bbox(c(xmin = 1007000, ymin = 6790000, xmax = 1022000,
 #'                    ymax = 6805000), crs = sf::st_crs(2154)))
-#' terra::ext(real_grid(e, d, 25))
+#' terra::ext(real_grid(e, d, 20))
 #' @export
 real_grid <- function(emprise, dtm, res) {
   assert_crs_2154(dtm)
@@ -544,7 +544,7 @@ real_grid <- function(emprise, dtm, res) {
 #' \donttest{
 #' f <- system.file("extdata", "synth_dtm.tif", package = "sylvostation")
 #' d <- terra::rast(f)
-#' g <- build_grid(terra::ext(d)[c(1, 3, 2, 4)], 25)
+#' g <- build_grid(terra::ext(d)[c(1, 3, 2, 4)], 20)
 #' suppressWarnings(names(real_terrain(d, g, mrvbf = FALSE)))
 #' }
 #' @export
@@ -748,7 +748,7 @@ safran_climate <- function(safran, months = 4:9, res = 1000) {
 #' @examples
 #' s <- read_safran(system.file("extdata", "safran_sim2_12mailles_extrait.csv",
 #'                               package = "sylvostation"))
-#' g <- build_grid(c(1015500, 6793500, 1015600, 6793600), 25)
+#' g <- build_grid(c(1015500, 6793500, 1015600, 6793600), 20)
 #' names(coarse_predictors(safran_climate(s), g))
 #' @export
 coarse_predictors <- function(climat, grid) {
@@ -1120,7 +1120,7 @@ real_type_legend <- function(legend) {
 #'   `greco`, `mrvbf` (couche calculée ?), `empty_layers`, `hydro_n`, `methode_hydrique`, `n_gbif`
 #'   (`NA` hors ligne), `soils` (logique), `forest_mask` (logique), `n_cells`,
 #'   `n_types`, `key` (logique), `gnss` (logique), `reference` (logique),
-#'   `taxref_version`, `safran_annees`, et pour la carte hydrique de 25 m (mission 021)
+#'   `taxref_version`, `safran_annees`, et pour la carte hydrique (mission 021) et `resolution_m` (m, `config.yml`)
 #'   `methode_hydrique_carte`, `k_methode`, `ru_origine` (texte), `ecart_moyen_abs`,
 #'   `ecart_max_abs`, `n_controle`. Sans `methode_hydrique_carte`, la ligne « 6 bis » dit
 #'   que la carte n'a pas été calculée.
@@ -1139,9 +1139,10 @@ evidence_table_real <- function(f) {
                stringsAsFactors = FALSE)
   }
   n_gbif <- g("n_gbif")
+  maille <- .res_txt(g("resolution_m"))
   rbind(
     e("1. Emprise et grille", reel,
-      paste0("SER ", g("ser_code"), src, " ; grille de 25 m sur les dalles trait\u00e9es.")),
+      paste0("SER ", g("ser_code"), src, " ; grille ", maille, " sur les dalles trait\u00e9es.")),
     e("2. LiDAR HD et MNT", reel, paste0(g("n_tiles"), " dalle(s) LiDAR HD trait\u00e9e(s)", src,
                                          " ; MNT et MHC \u00e0 1 m, mosa\u00efque \u00e0 5 m.")),
     e("3. D\u00e9riv\u00e9s du terrain", reel,
@@ -1175,13 +1176,13 @@ evidence_table_real <- function(f) {
         "Aucune couche de sols fournie (cl\u00e9 soil_paths absente) ; GlobalSoilMap introuvable (r\u00e9f\u00e9rentiels \u00a7 18).",
       dans = if (isTRUE(g("soils"))) "oui" else "non"),
     e("9. Masque forestier (MHC > 5 m)", if (isTRUE(g("forest_mask"))) reel else "non ex\u00e9cut\u00e9",
-      paste0("Cellule de 25 m foresti\u00e8re si au moins la moiti\u00e9 de ses pixels du MHC d\u00e9passe 5 m ",
+      paste0("Cellule ", maille, " foresti\u00e8re si au moins la moiti\u00e9 de ses pixels du MHC d\u00e9passe 5 m ",
              "(seuil provisoire) ; BD For\u00eat non branch\u00e9e. ", g("n_cells"), " cellule(s) foresti\u00e8re(s)."),
       dans = if (isTRUE(g("forest_mask"))) "oui" else "non"),
     e("10. Mod\u00e8les, validation crois\u00e9e spatiale, zone d'applicabilit\u00e9", reel,
       paste0("Composante r\u00e9gionale seulement : placettes IFN et pr\u00e9dicteurs \u00e0 maille large (climat SAFRAN). ",
              if (!is.null(f$methode_hydrique_carte)) paste0(
-               "Hydrique : la carte est l'indice Istress de 25 m calcul\u00e9 (ligne 6 bis) ; le mod\u00e8le ",
+               "Hydrique : la carte est l'indice Istress ", maille, " calcul\u00e9 (ligne 6 bis) ; le mod\u00e8le ",
                "r\u00e9gional hydrique ne sert qu'\u00e0 la validation crois\u00e9e. ") else "",
              if (off || is.na(n_gbif) || n_gbif == 0) "Composante locale (pr\u00e9dicteurs fins, ancrages GBIF) non ex\u00e9cut\u00e9e." else
                "Composante locale trophique sur les ancrages GBIF.")),
@@ -1214,12 +1215,13 @@ evidence_table_real <- function(f) {
   )
 }
 
-# Ligne « 6 bis » de l'etat de preuve : carte hydrique de 25 m (mission 021).
+# Ligne « 6 bis » de l'etat de preuve : carte hydrique (mission 021).
 .evidence_hydric_grid <- function(f, reel, e) {
+  maille <- .res_txt(f$resolution_m)
   m <- f$methode_hydrique_carte
-  etape <- "6 bis. Carte hydrique de 25 m (BILJOU, rayonnement de la pente)"
+  etape <- "6 bis. Carte hydrique (BILJOU, rayonnement de la pente)"
   if (is.null(m)) {
-    return(e(etape, "non ex\u00e9cut\u00e9", "Carte hydrique de 25 m non calcul\u00e9e.", dans = "non"))
+    return(e(etape, "non ex\u00e9cut\u00e9", "Carte hydrique non calcul\u00e9e.", dans = "non"))
   }
   chiffre <- function(x) if (is.null(x) || !length(x) || is.na(x)) "NA" else format(signif(x, 3))
   quoi <- switch(m,
@@ -1234,7 +1236,7 @@ evidence_table_real <- function(f) {
   # etat \u00ab repli \u00bb des que la carte n'est pas modulee par le rayonnement r.sun
   etat <- if (identical(m, "biljou_topo")) reel else "repli"
   e(etape, etat, paste0(
-    "Istress \u00e0 25 m = BILJOU(ETP, P et RU de la maille SAFRAN) ; m\u00e9thode ", m, " (", quoi,
+    "Istress ", maille, " = BILJOU(ETP, P et RU de la maille SAFRAN) ; m\u00e9thode ", m, " (", quoi,
     ") ; k : ", if (is.null(f$k_methode)) "NA" else f$k_methode,
     ". Plat de r\u00e9f\u00e9rence par la m\u00eame formule (k = 1). ",
     "RU uniforme par maille SAFRAN, provisoire : m\u00e9diane euptf2 des placettes IFN de la maille (",
@@ -1242,10 +1244,10 @@ evidence_table_real <- function(f) {
     "), jamais modul\u00e9e par la topographie. \u00c9cart de la table au calcul direct (",
     chiffre(f$n_controle), " cellule(s) de contr\u00f4le) : moyen ", chiffre(f$ecart_moyen_abs),
     ", maximal ", chiffre(f$ecart_max_abs), " (unit\u00e9s d'Istress). ",
-    "La couche hydric de la carte est -Istress de 25 m. Placettes IFN : Istress sans k, sur la ",
+    "La couche hydric de la carte est -Istress ", maille, ". Placettes IFN : Istress sans k, sur la ",
     "RU de la placette (r\u00e8gle des 700 m) ; carte et placettes ne sont pas \u00e0 la m\u00eame ",
     "\u00e9chelle (RU de la placette contre m\u00e9diane de la maille, plat contre pente). ",
-    "Les placettes IFN sont discr\u00e9tis\u00e9es avec les seuils de la carte de 25 m alors que leur ",
+    "Les placettes IFN sont discr\u00e9tis\u00e9es avec les seuils de la carte hydrique alors que leur ",
     "Istress est calcul\u00e9 sans k : cet \u00e9cart d'\u00e9chelle peut d\u00e9placer des placettes d'un type ",
     "hydrique \u00e0 l'autre et changer les fusions de types rares (merge_rare) ; le calcul n'est ",
     "pas corrig\u00e9. TWI, MRVBF et ",
@@ -1254,7 +1256,7 @@ evidence_table_real <- function(f) {
     "rayonnement nuageux, contraste d'exposition surestim\u00e9 ; (b) ombres du relief hors de ",
     "l'emprise non vues au bord ; (c) le Penman de biljouR plafonne rg/rso \u00e0 1 : au-del\u00e0, le ",
     "terme de grandes ondes ne suit plus k ; (d) RU uniforme par maille, provisoire ; (e) aucune ",
-    "validation fran\u00e7aise \u00e0 25 m (adaptation non valid\u00e9e de Dyer 2009) ; apports lat\u00e9raux et ",
+    "validation fran\u00e7aise \u00e0 cette r\u00e9solution (adaptation non valid\u00e9e de Dyer 2009) ; apports lat\u00e9raux et ",
     "engorgement non capt\u00e9s. Valeurs provisoires : r\u00e9f\u00e9rentiels \u00a7 25.5."))
 }
 
@@ -1284,7 +1286,7 @@ evidence_table_real <- function(f) {
 #'                                loc_precision_m = c(5, 12)),
 #'                     coords = c("x", "y"), crs = 2154)
 #' r <- terra::rast(xmin = 1015500, xmax = 1015600, ymin = 6793500, ymax = 6793600,
-#'                  resolution = 25, crs = "EPSG:2154", vals = 1)
+#'                  resolution = 20, crs = "EPSG:2154", vals = 1)
 #' names(r) <- "pente"
 #' gbif_anchors(cel, occ, r)$loc_precision_m
 #' @export
