@@ -13,7 +13,6 @@ License: GPL (>= 3)
 Encoding: UTF-8
 Language: fr
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
 SystemRequirements: GRASS GIS (>= 8) avec l'extension r.valley.bottom
     (g.extension extension=r.valley.bottom), pour le MRVBF ; facultatif
 Imports:
@@ -28,6 +27,7 @@ Suggests:
     biljouR,
     blockCV,
     CAST,
+    clhs,
     cluster,
     euptf2,
     happign,
@@ -56,3 +56,4 @@ Remotes:
 Additional_repositories: https://r-lidar.r-universe.dev
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+Config/roxygen2/version: 8.1.1

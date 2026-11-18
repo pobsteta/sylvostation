@@ -1247,3 +1247,39 @@ Les cellules sont indexées sur le MNT de 5 m (1 ligne = 400 cellules, du nord a
 confronter : le fond du Strengbach doit apparaître comme un fond plat bordé de versants, la
 crête non. Les moyennes à 20 m de la grille (Strengbach 3,65 à 5 m, 2,78 à 20 m) diffèrent
 de ces valeurs de cellule.
+
+# Passe 7 (mission 029, 2026-11-18) : plan d'échantillonnage GNSS
+
+Outils : `curl` et R (`sf`), exécutés par l'agent `dev` de la mission 029. Fichiers
+temporaires hors dépôt, rien n'entre dans `inst/extdata`.
+
+## 29. BD TOPO : tronçons de route (accès au terrain) : vérifié
+
+| Point | État | Commande ou source | Résultat |
+|---|---|---|---|
+| Couche et champs | **vérifié** | `WFS&REQUEST=DescribeFeatureType&TYPENAMES=BDTOPO_V3:troncon_de_route` | Géométrie `geometrie` ; champs utiles : `cleabs`, `nature`, `fictif`, `etat_de_l_objet`, `importance`, `prive`, `acces_vehicule_leger`, `acces_pieton`, `piste_dfci` (et 80 autres). Titre au GetCapabilities : « BD TOPO® : Tronçons de route », résumé « BD TOPO® V3 2026-09-15 » ; `DefaultCRS` EPSG:4326, EPSG:2154 en `OtherCRS`. Pas de `MetadataURL`. |
+| Décompte sur l'emprise test | **vérifié** | `WFS&REQUEST=GetFeature&TYPENAMES=BDTOPO_V3:troncon_de_route&BBOX=1007000,6790000,1022000,6805000,urn:ogc:def:crs:EPSG::2154&RESULTTYPE=hits` (2026-11-18T15:22:57Z) | `numberMatched` = **17 316** (le BBOX déborde, § 2 : boîte des tronçons lus x 1 005 604–1 023 089, y 6 788 913–6 805 896). |
+| Lecture complète | **vérifié** | même requête, `&SRSNAME=EPSG:2154&OUTPUTFORMAT=application/json&COUNT=5000&STARTINDEX=0,5000,10000,15000` | 17 316 tronçons, 17 316 `cleabs` distincts, lus par `sf` en EPSG:2154. |
+| Modalités de `nature` | **vérifié** (inventaire complet de l'emprise) | décompte `table()` | Bretelle 2 ; **Chemin 3 667** ; Escalier 30 ; Rond-point 138 ; **Route à 1 chaussée 5 893** ; Route à 2 chaussées 69 ; **Route empierrée 3 857** ; **Sentier 3 660**. |
+| Modalités de `acces_vehicule_leger` | **vérifié** | idem | A péage 7 ; Libre 13 106 ; Physiquement impossible 3 760 (dont les 3 660 sentiers et les 30 escaliers, 64 routes à 1 chaussée, 4 routes empierrées, 2 chemins) ; Restreint aux ayants droit 443 (231 routes à 1 chaussée, 151 routes empierrées, 61 chemins). |
+| Autres champs | **vérifié** | idem | `prive` : FALSE 17 298, TRUE 1, NA 17 ; `fictif` : FALSE 17 313, TRUE 3 ; `etat_de_l_objet` : En service 17 314, En projet 2. |
+| Licence | **vérifié** | `https://www.data.gouv.fr/api/1/datasets/?q=BD%20TOPO` | Jeu « BD TOPO® » (id `61489083dc4223219e50cc35`, organisation IGN) : `license` = **`lov2`** (Licence Ouverte 2.0). La licence propre à la couche WFS `BDTOPO_V3` n'est pas lue (pas de `MetadataURL`, CSW de la Géoplateforme en erreur 500 sur les requêtes `GetRecords` essayées) ; on suppose la même. |
+
+**Règle d'accès retenue (mission 029, décision du 2026-11-18) :** `nature` parmi Route à 1
+chaussée, Route à 2 chaussées, Bretelle, Rond-point, Route empierrée, Chemin
+(`ACCESS_NATURES`) ; on écarte Sentier, Escalier, `fictif` vrai, `etat_de_l_objet` différent
+de « En service » et `acces_vehicule_leger` = « Physiquement impossible ». Le privé
+(`prive`), « Restreint aux ayants droit » et « A péage » sont **signalés**
+(`acces_restreint`), pas exclus.
+
+## 30. Paquet `clhs` (hypercube latin conditionné) : vérifié (exécuté)
+
+| Point | État | Commande | Résultat |
+|---|---|---|---|
+| Installation | **vérifié** | `install.packages("clhs", repos = "https://cloud.r-project.org")` (bibliothèque utilisateur, 2026-11-18) | Version **0.9.2**, publiée sur le CRAN le 2025-10-20 ; licence GPL (>= 2) ; dépend de `ggplot2`, `sf`, `raster`, `reshape2`, `plyr`, `cluster`, `Rcpp`. |
+| Signature | **vérifié** | `args(clhs:::clhs.data.frame)` | `clhs(x, size, must.include = NULL, can.include = NULL, cost = NULL, iter = 10000, use.cpp = TRUE, temp = 1, tdecrease = 0.95, weights = list(numeric = 1, factor = 1, correlation = 1), eta = 1, obj.limit = -Inf, length.cycle = 10, simple = TRUE, progress = TRUE, track = NULL, use.coords = FALSE, ...)` ; méthodes pour `data.frame`, `sf`, `SpatRaster`, `SpatVector`, `Raster*`, `SpatialPointsDataFrame`. |
+| Variante à coût | **vérifié** (aide et code lus) | `?clhs`, `deparse(clhs:::clhs.data.frame)` | Aide : « associate a cost to each individual and take it into account during the optimisation process (Roudier et al., 2012) ». `cost` = nom ou indice de la colonne de coût ; avec `use.cpp = TRUE` (défaut), le coût passe au C++ (`CppLHS(..., cost_mode = TRUE)`), les coûts infinis sont ramenés à 1000. |
+| `can.include` | **vérifié** (aide) | `?clhs` | « The algorithm will use all of `x` as the reference distribution, but will only select samples from [can.include] » ; seulement en C++. C'est ce qui permet de garder toute la forêt comme référence et de ne tirer que les cellules accessibles et homogènes. |
+| Facteurs | **vérifié** (exécuté, tests de la mission 029) | — | Une colonne `factor` (géologie) est traitée comme catégorielle (`weights$factor`). |
+| Reproductibilité | **vérifié** (exécuté) | `set.seed(2)` deux fois, puis `set.seed(3)` | Mêmes indices avec la même graine, indices différents avec une autre : le C++ suit le générateur de R. |
+| Références | Minasny et McBratney 2006, DOI `10.1016/j.cageo.2005.12.009` (fiche de mission) ; Roudier et al. 2012 (cité par l'aide, **non lu**). | | |
