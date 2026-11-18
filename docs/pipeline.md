@@ -96,6 +96,19 @@ topographie module l'**ETP** par le rayonnement reçu par la pente, jamais la r�
   maille SAFRAN, BILJOU ; plat de référence par la même formule (k = 1) ; table par
   maille sur les classes de `k_sv` (pas `hydric_pas_k`), écart à un calcul direct sur
   `hydric_n_controle` cellules par maille, sans seuil bloquant (`hydrique_ecart_table.csv`).
+- **Coût de calcul (mission 028).** Le temps de `hydric_grid` et de `ifn_gradients` était
+  presque entièrement `biljouR::biljou_run()` (boucle de 11 000 jours qui réécrit un
+  `data.frame` à chaque jour, environ 2 s par passe de 30 ans), appelée une fois par classe
+  de `k_sv` (et par RU), plus une fois par cellule de contrôle, et une fois par couple
+  (maille, RU) pour les placettes. `.biljou_cols()` fait avancer **toutes ces passes d'une
+  maille ensemble**, jour par jour, en vecteurs (même bilan, mêmes fonctions de `biljouR`
+  pour l'interception, la transpiration et le sous-bois ; seule la boucle d'état est
+  réécrite) ; l'ETP de Penman des profils de `k` ne relit plus les dates ; l'attribution des
+  mailles est vectorisée. Résultats **identiques** (égalité exacte mesurée, tolérance écrite
+  et testée : 1e-12 en relatif contre `biljou_run()`, `.biljou_ru_ref()`). Le paramètre
+  `ncores` de `hydric_stress_grid()` (1 par défaut, une maille par processus, Unix) n'a aucun
+  effet sur le résultat ; il n'est pas branché dans `_targets.R`, la vectorisation suffit.
+  Mesures, profil et projections : voir le journal et la PR de la mission 028.
 - RU uniforme par maille (`ru_by_safran_cell()`, `hydrique_mailles.csv`) : provisoire.
 - Sorties : couche `hydric` de `gradients.tif` (= `grad_hydrique_carte` = -Istress),
   `hydrique.tif` écrit par `write_hydric_grid()` (COG, préfixe `synth_` si
