@@ -3,7 +3,7 @@
 > Cinq colonnes (fiche n° 8). Chaque carte renvoie à sa fiche dans `pilotage/missions/`.
 > **Une carte qui ne bouge pas est souvent la mauvaise nouvelle à dire tout de suite.**
 
-**Dernier cycle :** 4 (2026-11-16, délégation totale)
+**Dernier cycle :** 5 (2026-11-17, délégation totale)
 
 ## Bac à sable
 
@@ -14,10 +14,25 @@
 
 ## Validé
 
+
+
 ## Planifié
+
+
+- [018-execution-ser-pilote](missions/018-execution-ser-pilote.md) · après 016, 017 · dev
 
 ## Terminé
 
+- [021-descente-echelle-hydrique](missions/021-descente-echelle-hydrique.md) · cycle 5 · dev
+
+- [020-sources-descente-echelle-hydrique](missions/020-sources-descente-echelle-hydrique.md) · cycle 5 · acquereur
+
+- [016-mode-reel](missions/016-mode-reel.md) · cycle 5 · dev (opus) · mode réel branché, hors ligne sans réseau
+- [019-gradient-hydrique-biljour](missions/019-gradient-hydrique-biljour.md) · cycle 5 · dev · RU par texture, Is biljouR
+- [014-terrain-complements](missions/014-terrain-complements.md) · cycle 5 · dev · MRVBF GRASS, HAND TOPAGE
+- [015-indicateurs-sols-reels](missions/015-indicateurs-sols-reels.md) · cycle 5 · dev · Tichý 77,7 % des occurrences, RU provisoire
+- [017-tests-mode-reel](missions/017-tests-mode-reel.md) · cycle 5 · testeur · 9 tests sautés jusqu'à 016
+- [013-referentiels-complements](missions/013-referentiels-complements.md) · cycle 5 · acquereur · passe 3 des référentiels
 - [012-release-versionnage](missions/012-release-versionnage.md) · cycle 5 · dev · CI, release vAAAA.MM.N, badges
 
 - [000-critique-brief](missions/000-critique-brief.md) · cycle 1 · contradicteur

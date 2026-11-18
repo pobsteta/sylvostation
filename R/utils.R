@@ -2,7 +2,8 @@
 #'
 #' Variables dont la résolution est bien plus fine que la précision de localisation
 #' des placettes de l'IFN (700 m). La correspondance est insensible à la casse. Les
-#' noms commençant par `lidar_`, `mnt_` ou `mhc_` sont aussi considérés comme fins.
+#' noms commençant par `lidar_`, `mnt_`, `mhc_` ou `k_` (facteur de rayonnement,
+#' mission 021) sont aussi considérés comme fins.
 #' @format Un vecteur de caractères.
 #' @export
 FINE_VARIABLES <- c(
@@ -11,7 +12,10 @@ FINE_VARIABLES <- c(
   "mnt", "mhc", "metriques_lidar",
   # couches de derive_terrain() (mission 005)
   "exposition_cos", "exposition_sin", "surface_drainee",
-  "tpi_100", "tpi_300", "tpi_1000"
+  "tpi_100", "tpi_300", "tpi_1000",
+  # facteur de rayonnement r.sun et indice hydrique de la grille de 25 m (mission 021)
+  sprintf("k_%02d", 1:12), "k_sv", "is_topo", "nj_topo", "is_plat",
+  "grad_hydrique_25m"
 )
 
 #' Variables à maille large (autorisées aux placettes IFN)
@@ -22,7 +26,7 @@ FINE_VARIABLES <- c(
 #' @export
 COARSE_VARIABLES <- c("climat_km", "pedopaysage", "geologie_700m")
 
-.FINE_PREFIXES <- c("lidar_", "mnt_", "mhc_")
+.FINE_PREFIXES <- c("lidar_", "mnt_", "mhc_", "k_")
 
 #' Marquer des points comme placettes IFN
 #'

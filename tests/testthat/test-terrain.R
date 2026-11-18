@@ -117,7 +117,7 @@ test_that("TWI fini sur plan et croissant avec la surface drainee", {
   expect_equal(tw[10, 15], log(10 * 10 / 0.1), tolerance = 1e-5)
 })
 
-test_that("hauteur au-dessus du reseau : plan et ruisseau a y connu", {
+test_that("hauteur au-dessus du reseau (HAND) : plan et ruisseau a y connu", {
   d <- make_synth_dtm(nc = 40, res = 10)
   y0 <- 6800000 + 195  # centre d'une rangee de cellules
   ln <- terra::vect(cbind(id = 1, part = 1, x = c(980000, 980400), y = c(y0, y0)),
@@ -126,7 +126,7 @@ test_that("hauteur au-dessus du reseau : plan et ruisseau a y connu", {
   c_n <- terra::cellFromXY(d, cbind(980205, y0 + 50))  # 50 m au nord
   c_s <- terra::cellFromXY(d, cbind(980205, y0 - 50))
   expect_equal(out$hauteur_reseau[c_n][[1]], 5, tolerance = 1e-6)
-  expect_equal(out$hauteur_reseau[c_s][[1]], -5, tolerance = 1e-6)
+  expect_true(is.na(out$hauteur_reseau[c_s][[1]]))   # en aval du reseau : jamais negatif
   out2 <- dt(d, tpi_radii = 50, streams = sf::st_as_sf(ln))
   expect_equal(out2$hauteur_reseau[c_n][[1]], 5, tolerance = 1e-6)
   expect_error(dt(d, streams = terra::vect(cbind(980000, 6800000), crs = "EPSG:2154")),
@@ -208,4 +208,116 @@ test_that("terrain plat : exposition NA, pente nulle", {
   expect_true(all(terra::values(i$pente) == 0))
   expect_true(all(is.na(terra::values(i$exposition_cos))))
   expect_true(all(is.na(terra::values(i$exposition_sin))))
+})
+
+test_that("mrvbf = FALSE (defaut) : NA, avertissement de classe sylvostation_non_calcule", {
+  d <- make_synth_dtm(nc = 20, res = 10)
+  ln <- terra::vect(cbind(id = 1, part = 1, x = c(980000, 980200), y = c(6800100, 6800100)),
+                    type = "lines", crs = "EPSG:2154")   # evite l'avertissement de hauteur_reseau
+  expect_warning(out <- derive_terrain(d, tpi_radii = 50, streams = ln),
+                 "mrvbf", class = "sylvostation_non_calcule")
+  expect_true(all(is.na(terra::values(out$mrvbf))))
+})
+
+test_that(".mrvbf_grass : GRASS absent ou en echec => NA et avertissement, sans erreur", {
+  d <- make_synth_dtm(nc = 10, res = 25)
+  expect_warning(m <- sylvostation:::.mrvbf_grass(d, grass = ""),
+                 class = "sylvostation_non_calcule")
+  expect_true(all(is.na(terra::values(m))))
+  expect_equal(as.vector(terra::ext(m)), as.vector(terra::ext(d)))
+  # un executable qui n'ecrit rien : echec detecte, pas d'erreur
+  faux <- Sys.which("true")
+  skip_if(!nzchar(faux))
+  expect_warning(m2 <- sylvostation:::.mrvbf_grass(d, grass = faux),
+                 "r.valley.bottom", class = "sylvostation_non_calcule")
+  expect_true(all(is.na(terra::values(m2))))
+})
+
+test_that(".grass_has_extension : FALSE sans GRASS", {
+  expect_false(sylvostation:::.grass_has_extension("r.valley.bottom", grass = ""))
+})
+
+test_that("MRVBF GRASS : fond de vallee plat >> versant, grille identique (lent, ~2 min)", {
+  skip_if(!nzchar(Sys.which("grass")), "GRASS absent")
+  skip_if(!sylvostation:::.grass_has_extension("r.valley.bottom"),
+          "extension r.valley.bottom absente (g.extension extension=r.valley.bottom)")
+  skip_if(nzchar(Sys.getenv("SYLVOSTATION_SKIP_GRASS")), "SYLVOSTATION_SKIP_GRASS defini")
+  # vallee : fond plat (x = 980300 +/- 200 m), versants a 0,3 (17 degres)
+  d <- make_synth_dtm(nc = 24, res = 25, fun = function(x, y) {
+    100 + 0.3 * pmax(0, abs(x - 980300) - 200) + 0.002 * (y - 6800000)
+  })
+  m <- sylvostation:::.mrvbf_grass(d)
+  expect_equal(as.vector(terra::ext(m)), as.vector(terra::ext(d)))
+  expect_equal(terra::res(m), terra::res(d))
+  sol <- terra::cellFromXY(d, cbind(980312.5, 6800312.5))     # x = est, y = nord
+  vers <- terra::cellFromXY(d, cbind(980012.5, 6800312.5))
+  expect_equal(unname(terra::xyFromCell(d, sol)[1, ]), c(980312.5, 6800312.5))
+  expect_gt(m[sol][[1]], 1)
+  expect_lt(m[vers][[1]], 0.1)
+})
+
+# ---- solar_factor (mission 021) -----------------------------------------------------
+
+test_that(".aspect_to_rsun : azimut depuis le nord (horaire) vers r.sun (270 = sud)", {
+  # nord, est, sud, ouest (convention de terra) -> 90, 0, 270, 180 (convention r.sun)
+  expect_equal(sylvostation:::.aspect_to_rsun(c(0, 90, 180, 270)), c(90, 0, 270, 180))
+  expect_equal(sylvostation:::.aspect_to_rsun(360), 90)
+  expect_equal(sylvostation:::.aspect_to_rsun(135), 315)   # sud-est
+  expect_true(is.na(sylvostation:::.aspect_to_rsun(NA_real_)))
+})
+
+test_that("solar_factor : sans GRASS, repli k = 1 signale (methode climatique)", {
+  d <- make_synth_dtm(nc = 6)
+  expect_warning(k <- solar_factor(d, grass = ""), "climatique",
+                 class = "sylvostation_non_calcule")
+  expect_identical(names(k), sprintf("k_%02d", 1:12))
+  expect_true(all(terra::values(k) == 1))
+  expect_identical(attr(k, "methode"), "climatique")
+  expect_match(attr(k, "repli"), "GRASS")
+  expect_match(attr(k, "parametres")$statut, "provisoire")
+  expect_error(solar_factor(d, days = 1:3, grass = ""), "12 jours")
+  expect_error(solar_factor(terra::project(d, "EPSG:4326"), grass = ""), "2154")
+  # un executable qui n'ecrit rien : echec detecte, repli sans erreur
+  faux <- Sys.which("true")
+  skip_if(!nzchar(faux))
+  expect_warning(k2 <- solar_factor(d, grass = faux), "r.sun", class = "sylvostation_non_calcule")
+  expect_identical(attr(k2, "methode"), "climatique")
+})
+
+test_that("solar_factor (GRASS r.sun) : en hiver, versant sud > plat > versant nord", {
+  skip_if(!nzchar(Sys.which("grass")), "GRASS absent")
+  skip_if(nzchar(Sys.getenv("SYLVOSTATION_SKIP_GRASS")), "SYLVOSTATION_SKIP_GRASS defini")
+  # crete est-ouest a y0 ; au sud, l'altitude croit vers le nord (versant expose au sud,
+  # 30 degres), au nord elle decroit (versant expose au nord) ; un plateau plat a l'est.
+  xmin <- 1010000
+  ymin <- 6795000
+  y0 <- ymin + 500
+  d <- make_synth_dtm(nc = 40, res = 25, xmin = xmin, ymin = ymin, fun = function(x, y) {
+    ifelse(x > xmin + 700, 800, 800 - tan(30 * pi / 180) * abs(y - y0))
+  })
+  k <- solar_factor(d, nprocs = 1)
+  expect_identical(attr(k, "methode"), "r.sun")
+  expect_identical(names(k), sprintf("k_%02d", 1:12))
+  # points connus, x = est, y = nord (Lambert-93) : centres de cellules de 25 m
+  sud <- c(xmin + 312.5, y0 - 237.5)
+  nord <- c(xmin + 312.5, y0 + 237.5)
+  plat <- c(xmin + 912.5, y0 + 12.5)
+  cel <- terra::cellFromXY(k, rbind(sud, nord, plat))
+  expect_equal(unname(terra::xyFromCell(k, cel[1])[1, ]), sud)
+  expect_equal(unname(terra::rowColFromCell(k, cel[1])[1, ]), c(30, 13))   # ligne 1 = nord
+  v <- unname(terra::values(k)[cel, ])
+  # janvier (k_01) : versant sud > plat (environ 1) > versant nord
+  expect_gt(v[1, 1], 1.5)
+  expect_equal(v[3, 1], 1, tolerance = 0.02)
+  expect_lt(v[2, 1], 0.6)
+  # en juin, le contraste est bien plus faible qu'en janvier
+  expect_lt(abs(v[1, 6] - v[2, 6]), abs(v[1, 1] - v[2, 1]))
+  # pourtour (pente inconnue) : NA
+  expect_true(all(is.na(terra::values(k)[terra::cellFromRowCol(k, 1, 1:40), 1])))
+})
+
+test_that("solar_factor : k est une variable fine, refusee aux placettes IFN", {
+  ifn <- mark_ifn(data.frame(x = 1015500, y = 6793500))
+  expect_error(assert_no_fine_extract_on_ifn(ifn, sprintf("k_%02d", 1:12)), "IFN")
+  expect_error(assert_no_fine_extract_on_ifn(ifn, "k_sv"), "IFN")
 })

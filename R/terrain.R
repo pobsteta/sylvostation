@@ -76,12 +76,16 @@ aggregate_dtm <- function(dtm, res = c(5, 25)) {
 #' * `surface_drainee` (m2) : accumulation D8 (O'Callaghan et Mark 1984) calculée en R,
 #'   **sans remplissage des cuvettes** (elles retiennent l'eau). Sur un MNT réel,
 #'   prétraitement hydrologique **à vérifier** ;
-#' * `mrvbf` : **non calculé** (`NA` et avertissement de classe
-#'   `sylvostation_non_calcule`) : MRVBF reste `NA` tant qu'aucune branche whitebox
-#'   n'est écrite (binaire WhiteboxTools absent de l'environnement) ;
-#' * `hauteur_reseau` (m) : altitude moins celle de la cellule de cours d'eau la plus
-#'   proche à vol d'oiseau (différence d'altitude, pas un HAND le long de
-#'   l'écoulement) ; `NA` avec avertissement si `streams` est `NULL` ;
+#' * `mrvbf` : indice multi-résolution de fond de vallée (Gallant et Dowling 2003), par
+#'   l'extension GRASS `r.valley.bottom` (`whitebox` n'a pas d'outil MRVBF, référentiels
+#'   § 20), paramètres **par défaut** de l'extension (provisoires). `NA` et avertissement
+#'   de classe `sylvostation_non_calcule` si `mrvbf = FALSE` ou si GRASS (`grass`) ou
+#'   l'extension est absent. Calcul lent (2 à 4 minutes mesurées pour 1 600 à 57 600
+#'   cellules) ;
+#' * `hauteur_reseau` (m), voir [height_above_network()] : HAND (altitude moins celle de
+#'   la première cellule du réseau atteinte en suivant les directions D8 de
+#'   `surface_drainee`). `NA` si l'écoulement n'atteint pas le réseau ; jamais négatif ;
+#'   `NA` avec avertissement si `streams` est `NULL` ;
 #' * `rayonnement` (kWh/m2/an) : rayonnement direct potentiel **hors atmosphère et sans
 #'   ombres portées**, 12 jours types (Klein 1977), pas de 30 min, formules d'incidence
 #'   de Duffie et Beckman (*Solar Engineering of Thermal Processes*, éq. 1.6.2 et
@@ -92,6 +96,9 @@ aggregate_dtm <- function(dtm, res = c(5, 25)) {
 #'
 #' @param dtm `SpatRaster` à une couche, EPSG:2154, maille carrée, altitudes en mètres.
 #' @param tpi_radii Rayons du TPI, en mètres.
+#' @param mrvbf `TRUE` pour calculer le MRVBF par GRASS (lent : 2 à 4 minutes mesurées pour 1 600 à
+#'   57 600 cellules) ; `FALSE` (défaut) laisse la couche à `NA` avec
+#'   avertissement. Le pipeline en mode réel doit passer `TRUE`.
 #' @param streams Réseau hydrographique (BD TOPAGE) : `SpatVector` ou `sf` de lignes en
 #'   EPSG:2154, ou `NULL`.
 #' @return Un `SpatRaster` multicouche nommé.
@@ -102,7 +109,8 @@ aggregate_dtm <- function(dtm, res = c(5, 25)) {
 #'   suppressWarnings(names(derive_terrain(d, tpi_radii = 100)))
 #' }
 #' @export
-derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL) {
+derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
+                           mrvbf = FALSE) {
   .check_dtm(dtm)
   if (!is.numeric(tpi_radii) || !length(tpi_radii) || anyNA(tpi_radii) ||
       any(tpi_radii <= 0)) {
@@ -121,7 +129,8 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL) {
   slope <- terra::terrain(dtm, "slope", unit = "degrees", neighbors = 8)
   asp <- terra::terrain(dtm, "aspect", unit = "radians", neighbors = 8)
   curv <- .curvatures(dtm)
-  acc <- .flow_accumulation(dtm)
+  tg <- .d8_targets(dtm)
+  acc <- .flow_accumulation(dtm, tg)
   twi <- log((acc * L) / tan(terra::clamp(slope, lower = 0.1, values = TRUE) * pi / 180))
 
   tpis <- lapply(tpi_radii, function(r) .tpi(dtm, r))
@@ -131,20 +140,71 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL) {
     .warn_non_calcule("`streams` absent : `hauteur_reseau` non calcul\u00e9e (NA).")
     hand <- dtm * NA
   } else {
-    hand <- .height_above_streams(dtm, streams)
+    hand <- .height_above_streams(dtm, streams, tg)
   }
-  .warn_non_calcule("`mrvbf` non calcul\u00e9 (NA) : WhiteboxTools indisponible, \u00e0 v\u00e9rifier.")
-  mrvbf <- dtm * NA
+  if (isTRUE(mrvbf)) {
+    mrvbf_r <- .mrvbf_grass(dtm)
+  } else {
+    .warn_non_calcule("`mrvbf` non demand\u00e9 (`mrvbf = FALSE`) : NA (calcul GRASS lent).")
+    mrvbf_r <- dtm * NA
+  }
 
   ray <- .radiation_layer(dtm, slope, asp)
 
   # terra renvoie 90 degres sur terrain plat : exposition indefinie => NA
   asp <- terra::ifel(slope == 0, NA, asp)
   out <- c(slope, cos(asp), sin(asp), curv, terra::rast(tpis), twi, acc * L^2,
-           mrvbf, hand, ray)
+           mrvbf_r, hand, ray)
   names(out) <- c("pente", "exposition_cos", "exposition_sin", "courbure",
                   "courbure_plan", "courbure_profil", tpi_names, "twi",
                   "surface_drainee", "mrvbf", "hauteur_reseau", "rayonnement")
+  out
+}
+
+# TRUE si l'extension GRASS `ext` est installee (`g.extension -a`), sans chemin en dur.
+.grass_has_extension <- function(ext = "r.valley.bottom", grass = Sys.which("grass")) {
+  if (!nzchar(grass)) return(FALSE)
+  res <- suppressWarnings(system2(grass, c("--tmp-project", "EPSG:2154", "--exec",
+                                           "g.extension", "-a"), stdout = TRUE, stderr = TRUE))
+  ext %in% trimws(res)
+}
+
+# MRVBF par GRASS (extension r.valley.bottom) dans un projet temporaire : le MNT est
+# ecrit en GeoTIFF, lu par r.in.gdal, le resultat relu par terra. Sans GRASS, ou si
+# l'extension echoue : NA et avertissement `sylvostation_non_calcule`.
+.mrvbf_grass <- function(dtm, grass = Sys.which("grass")) {
+  na_out <- function(msg) {
+    .warn_non_calcule(paste0("`mrvbf` non calcul\u00e9 (NA) : ", msg))
+    dtm * NA
+  }
+  if (!nzchar(grass)) return(na_out("GRASS GIS (`grass`) introuvable, \u00e0 installer."))
+  dir <- tempfile("mrvbf_")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  inp <- file.path(dir, "in.tif")
+  outp <- file.path(dir, "out.tif")
+  terra::writeRaster(dtm, inp, datatype = "FLT8S")
+  sh <- file.path(dir, "run.sh")
+  writeLines(c("set -e",
+               paste0("r.in.gdal input='", inp, "' output=dem --quiet"),
+               "g.region raster=dem",
+               "r.valley.bottom elevation=dem mrvbf=mrvbf --quiet",
+               paste0("r.out.gdal input=mrvbf output='", outp,
+                      "' format=GTiff --overwrite --quiet -c -m")), sh)
+  res <- suppressWarnings(system2(grass, c("--tmp-project", shQuote(inp), "--exec", "sh",
+                                           shQuote(sh)), stdout = TRUE, stderr = TRUE))
+  if (!file.exists(outp)) {
+    return(na_out(paste0("\u00e9chec de GRASS ou de l'extension `r.valley.bottom` (",
+                         "g.extension extension=r.valley.bottom) : ",
+                         paste(utils::tail(res, 2), collapse = " "))))
+  }
+  m <- terra::rast(outp)
+  if (!all(c(terra::nrow(m), terra::ncol(m)) == c(terra::nrow(dtm), terra::ncol(dtm))) ||
+      !isTRUE(all.equal(as.vector(terra::ext(m)), as.vector(terra::ext(dtm))))) {
+    return(na_out("grille de sortie de GRASS diff\u00e9rente de celle du MNT."))
+  }
+  out <- dtm * NA
+  terra::values(out) <- terra::values(m, mat = FALSE)
   out
 }
 
@@ -185,26 +245,33 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL) {
   dtm - m
 }
 
-# Accumulation D8 (nombre de cellules, cellule comprise), sans remplissage.
-.flow_accumulation <- function(dtm) {
+# Directions D8 sans remplissage : index lineaire (colonnes) de la cellule cible, 0 = puits.
+# La cible est toujours strictement plus basse que la cellule.
+.d8_targets <- function(dtm) {
   nr <- terra::nrow(dtm); nc <- terra::ncol(dtm)
   L <- terra::res(dtm)[1]
   z <- matrix(terra::values(dtm, mat = FALSE), nr, nc, byrow = TRUE)
   zp <- matrix(NA_real_, nr + 2, nc + 2)
   zp[2:(nr + 1), 2:(nc + 1)] <- z
   best <- matrix(0, nr, nc)   # meilleure pente descendante
-  tgt <- matrix(0L, nr, nc)   # index lin\u00e9aire (colonnes) de la cible, 0 = puits
+  tgt <- matrix(0L, nr, nc)
   for (di in -1:1) for (dj in -1:1) {
     if (di == 0 && dj == 0) next
     nb <- zp[(2:(nr + 1)) + di, (2:(nc + 1)) + dj]
-    s <- (z - nb) / (L * sqrt(di^2 + dj^2))
-    ok <- !is.na(s) & s > best
-    best[ok] <- s[ok]
+    sl <- (z - nb) / (L * sqrt(di^2 + dj^2))
+    ok <- !is.na(sl) & sl > best
+    best[ok] <- sl[ok]
     tgt[ok] <- (((col(z) + dj) - 1L) * nr + (row(z) + di))[ok]
   }
-  a <- ifelse(is.na(as.vector(z)), NA_real_, 1)
-  tg <- as.vector(tgt)
-  for (i in order(as.vector(z), decreasing = TRUE, na.last = NA)) {
+  as.vector(tgt)
+}
+
+# Accumulation D8 (nombre de cellules, cellule comprise), sans remplissage.
+.flow_accumulation <- function(dtm, tg = .d8_targets(dtm)) {
+  nr <- terra::nrow(dtm); nc <- terra::ncol(dtm)
+  zc <- matrix(terra::values(dtm, mat = FALSE), nr, nc, byrow = TRUE)
+  a <- ifelse(is.na(as.vector(zc)), NA_real_, 1)
+  for (i in order(as.vector(zc), decreasing = TRUE, na.last = NA)) {
     t <- tg[i]
     if (t > 0L) a[t] <- a[t] + a[i]
   }
@@ -214,26 +281,33 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL) {
   out
 }
 
-# Hauteur au-dessus de la cellule de cours d'eau la plus proche.
-.height_above_streams <- function(dtm, streams) {
-  s <- terra::values(terra::rasterize(streams, dtm, field = 1, touches = TRUE),
-                     mat = FALSE)
-  z <- terra::values(dtm, mat = FALSE)
-  cells_s <- which(!is.na(s) & !is.na(z))
+# HAND : pour chaque cellule, altitude moins celle de la premiere cellule du reseau
+# atteinte en suivant les directions D8 (sans remplissage). NA si l'ecoulement n'atteint
+# pas le reseau (puits, sortie du MNT, cellule en aval du reseau) : jamais negatif.
+.height_above_streams <- function(dtm, streams, tg = .d8_targets(dtm)) {
+  nr <- terra::nrow(dtm); nc <- terra::ncol(dtm)
   out <- dtm * NA
-  if (!length(cells_s)) {
+  sr <- terra::rasterize(streams, dtm, field = 1, touches = TRUE)
+  zr <- terra::values(dtm, mat = FALSE)
+  is_s <- !is.na(terra::values(sr, mat = FALSE)) & !is.na(zr)
+  if (!any(is_s)) {
     .warn_non_calcule("Aucune cellule de cours d'eau dans l'emprise : `hauteur_reseau` NA.")
     return(out)
   }
-  all_cells <- which(!is.na(z))
-  pts <- function(cells) {
-    sf::st_as_sf(as.data.frame(terra::xyFromCell(dtm, cells)),
-                 coords = c("x", "y"), crs = 2154)
+  # tg est en index lineaire par colonnes ; terra range par lignes : permutation
+  perm <- as.vector(matrix(seq_len(nr * nc), nr, nc, byrow = TRUE))
+  z_cm <- zr[perm]
+  s_cm <- is_s[perm]
+  ref <- rep(NA_real_, nr * nc)
+  ref[s_cm] <- z_cm[s_cm]
+  for (i in order(z_cm, na.last = NA)) {      # du plus bas au plus haut
+    if (s_cm[i]) next
+    t <- tg[i]
+    if (t > 0L) ref[i] <- ref[t]
   }
-  nn <- sf::st_nearest_feature(pts(all_cells), pts(cells_s))
-  v <- rep(NA_real_, length(z))
-  v[all_cells] <- z[all_cells] - z[cells_s[nn]]
-  terra::values(out) <- v
+  h <- numeric(nr * nc)
+  h[perm] <- z_cm - ref
+  terra::values(out) <- h
   out
 }
 
@@ -289,4 +363,138 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL) {
 .warn_non_calcule <- function(msg) {
   warning(structure(class = c("sylvostation_non_calcule", "warning", "condition"),
                     list(message = msg, call = NULL)))
+}
+
+# Azimut de l'exposition (degres depuis le nord, sens horaire : convention de terra et de
+# `exposition_cos/sin`) vers la convention de GRASS `r.sun` (degres depuis l'est, sens
+# antihoraire : 90 = nord, 180 = ouest, 270 = sud ; `r.sun --help`, GRASS 8.4.2,
+# « 270 is south »). Formule : (450 - azimut) mod 360 ; NA conserve.
+.aspect_to_rsun <- function(az) {
+  (450 - az) %% 360
+}
+
+#' Facteur topographique de rayonnement mensuel (GRASS `r.sun`, ciel clair)
+#'
+#' Pour chaque cellule `x` et chaque mois `j` (jour type de Klein 1977) :
+#' k(x, j) = G(x ; pente, exposition, ombres portées) / G(x ; pente 0, sans ombres), où
+#' G est le rayonnement global journalier (`glob_rad`, direct + diffus + réfléchi,
+#' Wh m⁻² j⁻¹) de GRASS `r.sun` (Šúri et Hofierka 2004) **en ciel clair** (`coeff_bh`,
+#' `coeff_dh` absents). C'est la méthode A de `docs/referentiels.md` § 25.4 (adaptation
+#' **non validée** de Dyer 2009) : k multiplie le rayonnement SAFRAN dans l'ETP de
+#' [hydric_stress_grid()].
+#'
+#' * Pente et exposition : `terra::terrain` (Horn 1981), comme la couche `pente` de
+#'   [derive_terrain()] ; l'exposition (depuis le nord, sens horaire) est convertie vers
+#'   la convention de `r.sun` (270 = sud) par (450 - azimut) mod 360. Terrain plat :
+#'   pente 0. Pourtour du MNT (pente inconnue) : `NA`.
+#' * Numérateur avec ombres portées (défaut de `r.sun`) ; dénominateur `r.sun -p
+#'   slope_value=0` (plat, sans ombres).
+#' * Valeurs **provisoires** (§ 25.5) : ciel clair, trouble de Linke 3,0, albédo 0,2
+#'   (défauts du manuel), jours types de Klein, pas de 0,5 h. Les ombres portées par le
+#'   relief situé hors du MNT fourni ne sont pas vues (bord de l'emprise).
+#' * **Repli** : sans GRASS (`grass` introuvable) ou si `r.sun` échoue, k = 1 partout
+#'   (méthode « climatique », attribut `methode`), avertissement de classe
+#'   `sylvostation_non_calcule`.
+#'
+#' Coût mesuré (GRASS 8.4.2, 3 fils, 2026-11-18, mission 021) : 4,1 s par jour type
+#' avec ombres et 0,9 s pour le plat sur 360 000 cellules de 25 m (225 dalles), soit
+#' environ une minute pour les 12 mois ; plus de 10 minutes par jour à 5 m.
+#'
+#' k est une variable **fine** (`k_01` à `k_12`, voir [FINE_VARIABLES]) : jamais aux
+#' placettes IFN ([assert_no_fine_extract_on_ifn()]).
+#'
+#' @param dtm `SpatRaster` à une couche, EPSG:2154, maille carrée (25 m dans le pipeline),
+#'   altitudes en mètres.
+#' @param days Jours de l'année des 12 mois (jours types de Klein 1977).
+#' @param linke,albedo Trouble de Linke et albédo de `r.sun` (provisoires).
+#' @param step Pas de temps de `r.sun` (heures, provisoire).
+#' @param nprocs Nombre de fils de `r.sun`.
+#' @param grass Exécutable GRASS (`""` : absent, repli).
+#' @return `SpatRaster` à 12 couches `k_01` à `k_12` sur la grille de `dtm`, attributs
+#'   `methode` (`"r.sun"` ou `"climatique"`), `repli` (raison du repli) et `parametres`.
+#' @examples
+#' f <- system.file("extdata", "synth_dtm.tif", package = "sylvostation")
+#' d <- terra::rast(f)   # surface synthétique
+#' k <- suppressWarnings(solar_factor(d, grass = ""))   # sans GRASS : repli k = 1
+#' attr(k, "methode")
+#' @export
+solar_factor <- function(dtm, days = .JOURS_TYPES, linke = 3, albedo = 0.2, step = 0.5,
+                         nprocs = 1, grass = Sys.which("grass")) {
+  .check_dtm(dtm)
+  if (!is.numeric(days) || length(days) != 12L || anyNA(days) || any(days < 1 | days > 365)) {
+    stop("`days` doit contenir 12 jours de l'ann\u00e9e (1 \u00e0 365).", call. = FALSE)
+  }
+  param <- list(ciel = "clair", linke = linke, albedo = albedo, step_h = step,
+                jours = days, statut = "provisoire (r\u00e9f\u00e9rentiels \u00a7 25.5)")
+  noms <- sprintf("k_%02d", 1:12)
+  repli <- function(msg) {
+    .warn_non_calcule(paste0("Facteur de rayonnement k = 1 (m\u00e9thode climatique) : ", msg))
+    un <- terra::ifel(is.na(dtm), NA, 1)
+    out <- terra::rast(rep(list(un), 12))
+    names(out) <- noms
+    attr(out, "methode") <- "climatique"
+    attr(out, "repli") <- msg
+    attr(out, "parametres") <- param
+    out
+  }
+  if (!nzchar(grass)) return(repli("GRASS GIS (`grass`) introuvable, \u00e0 installer."))
+
+  names(dtm) <- "z"
+  slope <- terra::terrain(dtm, "slope", unit = "degrees", neighbors = 8)
+  az <- terra::terrain(dtm, "aspect", unit = "degrees", neighbors = 8)
+  asp <- terra::ifel(slope == 0, 270, .aspect_to_rsun(az))   # plat : exposition sans effet
+
+  dir <- tempfile("rsun_")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  f <- function(n) file.path(dir, n)
+  terra::writeRaster(dtm, f("dem.tif"), datatype = "FLT8S")
+  terra::writeRaster(slope, f("slope.tif"), datatype = "FLT8S")
+  terra::writeRaster(asp, f("aspect.tif"), datatype = "FLT8S")
+  cmd <- c("set -e",
+           paste0("r.in.gdal input='", f("dem.tif"), "' output=dem --quiet"),
+           paste0("r.in.gdal input='", f("slope.tif"), "' output=sl --quiet"),
+           paste0("r.in.gdal input='", f("aspect.tif"), "' output=as --quiet"),
+           "g.region raster=dem")
+  for (i in 1:12) {
+    opts <- paste0(" linke_value=", linke, " albedo_value=", albedo, " day=", days[i],
+                   " step=", step, " nprocs=", nprocs, " --quiet --overwrite")
+    out_g <- f(sprintf("g%02d.tif", i))
+    out_p <- f(sprintf("p%02d.tif", i))
+    cmd <- c(cmd,
+             paste0("r.sun elevation=dem slope=sl aspect=as glob_rad=g", i, opts),
+             paste0("r.sun -p elevation=dem slope_value=0 glob_rad=p", i, opts),
+             paste0("r.out.gdal input=g", i, " output='", out_g,
+                    "' format=GTiff type=Float64 --overwrite --quiet -c -m"),
+             paste0("r.out.gdal input=p", i, " output='", out_p,
+                    "' format=GTiff type=Float64 --overwrite --quiet -c -m"))
+  }
+  writeLines(cmd, f("run.sh"))
+  res <- suppressWarnings(system2(grass, c("--tmp-project", shQuote(f("dem.tif")), "--exec",
+                                           "sh", shQuote(f("run.sh"))),
+                                  stdout = TRUE, stderr = TRUE))
+  sorties <- f(c(sprintf("g%02d.tif", 1:12), sprintf("p%02d.tif", 1:12)))
+  if (!all(file.exists(sorties))) {
+    return(repli(paste0("\u00e9chec de GRASS `r.sun` : ",
+                        paste(utils::tail(res, 2), collapse = " "))))
+  }
+  n <- terra::ncell(dtm)
+  vals <- vapply(1:12, function(i) {
+    g <- terra::rast(sorties[i])
+    p <- terra::rast(sorties[12 + i])
+    if (!all(c(terra::nrow(g), terra::ncol(g)) == c(terra::nrow(dtm), terra::ncol(dtm)))) {
+      return(rep(NA_real_, n))
+    }
+    gv <- terra::values(g, mat = FALSE)
+    pv <- terra::values(p, mat = FALSE)
+    ifelse(is.finite(gv) & is.finite(pv) & pv > 0, gv / pv, NA_real_)
+  }, numeric(n))
+  if (all(is.na(vals))) return(repli("grille de sortie de GRASS diff\u00e9rente de celle du MNT."))
+  vals[is.na(terra::values(slope, mat = FALSE)), ] <- NA_real_   # pourtour : pente inconnue
+  out <- terra::rast(dtm, nlyrs = 12)
+  terra::values(out) <- vals
+  names(out) <- noms
+  attr(out, "methode") <- "r.sun"
+  attr(out, "parametres") <- param
+  out
 }

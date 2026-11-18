@@ -46,3 +46,19 @@
 Pas de mission `testeur` séparée par mission de développement : le `dev` écrit ses tests
 et le `relecteur` les contrôle (décision déléguée, prix au journal). Exception (mission 000, B2) : la règle bloquante a ses tests d'acceptation écrits par
 le `testeur` de la mission 011, sans lire le code.
+
+### Cycle 5 (2026-11-17, « code jusqu'au bout ce qu'il reste à faire »)
+
+| Mission | Agent | Modèle | Temps de la main | Les 3 questions | Cycle |
+|---|---|---|---|---|---|
+| [012 release, version calendaire, badges](missions/012-release-versionnage.md) | `dev` | sonnet | donner | oui · oui · oui | 5 (faite) |
+| [013 compléments de référentiels](missions/013-referentiels-complements.md) | `acquereur` | opus | donner | oui · oui · oui (réseau ouvert) | 5 |
+| [014 MRVBF et hauteur au-dessus du réseau](missions/014-terrain-complements.md) | `dev` | sonnet | donner | oui · oui après 013 · oui | 5 |
+| [015 indicateurs et pédotransfert réels](missions/015-indicateurs-sols-reels.md) | `dev` | sonnet | donner | oui · oui après 013 · oui si source joignable | 5 |
+| [016 mode réel du pipeline](missions/016-mode-reel.md) | `dev` | opus | prendre | oui · oui · oui (GNSS, AgroParisTech optionnels) | 5 |
+| [019 gradient hydrique par biljouR](missions/019-gradient-hydrique-biljour.md) | `dev` | opus | donner | oui · oui · oui | 5 |
+| [017 tests d'acceptation du mode réel](missions/017-tests-mode-reel.md) | `testeur` | sonnet | donner | oui · oui · oui | 5 |
+| [018 exécution sur la SER pilote](missions/018-execution-ser-pilote.md) | `dev` | sonnet | donner | oui · oui après 016 · oui (≈ 42 Go, ≈ 6 h) | 5 |
+
+Hors code, toujours à Pascal : relevés GNSS (30 à 50), rasters AgroParisTech, validation de
+la table lithologique par un géologue, lecture « réserve utile = gradient hydrique ».

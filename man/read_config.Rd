@@ -13,7 +13,20 @@ read_config(path = "config.yml")
 Une liste nommée : \code{ser_code}, \code{emprise_test} (xmin, ymin, xmax, ymax,
 crs), \code{buffer_m}, \code{resolution_m}, \code{crs}, \code{data_dir}, \code{laz_dir}, \code{out_dir},
 \code{ifn_precision_m}, \code{demo} (booléen, \code{FALSE} si la clé est absente : en mode démo,
-le pipeline tourne sans réseau sur les jeux d'essai synthétiques de \code{inst/extdata}).
+le pipeline tourne sans réseau sur les jeux d'essai synthétiques de \code{inst/extdata}),
+et les clés du mode réel (mission 016, valeurs par défaut si absentes) : \code{offline}
+(\code{FALSE} ; \code{TRUE} = mode réel sans réseau sur les extraits réels de \code{inst/extdata}),
+\code{max_tiles} (\code{NULL} = toutes les dalles), \code{emprise} (\code{"test"} ou \code{"ser"}),
+\code{lidar_block_size} (3), \code{lidar_buffer_m} (20), \code{lidar_ncores} (3),
+\code{taxref_version} (\code{"18"}, figée), \code{indicator_source} (\code{"tichy"}), \code{ru_source}
+(\code{"euptf2"}), \code{safran_annees} (1996-2025), \code{saison_vegetation} (mois 4 à 9),
+\code{bdcharm_departements}, \code{gbif_method} (\code{"search"}), \code{forest_mask} (\code{TRUE}),
+\code{forest_height_m} (5), \code{cache_dir}, la carte hydrique de 25 m (mission 021,
+provisoires) : \code{solar_linke} (3), \code{solar_albedo} (0,2), \code{solar_step_h} (0,5),
+\code{hydric_pas_k} (0,02), \code{hydric_n_controle} (30), \code{ifn_archive_url} et \code{taxref_url} (sans valeur
+par défaut : seule source, config.yml ; exigées en ligne), et les
+entrées optionnelles \code{gnss_path}, \code{reference_path}, \code{soil_paths}, \code{tichy_path}
+(\code{NULL} si absentes : jamais remplacées).
 }
 \description{
 Lit un fichier \code{config.yml} (paquet \code{yaml}) et vérifie les types, le système de

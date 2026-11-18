@@ -79,7 +79,7 @@ test_that("le pipeline démo s'exécute de bout en bout et écrit des sorties sy
   })
 })
 
-test_that("le mode réel non branché s'arrête avec un message clair", {
+test_that("le mode réel en ligne sans tichy_path s'arrête avec un message clair", {
   skip_on_cran()
   skip_if_not_installed("targets")
   racine <- testthat::test_path("..", "..")
@@ -88,7 +88,9 @@ test_that("le mode réel non branché s'arrête avec un message clair", {
   targets::tar_dir({
     file.copy(file.path(racine, "_targets.R"), ".")
     cfg <- readLines(file.path(racine, "config.yml"))
-    writeLines(sub("^demo: true", "demo: false", cfg), "config.yml")
-    expect_error(source("_targets.R"), "Mode réel non branché")
+    # mission 016 : le mode réel est branché ; en ligne, le classeur Tichý est exigé en local
+    cfg <- cfg[!grepl("^(offline|tichy_path):", cfg)]
+    writeLines(c(sub("^demo: true", "demo: false", cfg), "offline: false"), "config.yml")
+    expect_error(source("_targets.R"), "tichy_path")
   })
 })
