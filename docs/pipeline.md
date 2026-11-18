@@ -135,6 +135,17 @@ mesurés en mission 018. `error = "stop"` : jamais de mosaïque partielle silenc
   paquet) contre 1 649 Mo en lecture complète.
 - **Ancrages GBIF** : la précision d'une maille est l'incertitude maximale de ses
   occurrences (`gbif_anchors()`), contrôlée par la règle bloquante (25 m).
+  Aucune maille bioindiquée (petite emprise) : `gbif_anchors()` rend un `sf` de 0 ligne
+  (mêmes colonnes) avec l'avertissement `sylvostation_non_calcule` ; le modèle trophique
+  local est alors sauté et la ligne « 7. Points d'ancrage (GBIF) » vaut
+  `non atteint (aucune maille GBIF)` (mission 026).
+- **Reprise réseau** (mission 026) : `fetch_cached()` reprend un téléchargement en échec
+  (3 tentatives par défaut, attentes 5, 20 puis 60 s, fichier partiel supprimé, message à
+  chaque tentative, erreur claire à la fin). Nombre de tentatives : argument `retries` ou
+  option `sylvostation.download_retries` ; la clé `download_retries` de `config.yml` reste
+  **à brancher** (hors périmètre de 026). Les téléchargements de dalles LiDAR
+  (`.download_once()`, `R/emprise.R`), du TOPAGE (`R/hydro.R`) et de la SER ne passent pas
+  par `fetch_cached()` : **non repris pour l'instant**.
 - **Géologie avec `emprise: ser`** : `geology_coverage()` avertit si plus de 1 % de la SER
   tombe hors des départements de `bdcharm_departements`.
 

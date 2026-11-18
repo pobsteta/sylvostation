@@ -84,7 +84,63 @@ test_that("fetch_cached : cache sans réseau, refus hors ligne, téléchargement
   fetch_cached("https://exemple.invalid/a.csv", d, offline = TRUE, downloader = faux)
   expect_equal(appels, 1L)  # en cache : aucun nouvel appel
   echec <- function(url, destfile, ...) 1L
-  expect_error(fetch_cached("https://exemple.invalid/b.csv", d, downloader = echec), "impossible")
+  expect_error(fetch_cached("https://exemple.invalid/b.csv", d, downloader = echec,
+                            sleeper = function(s) NULL), "impossible")
+})
+
+test_that("fetch_cached : reprise après deux échecs, puis réussite (mission 026)", {
+  d <- tempfile("cache")
+  dir.create(d)
+  appels <- 0L
+  attentes <- numeric()
+  partiel_vu <- logical()
+  capricieux <- function(url, destfile, ...) {
+    partiel_vu <<- c(partiel_vu, file.exists(destfile))
+    appels <<- appels + 1L
+    if (appels < 3L) {
+      writeLines("partiel", destfile)  # fichier partiel laissé par l'échec
+      stop("Stream error in the HTTP/2 framing layer")
+    }
+    writeLines("x", destfile)
+    0L
+  }
+  expect_message(
+    p <- fetch_cached("https://exemple.invalid/c.csv", d, downloader = capricieux,
+                      sleeper = function(s) attentes <<- c(attentes, s)),
+    "tentative 1/3")
+  expect_equal(appels, 3L)
+  expect_equal(attentes, c(5, 20))                 # attente croissante
+  expect_false(any(partiel_vu))                    # partiel supprimé avant chaque reprise
+  expect_identical(readLines(p), "x")
+  expect_false(file.exists(paste0(p, ".part")))
+})
+
+test_that("fetch_cached : échec définitif après N tentatives, N réglable", {
+  d <- tempfile("cache")
+  dir.create(d)
+  appels <- 0L
+  toujours <- function(url, destfile, ...) {
+    appels <<- appels + 1L
+    stop("Stream error in the HTTP/2 framing layer")
+  }
+  rien <- function(s) NULL
+  suppressMessages(expect_error(
+    fetch_cached("https://exemple.invalid/e.csv", d, downloader = toujours, sleeper = rien),
+    "impossible apr.s 3 tentative.*HTTP/2"))
+  expect_equal(appels, 3L)
+  appels <- 0L
+  suppressMessages(expect_error(
+    fetch_cached("https://exemple.invalid/f.csv", d, downloader = toujours, retries = 5,
+                 sleeper = rien), "5 tentative"))
+  expect_equal(appels, 5L)
+  old <- options(sylvostation.download_retries = 2L)
+  on.exit(options(old), add = TRUE)
+  appels <- 0L
+  suppressMessages(try(fetch_cached("https://exemple.invalid/g.csv", d,
+                                    downloader = toujours, sleeper = rien), silent = TRUE))
+  expect_equal(appels, 2L)
+  expect_error(fetch_cached("https://exemple.invalid/h.csv", d, retries = 0), "retries")
+  expect_false(file.exists(file.path(d, "e.csv.part")))
 })
 
 test_that("real_sources : extraits réels hors ligne, jamais synth_, version TAXREF figée", {
@@ -520,6 +576,32 @@ test_that("gbif_anchors : précision = incertitude maximale des occurrences de l
   expect_error(gbif_anchors(cel, mark_ifn(occ), r), "IFN|700|pr.cision", ignore.case = TRUE)
   expect_error(gbif_anchors(data.frame(a = 1), occ, r), "grid_bioindication")
   expect_error(gbif_anchors(cel, data.frame(a = 1), r), "clean_occ")
+})
+
+test_that("gbif_anchors : aucune maille bioindiquée -> sf vide signalé, pas d'erreur (026)", {
+  carre <- sf::st_polygon(list(rbind(c(1015500, 6793500), c(1015550, 6793500),
+                                     c(1015550, 6793550), c(1015500, 6793550),
+                                     c(1015500, 6793500))))
+  cel <- sf::st_sf(cell_id = "a", ph = 5, azote = 4, geometry = sf::st_sfc(carre, crs = 2154))
+  r <- terra::rast(xmin = 1015500, xmax = 1015600, ymin = 6793500, ymax = 6793600,
+                   resolution = 25, crs = "EPSG:2154", vals = 7)
+  names(r) <- "pente"
+  loin <- sf::st_as_sf(data.frame(x = 1016500, y = 6794500, loc_precision_m = 5),
+                       coords = c("x", "y"), crs = 2154)
+  expect_warning(a <- gbif_anchors(cel, loin, r), class = "sylvostation_non_calcule")
+  expect_s3_class(a, "sf")
+  expect_equal(nrow(a), 0L)
+  expect_true(all(c("cell_id", "source", "loc_precision_m", "n_occ_maille", "trophic", "pente")
+                  %in% names(a)))
+  expect_equal(sf::st_crs(a)$epsg, 2154L)
+  expect_equal(attr(a, "n_ecartees"), 1L)
+  # l'aval accepte ce vide : aucune ligne complète, donc pas de modèle local (< 20 lignes)
+  expect_equal(sum(stats::complete.cases(sf::st_drop_geometry(a))), 0L)
+  # l'état de preuve le dit
+  e <- evidence_table_real(list(offline = FALSE, n_gbif = nrow(a), gnss = TRUE,
+                                reference = TRUE, key = TRUE, soils = TRUE))
+  expect_identical(e$etat[grepl("GBIF", e$etape)], "non atteint (aucune maille GBIF)")
+  expect_match(e$detail[grepl("^10", e$etape)], "non ex.cut.e")
 })
 
 test_that("gnss_field_gradients : gradients de terrain des relevés GNSS", {

@@ -4,7 +4,15 @@
 \alias{fetch_cached}
 \title{Télécharger un fichier une seule fois (cache local), ou refuser hors ligne}
 \usage{
-fetch_cached(url, dir, offline = FALSE, downloader = utils::download.file)
+fetch_cached(
+  url,
+  dir,
+  offline = FALSE,
+  downloader = utils::download.file,
+  retries = getOption("sylvostation.download_retries", 3L),
+  wait = c(5, 20, 60),
+  sleeper = Sys.sleep
+)
 }
 \arguments{
 \item{url}{Adresse du fichier.}
@@ -15,6 +23,15 @@ fetch_cached(url, dir, offline = FALSE, downloader = utils::download.file)
 
 \item{downloader}{Fonction de téléchargement, de signature de
 \code{\link[utils:download.file]{utils::download.file()}} (remplaçable dans les tests).}
+
+\item{retries}{Nombre total de tentatives (au moins 1). Par défaut l'option
+\code{sylvostation.download_retries}, sinon 3 (valeur provisoire ; la clé \code{download_retries}
+de \code{config.yml} reste à brancher).}
+
+\item{wait}{Attentes (secondes) avant la 2e, la 3e... tentative ; la dernière valeur
+est répétée si besoin. Défaut : 5, 20, 60 (provisoire).}
+
+\item{sleeper}{Fonction d'attente (remplaçable dans les tests).}
 }
 \value{
 Le chemin du fichier local.
@@ -23,6 +40,14 @@ Le chemin du fichier local.
 Renvoie le chemin local de \code{url} dans \code{dir} : si le fichier y est déjà, aucun accès
 réseau n'a lieu. Sinon, avec \code{offline = TRUE}, la fonction \strong{s'arrête} (le mode
 hors ligne ne télécharge jamais) ; sinon elle télécharge par \code{downloader}.
+}
+\details{
+\strong{Reprise sur incident réseau} (mission 026) : un échec du téléchargement (erreur ou
+état non nul, par exemple « Stream error in the HTTP/2 framing layer ») est repris,
+jusqu'à \code{retries} tentatives au total, avec une attente croissante (\code{wait}). Le fichier
+partiel est supprimé avant chaque reprise et un message est émis à chaque tentative.
+Après la dernière, la fonction s'arrête avec une erreur claire (adresse, nombre de
+tentatives, dernière cause).
 }
 \examples{
 d <- tempfile("cache")
