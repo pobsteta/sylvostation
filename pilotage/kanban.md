@@ -27,6 +27,8 @@
 
 ## Terminé
 
+- [022-rapport-pdf](missions/022-rapport-pdf.md) · cycle 5 · dev
+
 - [024-cartes-comparaison](missions/024-cartes-comparaison.md) · cycle 5 · acquereur
 
 - [021-descente-echelle-hydrique](missions/021-descente-echelle-hydrique.md) · cycle 5 · dev
