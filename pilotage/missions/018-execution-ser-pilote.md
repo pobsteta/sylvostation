@@ -56,3 +56,11 @@ Seuils et résolution de config.yml, provisoires.
 ## Qui veille, qui tranche
 
 Relecteur, puis l'orchestrateur.
+
+## Complément du 2026-11-18 (orchestrateur)
+
+- Depuis 021 : la carte hydrique à 25 m (`hydrique_25m.tif`, méthode `biljou_topo`) fait partie du run ; contrôler `k_sv` et `is_topo` sur relief réel (contraste nord/sud, pourtour), et l'écart table/calcul direct.
+- Le worktree n'a pas `data/` : créer un lien `data -> /home/pascal/dev/sylvostation/data` pour réutiliser le cache (SAFRAN, etc.) ; ne jamais versionner `data/`.
+- Ne pas exécuter dans le dépôt principal (son code peut changer pendant le run).
+- **Pour la mission 023 (page pkgdown)** : laisser les sorties sous `data/sorties/D11/` et inscrire dans le compte rendu leur chemin, la liste des fichiers et l'emprise exacte (EPSG:2154).
+- Ordre : 4 dalles d'abord ; rendre un point d'étape (chiffres, durée) avant les 225.

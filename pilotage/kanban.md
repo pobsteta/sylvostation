@@ -19,7 +19,7 @@
 ## Planifié
 
 
-- [018-execution-ser-pilote](missions/018-execution-ser-pilote.md) · après 016, 017 · dev
+- [023-page-pkgdown-vosges](missions/023-page-pkgdown-vosges.md) · après 018, 022 · depuis le cycle 5 · dev
 
 ## Terminé
 
