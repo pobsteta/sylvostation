@@ -69,8 +69,12 @@ une classe hors du triangle (\code{Als}, code 8), non représentée dans la gran
 }
 \examples{
 \donttest{
-ifn <- load_ifn(system.file("extdata", package = "sylvostation"), files = c("PLACETTE", "ECOLOGIE"))
-ru <- ru_from_texture(ifn$placettes)
-summary(ru$ru_mm)
+if (all(vapply(c("euptf2", "soiltexture", "ranger"), requireNamespace, TRUE,
+               quietly = TRUE))) {
+  ifn <- load_ifn(system.file("extdata", package = "sylvostation"),
+                  files = c("PLACETTE", "ECOLOGIE"))
+  ru <- ru_from_texture(ifn$placettes)
+  summary(ru$ru_mm)
+}
 }
 }

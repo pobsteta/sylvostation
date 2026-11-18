@@ -28,3 +28,38 @@ ifn_precision_m: 700
 # Mode démonstration : le pipeline tourne sans réseau sur inst/extdata (jeux synth_*,
 # synthetic = TRUE) ; sorties sous data/. Les résultats ne valent RIEN sur données réelles.
 demo: true
+
+# --- Mode réel (mission 016), lu seulement avec `demo: false` ---------------------------
+# offline: true = mode réel SANS RÉSEAU sur les extraits réels de inst/extdata (CI, tests).
+offline: false
+# Nombre maximal de dalles LiDAR (essai court, par exemple 4) ; null = toutes.
+max_tiles: null
+# test = emprise_test recoupée avec la SER tamponnée (225 dalles) ; ser = SER entière.
+emprise: test
+# Valeurs provisoires (journal, mission 003), à geler avant la phase 1.
+lidar_block_size: 3
+lidar_buffer_m: 20
+lidar_ncores: 3
+# Version de TAXREF figée (jointures CD_NOM puis CD_REF) ; doit figurer dans le nom du fichier.
+taxref_version: "18"
+taxref_url: "https://assets.patrinat.fr/files/referentiel/TAXREF_v18_2025.zip"
+indicator_source: tichy
+# Classeur Zenodo de Tichý et al. (2023), à poser en local pour le mode en ligne (URL directe à vérifier).
+tichy_path: null
+ru_source: euptf2
+# Climat SAFRAN (SIM2) : période provisoire ; saison de végétation avril-septembre (provisoire).
+safran_annees: [1996, 2025]
+saison_vegetation: [4, 9]
+# Départements BD Charm-50 de l'emprise (référentiels § 5) : liste explicite.
+bdcharm_departements: ["067", "068", "088"]
+ifn_archive_url: "https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip"
+# GBIF : search sans compte ; download si GBIF_USER, GBIF_PWD, GBIF_EMAIL sont posées.
+gbif_method: search
+# Masque forestier : MHC > forest_height_m sur au moins la moitié de la cellule de 25 m.
+forest_mask: true
+forest_height_m: 5
+cache_dir: data/cache
+# Entrées optionnelles : absentes = signalées dans l'état de preuve, jamais remplacées.
+gnss_path: null
+reference_path: null
+soil_paths: null

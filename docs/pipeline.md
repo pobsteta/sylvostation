@@ -1,6 +1,6 @@
 # Pipeline `targets` (mission 010)
 
-Source : `_targets.R`, paramétré par `config.yml`. Ce fichier décrit seulement ce qui n'est
+Source : `_targets.R`, paramétré par `config.yml` (missions 010 et 016). Ce fichier décrit seulement ce qui n'est
 pas évident dans le code ; les décisions restent dans `docs/adr/`.
 
 ## Mode démo (`demo: true`)
@@ -26,12 +26,95 @@ Choix de conception :
 - le bloc « ancrage » (mission 007 : `get_gbif`, `clean_occ`, `grid_bioindication`,
   `load_gnss`) est intégré au paquet (`R/ancrage.R`) mais non branché au pipeline démo : `synth_demo_points()` le remplace.
 
-## Mode réel (`demo: false`)
+## Mode réel (`demo: false`, mission 016)
 
-Non branché : `_targets.R` s'arrête avec un message. À brancher : téléchargement de la SER
-(`get_ser(source = "download")`), tableau d'assemblage et dalles LiDAR HD (`list_tiles`,
-`run_lasr`), ancrage GBIF et relevés GNSS (mission 007), couches de sols, seuils de la
-référence AgroParisTech.
+À partir du seul code SER, le pipeline télécharge (cache sous `cache_dir`, hors dépôt),
+calcule et écrit le catalogue **sans préfixe `synth_`** dans `out_dir/<ser_code>/`. Les
+fonctions sont dans `R/pipeline_reel.R` ; les clés de configuration dans `config.yml`
+(rubrique « Mode réel », valeurs par défaut dans `read_config()`).
+
+### `offline: true` : mode réel sans réseau
+
+Sources = les **extraits réels** de `inst/extdata`, jamais un jeu `synth_` :
+`ser_extrait.gpkg`, `LHD_FXX_1015_6794_extrait.laz` (une dalle réduite à 80 m x 80 m),
+`topage_troncons_extrait.gpkg`, `bdcharm50_emprise_test.gpkg`, `ifn_*.csv` (100 placettes),
+`taxref_v18_extrait.csv`, `tichy_2023_extrait.csv`, `safran_sim2_12mailles_extrait.csv`
+(12 mailles, 2003-2004). Aucune fonction de téléchargement n'est appelée
+(`fetch_cached()` refuse hors ligne). C'est ce run que lancent la CI et les tests
+(`test-acceptation-mode-reel.R`, `test-pipeline-reel.R`, ce dernier compte les appels
+réseau : 0). Durée mesurée : environ 1 min 30 s (dont environ 50 s de MRVBF par GRASS).
+
+**Hors ligne, seule la composante régionale à maille large est produite** : sans ancrage
+GBIF réel (un extrait exigerait un DOI, donc un `occ_download` avec compte), les gradients
+cartographiés viennent des placettes IFN et du climat SAFRAN. Le LiDAR et le terrain sont
+calculés (masque forestier, état de preuve) mais n'entrent dans aucun modèle.
+
+### Cibles
+
+| Cible | Fonction | En ligne | Hors ligne |
+|---|---|---|---|
+| `ser`, `emprise` | `get_ser()`, `real_extent()` (`emprise: test` ou `ser`) | `ser_l93.zip` | extrait |
+| `tiles` | `list_tiles()` ou `local_tiles()`, puis `select_tiles(max_tiles)` | WFS | nom du LAZ |
+| `tile_blocks`, `lidar_files` | `tile_blocks()` (3 x 3), `run_tile_block()` par branche | `url_npl` | LAZ local |
+| `dtm`, `grid` | `mosaic_tiles()` (5 m), `real_grid()` (25 m) | | |
+| `hydro`, `terrain` | `get_hydro_network()`, `real_terrain()` (`mrvbf = TRUE`) | WFS TOPAGE | extrait |
+| `forest` | `forest_mask()` : MHC > 5 m sur la moitié de la cellule (provisoire) | | |
+| `geol_*` | `read_geology()`, `recode_lithology()`, `dominant_lithology(700)` | BD Charm-50 (`bdcharm_departements`) | extrait |
+| `ifn` | `load_ifn()`, `filter_greco()`, `filter_releves()` | `fetch_ifn()` | extrait |
+| `taxref`, `indicateurs` | `read_taxref()`, `load_indicator_values("tichy")` | `taxref_url`, `tichy_path` | extraits |
+| `safran`, `climat` | `fetch_safran()`, `read_safran()`, `safran_climate()` (avril-septembre) | SIM2 | 12 mailles |
+| `ifn_gradients` | `ifn_real_gradients()` : Tichý, `ru_from_texture()`, `hydric_stress()` (ADR 0006), `bioclim_axis()` | | |
+| `anchors`, `local_trophic` | `get_gbif()`, `clean_occ()`, `grid_bioindication()`, `gbif_anchors()` | `occ_search` ou `occ_download` | **absent** |
+| `models`, `cvs`, `maps` | `fit_gradient()`, `spatial_cv()`, `predict_raster()` (trophique, hydrique) ; bioclimat = `apply_bioclim()` | | régional seul |
+| typologie | `default_thresholds()`, `discretise()`, `merge_rare(plots = types des placettes)`, `type_raster()`, `real_type_legend()` (`azonal = FALSE`) | | |
+| fiches, clé | `indicator_species()`, `real_fertility()`, `build_key()` sur `obs_pente`, `obs_topo`, `obs_humus` (notés par l'IFN) | | |
+| `gnss_validation` | `load_gnss()`, `gnss_field_gradients()`, `validate_maps()` | si `gnss_path` | absent |
+| `comparison_table` | `load_reference()`, `compare_gradients()` | si `reference_path` | absent |
+| `evidence`, `outputs`, `rapport` | `evidence_table_real()`, `write_outputs(synthetic = FALSE)`, `write_types_gpkg_real()`, Quarto | | |
+
+### Dalles : branchement dynamique et reprise
+
+Les dalles sont groupées en blocs contigus de `lidar_block_size` x `lidar_block_size`
+(3 x 3, 225 dalles = 25 blocs). Une branche `targets` par bloc : une branche terminée
+n'est pas relancée ; dans un bloc interrompu, `run_tile_block()` saute les dalles dont
+`mnt_<dalle>.tif` et `mhc_<dalle>.tif` existent. Les LAZ sont effacés après chaque bloc.
+Le tampon de 20 m ne lit que les dalles du bloc : effets de bord entre blocs acceptés,
+mesurés en mission 018. `error = "stop"` : jamais de mosaïque partielle silencieuse
+(`mosaic_tiles()` vérifie que toutes les dalles attendues sont présentes).
+
+### Sources : règles
+
+- **Aucun jeu synthétique en mode réel** : `real_sources()` passe chaque extrait et chaque
+  entrée optionnelle (`gnss_path`, `reference_path`, `soil_paths`, `tichy_path`) par
+  `assert_not_synthetic()` : arrêt si le nom commence par `synth_`, si une colonne
+  `synthetic` vaut `TRUE` (CSV, GeoPackage, classeur) ou si un raster porte la balise
+  `synthetic = TRUE`.
+- **URL IFN et TAXREF** : une seule source, `config.yml` (`ifn_archive_url`, `taxref_url`),
+  exigée en ligne.
+- **SAFRAN en ligne** : chaque fichier annuel (toute la France) est lu par blocs de lignes
+  et filtré à la lecture aux mailles proches de l'emprise ; mesuré sur `QUOT_SIM2_2003.csv.gz`
+  (3 610 580 lignes) : pic de mémoire du processus R 449 Mo (dont 255 Mo pour R et le
+  paquet) contre 1 649 Mo en lecture complète.
+- **Ancrages GBIF** : la précision d'une maille est l'incertitude maximale de ses
+  occurrences (`gbif_anchors()`), contrôlée par la règle bloquante (25 m).
+- **Géologie avec `emprise: ser`** : `geology_coverage()` avertit si plus de 1 % de la SER
+  tombe hors des départements de `bdcharm_departements`.
+
+### Entrées absentes
+
+`gnss_path` absent : ligne « 15. Validation thématique par relevés GNSS indépendants »
+= `non atteint (entrée absente)`. `reference_path` absent : ligne « 16. Comparaison à la
+référence AgroParisTech » = `sautée (entrée absente)`, et aucun fichier de comparaison.
+`soil_paths` absent : « 8. Sols » = `non exécuté`. Rien n'est remplacé par du synthétique.
+
+### Choix provisoires (à geler avant la phase 1)
+
+Saison de végétation avril-septembre ; bioclimat = premier axe principal de P - ETP et de
+la température moyenne annuelle (centrées-réduites sur les placettes), « plus haut = plus
+chaud » ; masque forestier (MHC > 5 m sur au moins la moitié de la cellule) ; seuils par
+quantiles ; `azonal = FALSE` partout. Couches de terrain vides (MRVBF sans GRASS, TPI dont
+la fenêtre dépasse l'emprise, hauteur au réseau sans cours d'eau) : retirées des
+prédicteurs et nommées dans l'état de preuve (`empty_layers()`).
 
 ## À vérifier
 

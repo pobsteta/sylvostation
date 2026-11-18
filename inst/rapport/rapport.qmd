@@ -10,6 +10,7 @@ params:
   dossier: "."
   prefixe: "synth_"
   ser_code: "D11"
+  hors_ligne: false
 execute:
   echo: false
   warning: false
@@ -19,18 +20,22 @@ execute:
 ```{r}
 #| label: setup
 #| include: false
-# Gabarit du rapport (mission 010). Il lit uniquement les fichiers écrits par
+# Gabarit du rapport (missions 010 et 016). Il lit uniquement les fichiers écrits par
 # write_outputs() dans `params$dossier` ; il ne dépend pas du paquet sylvostation.
+# Préfixe `synth_` : mode démo (données fabriquées) ; préfixe vide : mode réel.
 dossier <- params$dossier
 pre <- params$prefixe
 lire <- function(nom) {
   f <- file.path(dossier, paste0(pre, nom, ".csv"))
-  if (file.exists(f)) utils::read.delim(f, sep = ";", dec = ".", check.names = FALSE,
-                                        fileEncoding = "UTF-8") else NULL
+  if (!file.exists(f) || file.size(f) < 2) return(NULL)
+  tryCatch(utils::read.delim(f, sep = ";", dec = ".", check.names = FALSE,
+                             fileEncoding = "UTF-8"), error = function(e) NULL)
 }
 tab <- function(x, ...) if (is.null(x)) cat("(table absente)\n") else
   knitr::kable(x, digits = 2, row.names = FALSE, ...)
 synth <- identical(pre, "synth_")
+hors_ligne <- isTRUE(params$hors_ligne)
+lignes <- function(x) if (is.null(x)) 0L else nrow(x)
 ```
 
 ```{r}
@@ -41,6 +46,14 @@ if (synth) cat(paste0(
   "d'ancrage, relevés de terrain et la carte de référence sont **fabriqués** ",
   "(fichiers `synth_*`, `synthetic = TRUE`). Aucun résultat ci-dessous n'est un résultat ",
   "sur données réelles ; aucun ne doit être cité ni utilisé pour décider sur le terrain.\n:::\n"))
+if (!synth) cat(paste0(
+  "::: {.callout-note}\n## MODE RÉEL", if (hors_ligne) " HORS LIGNE" else "", "\n",
+  "Ce rapport a été produit par le **mode réel** à partir du code SER. ",
+  if (hors_ligne) paste0("Exécution **hors ligne** sur les extraits réels de `inst/extdata` ",
+                         "(une dalle LiDAR réduite, 100 placettes IFN, 12 mailles SAFRAN sur 2 ans) : ",
+                         "les résultats sont réels mais **réduits**, ils prouvent que la chaîne ",
+                         "s'enchaîne sur données réelles, pas qu'elle est juste. ") else "",
+  "Les étapes dont l'entrée manque sont signalées dans l'état de preuve, jamais remplacées.\n:::\n"))
 ```
 
 Sylvoécorégion : **`r params$ser_code`**.
@@ -107,17 +120,20 @@ référence ; essence fictive en démo) par type.
 types <- lire("types")
 ind <- lire("especes_indicatrices")
 fert <- lire("fertilite")
-for (k in seq_len(nrow(types))) {
+for (k in seq_len(lignes(types))) {
   t <- types$type[k]
   cat("\n### Type ", t, "\n\n", sep = "")
+  n_pts <- if ("n_ancrages" %in% names(types)) paste0(types$n_ancrages[k], " points d'ancrage") else
+    paste0(types$n_placettes[k], " placettes IFN")
   cat("Surface : ", round(types$area_ha[k], 1), " ha (", round(100 * types$part_surface[k], 1),
-      " % de la zone) ; ", types$n_ancrages[k], " points d'ancrage.\n\n", sep = "")
-  i <- ind[ind$type == t, , drop = FALSE]
-  cat("Espèces indicatrices : ", if (nrow(i)) paste0(utils::head(i$species, 5), collapse = ", ") else "aucune",
+      " % de la zone) ; ", n_pts, ".\n\n", sep = "")
+  i <- if (lignes(ind)) ind[ind$type == t, , drop = FALSE] else NULL
+  cat("Espèces indicatrices : ", if (lignes(i)) paste0(utils::head(i$species, 5), collapse = ", ") else "aucune",
       ".\n\n", sep = "")
-  f <- fert[fert$type == t, , drop = FALSE]
-  if (nrow(f)) cat("Fertilité (", f$species[1], ") : ", round(f$fertilite_moy[1], 1),
-                   " m à ", f$age_ref[1], " ans.\n\n", sep = "")
+  f <- if (lignes(fert)) fert[fert$type == t, , drop = FALSE] else NULL
+  if (lignes(f)) cat("Fertilité (", f$species[1], ") : ", round(f$fertilite_moy[1], 1),
+                     " m à ", f$age_ref[1], " ans.\n\n", sep = "") else
+    if (!synth) cat("Fertilité : non calculée (aucun arbre avec hauteur et âge pour ce type).\n\n")
 }
 ```
 
@@ -126,7 +142,8 @@ for (k in seq_len(nrow(types))) {
 ```{r}
 #| results: asis
 k <- lire("cle_terrain")
-cat("```\n", paste(k$ligne, collapse = "\n"), "\n```\n", sep = "")
+if (lignes(k)) cat("```\n", paste(k$ligne, collapse = "\n"), "\n```\n", sep = "") else
+  cat("Clé non construite (moins de deux types parmi les placettes).\n")
 ```
 
 ```{r}
@@ -139,62 +156,112 @@ tab(lire("cle_resume"))
 
 R² et RMSE de chaque gradient, comparés aux repères publiés (0,36 trophique, 0,52
 bioclimat, 0,43 réserve utile ; associée ici au gradient hydrique, lecture à confirmer).
-Sur des données synthétiques, un R² supérieur au repère **ne prouve rien**.
+
+```{r}
+#| results: asis
+if (synth) cat("Sur des données synthétiques, un R² supérieur au repère **ne prouve rien**.\n\n") else
+  cat("Mode réel : modèles **régionaux** calibrés sur les placettes IFN avec des prédicteurs à ",
+      "maille large (climat SAFRAN) ; le bioclimat est calculé à partir du climat, pas modélisé.\n\n")
+```
 
 ```{r}
 tab(lire("validation_stats"))
 ```
 
-Modèle régional sur les placettes IFN (maille large seulement ; gradient issu de valeurs
-indicatrices synthétiques) :
-
 ```{r}
-tab(lire("validation_regional_ifn"))
+#| results: asis
+if (synth) {
+  cat("Modèle régional sur les placettes IFN (maille large seulement ; gradient issu de valeurs ",
+      "indicatrices synthétiques) :\n\n")
+  print(tab(lire("validation_regional_ifn")))
+}
 ```
 
-### Thématique : types prédits contre types de « terrain » (synthétiques)
+### Thématique : types prédits contre types de terrain
 
 ```{r}
-tab(lire("validation_cartes"))
-```
-
-Accord par axe (1 = trophique, 2 = hydrique, 3 = bioclimat, dans l'ordre des types) :
-
-```{r}
-tab(lire("validation_par_axe"))
+#| results: asis
+if (synth) {
+  cat("Types de « terrain » **synthétiques**.\n\n")
+  print(tab(lire("validation_cartes")))
+  cat("\n\nAccord par axe (1 = trophique, 2 = hydrique, 3 = bioclimat, dans l'ordre des types) :\n\n")
+  print(tab(lire("validation_par_axe")))
+} else if (lignes(lire("validation_gnss"))) {
+  cat("Relevés GNSS indépendants (axes trophique et bioclimatique) :\n\n")
+  print(tab(lire("validation_gnss")))
+} else {
+  cat("**Non atteint (entrée absente)** : aucun relevé GNSS n'a été fourni (`gnss_path`).\n")
+}
 ```
 
 ### Comparaison à la carte de référence (protocole du brief, § 9)
 
-Référence **synthétique** (les rasters d'AgroParisTech n'ont pas été obtenus).
-**La référence synthétique est fabriquée à partir de la même vérité synthétique que nos gradients : un rho élevé est forcé par construction et ne mesure aucune performance.** Corrélation de rang à 50 m, puis accord des codes à trois chiffres (seuils de la
-référence synthétiques ; ordre des chiffres à vérifier).
-
 ```{r}
-tab(lire("comparaison_gradients"))
-tab(lire("comparaison_types_3chiffres"))
+#| results: asis
+if (synth) {
+  cat("Référence **synthétique** (les rasters d'AgroParisTech n'ont pas été obtenus). ",
+      "**La référence synthétique est fabriquée à partir de la même vérité synthétique que nos ",
+      "gradients : un rho élevé est forcé par construction et ne mesure aucune performance.** ",
+      "Corrélation de rang à 50 m, puis accord des codes à trois chiffres (seuils de la ",
+      "référence synthétiques ; ordre des chiffres à vérifier).\n\n")
+  print(tab(lire("comparaison_gradients")))
+  print(tab(lire("comparaison_types_3chiffres")))
+} else if (lignes(lire("comparaison_gradients"))) {
+  print(tab(lire("comparaison_gradients")))
+} else {
+  cat("**Sautée (entrée absente)** : les rasters de la référence n'ont pas été fournis ",
+      "(`reference_path`).\n")
+}
 ```
 
 ## Limites
 
-::: {.callout-important}
-**Les critères d'acceptation du § 7 du brief technique sont « non atteints »** : aucun n'a
-tourné sur données réelles. Une exécution de démonstration qui réussit prouve que la
-chaîne s'enchaîne (contrat d'interface), pas qu'elle est juste.
-:::
-
-| Critère du § 7 | Statut | Pourquoi |
-|---|---|---|
-| Le pipeline s'exécute de bout en bout sur une SER pilote à partir du seul code SER | **non atteint** | La démo tourne sur jeux d'essai ; le mode réel n'est pas branché (téléchargements SER, LiDAR HD, ancrage GBIF : fonctions intégrées au paquet (mission 007), non branchées au pipeline démo). |
-| Performances issues d'une validation croisée spatiale **et** de relevés GNSS indépendants | **non atteint** | Validation croisée sur points synthétiques ; aucun relevé GNSS réel. |
-| Aucune variable fine extraite aux coordonnées des placettes IGN | **non atteint** (vérifié par test, pas sur un run réel) | La règle est codée et testée ; dans la démo, les placettes IFN ne reçoivent que des couches à maille large. |
-| Chaque type couvre au moins 1 % de la surface forestière ou est justifié azonal | **non atteint** | Surfaces calculées sur une zone synthétique de 6,25 km² ; aucune station azonale traitée ; pas de masque forestier. |
-| La clé reclasse correctement au moins 70 % des placettes | **non atteint** | Résultat de la démo : voir le tableau de la clé ci-dessus (observables synthétiques). |
-| Le rapport liste les limites | cette section | — |
+```{r}
+#| results: asis
+if (synth) cat(paste0(
+  "::: {.callout-important}\n",
+  "**Les critères d'acceptation du § 7 du brief technique sont « non atteints »** : aucun n'a ",
+  "tourné sur données réelles. Une exécution de démonstration qui réussit prouve que la ",
+  "chaîne s'enchaîne (contrat d'interface), pas qu'elle est juste.\n:::\n\n",
+  "| Critère du § 7 | Statut | Pourquoi |\n|---|---|---|\n",
+  "| Le pipeline s'exécute de bout en bout sur une SER pilote à partir du seul code SER | **non atteint** | La démo tourne sur jeux d'essai. |\n",
+  "| Performances issues d'une validation croisée spatiale **et** de relevés GNSS indépendants | **non atteint** | Validation croisée sur points synthétiques ; aucun relevé GNSS réel. |\n",
+  "| Aucune variable fine extraite aux coordonnées des placettes IGN | **non atteint** (vérifié par test, pas sur un run réel) | La règle est codée et testée. |\n",
+  "| Chaque type couvre au moins 1 % de la surface forestière ou est justifié azonal | **non atteint** | Zone synthétique de 6,25 km² ; pas de masque forestier. |\n",
+  "| La clé reclasse correctement au moins 70 % des placettes | **non atteint** | Observables synthétiques. |\n",
+  "| Le rapport liste les limites | cette section | — |\n\n"))
+if (!synth) {
+  ep <- lire("etat_de_preuve")
+  cat("::: {.callout-important}\n",
+      "Le statut de chaque étape est dans le tableau « État de preuve » ci-dessus. ",
+      if (hors_ligne) "Exécution **hors ligne** sur extraits réduits : les critères du § 7 restent non atteints tant que la SER entière n'a pas tourné. " else "",
+      "\n:::\n\n", sep = "")
+  manq <- if (lignes(ep)) ep[grepl("entrée absente|non exécuté", ep$etat), c("etape", "etat"), drop = FALSE] else NULL
+  if (lignes(manq)) {
+    cat("Étapes non exécutées ou entrées absentes :\n\n")
+    cat(paste0("- ", manq$etape, " : **", manq$etat, "**"), sep = "\n")
+    cat("\n\n")
+  }
+  cat(paste0(
+    "- **Composante régionale seulement**", if (hors_ligne) " (hors ligne)" else "",
+    " : les gradients cartographiés viennent de modèles calibrés sur les placettes IFN avec des ",
+    "prédicteurs à maille large (climat SAFRAN de 8 km) ; la composante locale à prédicteurs fins ",
+    "(LiDAR) exige des points d'ancrage précis (GBIF, GNSS)", if (hors_ligne) ", absents hors ligne" else "",
+    ". À l'intérieur d'une maille SAFRAN, la carte varie peu.\n",
+    "- **Masque forestier** : cellules de 25 m dont au moins la moitié des pixels du MHC LiDAR ",
+    "dépassent 5 m (seuil provisoire) ; BD Forêt non branchée.\n",
+    "- **Saison de végétation** : avril à septembre (provisoire) ; bioclimat = premier axe de ",
+    "P - ETP et de la température (provisoire).\n",
+    "- **Gradient hydrique** : indice de contrainte BILJOU (ADR 0006) aux placettes, réserve utile ",
+    "par la texture IFN ; paramètres de végétation provisoires.\n\n"))
+}
+```
 
 Limites propres à cette version :
 
-- **Stations marginales et azonales** (alluviales, tourbeuses, éboulis) : non traitées.
+- **Stations marginales et azonales** (alluviales, tourbeuses, éboulis) : non traitées ;
+  aucun type n'est marqué azonal (`azonal = FALSE` partout), un type de moins de 1 % est
+  donc fusionné.
 - **Zones hors domaine d'applicabilité** : signalées par la couche `aoa` ; les prédictions
   y sont à ne pas interpréter. `sd_cv` est un niveau d'erreur *global* recalé sur la
   validation croisée (motif spatial de l'écart-type du modèle), pas une erreur locale.
@@ -202,13 +269,12 @@ Limites propres à cette version :
   pas le sondage à la tarière. Cartes à 25 m (valeur provisoire, ADR 0004).
 - **Valeurs provisoires** : seuils de discrétisation (quantiles), seuil de fusion des types
   rares (1 % ou 15 placettes), profondeur de la clé, âge de référence de la fertilité,
-  coefficients de réserve utile (à vérifier), recodage lithologique (non validé).
-- **Placettes IFN** localisées à 700 m près : aucune variable fine ne leur est croisée ;
-  les 100 placettes de l'extrait ne suffisent pas à calibrer un modèle régional fiable.
+  réserve utile (à vérifier), recodage lithologique (non validé).
+- **Placettes IFN** localisées à 700 m près : aucune variable fine ne leur est croisée.
 - **Référence** : rasters AgroParisTech et seuils de Gégout et al. (2008) non obtenus ; leur
   format réel (noms de couches, codage des 59 types) est **à vérifier**.
-- **LiDAR HD** : vols d'hiver (hauteurs de feuillus sous-estimées) ; l'incrément 1 réel
-  (4 dalles) est traité hors de ce pipeline.
+- **LiDAR HD** : vols d'hiver (hauteurs de feuillus sous-estimées) ; effets de bord entre
+  blocs de 3 x 3 dalles acceptés (mesure prévue en mission 018).
 - **Types sans réalité de terrain** : aucune confrontation aux catalogues existants ni à un
   forestier local n'a eu lieu.
 

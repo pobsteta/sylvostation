@@ -243,9 +243,13 @@ texture_to_psd <- function(code, dictionnaire = read_texture_dictionary()) {
 #'   `texture_partielle`. Attributs `ru_verifie`, `ru_source`, `source`, `cible`, `ptf`.
 #' @examples
 #' \donttest{
-#' ifn <- load_ifn(system.file("extdata", package = "sylvostation"), files = c("PLACETTE", "ECOLOGIE"))
-#' ru <- ru_from_texture(ifn$placettes)
-#' summary(ru$ru_mm)
+#' if (all(vapply(c("euptf2", "soiltexture", "ranger"), requireNamespace, TRUE,
+#'                quietly = TRUE))) {
+#'   ifn <- load_ifn(system.file("extdata", package = "sylvostation"),
+#'                   files = c("PLACETTE", "ECOLOGIE"))
+#'   ru <- ru_from_texture(ifn$placettes)
+#'   summary(ru$ru_mm)
+#' }
 #' }
 #' @export
 ru_from_texture <- function(pl, ru_source = c("euptf2", "bruand2004"),
@@ -253,7 +257,7 @@ ru_from_texture <- function(pl, ru_source = c("euptf2", "bruand2004"),
                             dictionnaire = read_texture_dictionary()) {
   ru_source <- match.arg(ru_source)
   cible <- match.arg(cible)
-  if (!is.data.frame(pl)) stop("`pl` doit être un tableau de placettes.", call. = FALSE)
+  if (!is.data.frame(pl)) stop("`pl` doit \u00eatre un tableau de placettes.", call. = FALSE)
   paquets <- c("euptf2", "ranger", "soiltexture")
   manque <- paquets[!vapply(paquets, .has_pkg, logical(1))]
   if (ru_source == "euptf2" && length(manque)) {
@@ -262,7 +266,7 @@ ru_from_texture <- function(pl, ru_source = c("euptf2", "bruand2004"),
   }
   avec_euptf <- !length(manque)
   if (!is.character(ptf) || length(ptf) != 1L || !grepl("^PTF[0-9]{2}$", ptf)) {
-    stop("`ptf` doit être de la forme \"PTF01\".", call. = FALSE)
+    stop("`ptf` doit \u00eatre de la forme \"PTF01\".", call. = FALSE)
   }
   if (inherits(pl, "sf")) pl <- sf::st_drop_geometry(pl)
   c0 <- .couches_sol(pl)
@@ -413,7 +417,7 @@ hydric_stress <- function(x, safran = NULL, ru_col = "ru_mm", annees = NULL,
                 leaf_fall = leaf_fall, statut = "provisoire (mission 019)")
   grille <- inherits(x, "SpatRaster")
   if (!grille && !inherits(x, "sf")) {
-    stop("`x` doit être un sf de points ou un SpatRaster de réserve utile.", call. = FALSE)
+    stop("`x` doit \u00eatre un sf de points ou un SpatRaster de r\u00e9serve utile.", call. = FALSE)
   }
   assert_crs_2154(x)
   if (!grille) {
@@ -425,7 +429,7 @@ hydric_stress <- function(x, safran = NULL, ru_col = "ru_mm", annees = NULL,
   if (is.null(safran)) raison <- "climat SAFRAN absent"
   else if (!.has_pkg("biljouR")) raison <- "paquet biljouR absent"
   if (!is.null(raison)) {
-    warning("Gradient hydrique en repli sur la réserve utile : ", raison, ".", call. = FALSE)
+    warning("Gradient hydrique en repli sur la r\u00e9serve utile : ", raison, ".", call. = FALSE)
     if (grille) {
       out <- c(x * NA, x * NA, x)
       names(out) <- c("is_biljou", "nj_stress", "grad_hydrique")
@@ -461,7 +465,7 @@ hydric_stress <- function(x, safran = NULL, ru_col = "ru_mm", annees = NULL,
   for (v in setdiff(requis, "DATE")) safran[[v]] <- suppressWarnings(as.numeric(safran[[v]]))
   if (!is.null(annees)) {
     safran <- safran[as.integer(substr(as.character(safran$DATE), 1, 4)) %in% annees, , drop = FALSE]
-    if (!nrow(safran)) stop("Aucune journée SAFRAN pour les années demandées.", call. = FALSE)
+    if (!nrow(safran)) stop("Aucune journ\u00e9e SAFRAN pour les ann\u00e9es demand\u00e9es.", call. = FALSE)
   }
   mailles <- .mailles_safran(safran)
   cle <- paste(safran$LAMBX, safran$LAMBY, sep = "_")
