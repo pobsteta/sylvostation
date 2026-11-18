@@ -177,8 +177,9 @@ Extraits le 2026-11-16, mission 001 (voir `docs/referentiels.md`, § 5 et § 7).
   `LAMBY` 23530, 23610, 23690, 23770, Lambert II étendu en hm, liste
   `data/cache/safran/cellules_emprise.txt`), du 2003-01-01 au 2004-12-31 (8 772 lignes),
   colonnes d'origine `LAMBX;LAMBY;DATE;PRENEI;PRELIQ;T;FF;SSI;HU;ETP`, sans arrondi.
-  Unités (document Météo-France « Données quotidiennes SIM » du 2026-03-31, `params.pdf`
-  du cache) : précipitations et ETP en mm, `T` en °C (moyenne quotidienne), `FF` en m/s
+  Unités : document Météo-France intitulé « Données quotidiennes SIM » (2 pages, créé le
+  2026-03-31), lu dans le cache local `data/cache/safran/params.pdf` (hors dépôt) ;
+  **adresse de téléchargement à vérifier** (voir `docs/referentiels.md` § 25.8) : précipitations et ETP en mm, `T` en °C (moyenne quotidienne), `FF` en m/s
   (vent moyen quotidien), `HU` en % (humidité relative moyenne), `SSI` en **J/cm²**
   (« rayonnement visible », cumul quotidien ]00UTC-00UTC]). 458 Ko.
   Mission 016 : 7 colonnes (sans `FF`, `SSI`, `HU`). Mission 021 (2026-11-18) : `FF`, `SSI`

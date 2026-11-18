@@ -538,8 +538,8 @@ hydric_stress <- function(x, safran = NULL, ru_col = "ru_mm", annees = NULL,
 .check_ssi <- function(rg_mj, doy, lat) {
   trop <- which(rg_mj > .ra_mj(doy, lat))
   if (length(trop)) {
-    warning(length(trop), " jour(s) SAFRAN avec SSI supérieur au rayonnement ",
-            "extraterrestre : unité (J/cm2) ou donnée à vérifier.", call. = FALSE)
+    warning(length(trop), " jour(s) SAFRAN avec SSI sup\u00e9rieur au rayonnement ",
+            "extraterrestre : unit\u00e9 (J/cm2) ou donn\u00e9e \u00e0 v\u00e9rifier.", call. = FALSE)
   }
   invisible(length(trop))
 }
@@ -603,7 +603,7 @@ hydric_stress <- function(x, safran = NULL, ru_col = "ru_mm", annees = NULL,
 #' ru_by_safran_cell(p, s)
 #' @export
 ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm") {
-  if (!inherits(points, "sf")) stop("`points` doit être un sf de points.", call. = FALSE)
+  if (!inherits(points, "sf")) stop("`points` doit \u00eatre un sf de points.", call. = FALSE)
   assert_crs_2154(points)
   if (!ru_col %in% names(points)) stop("Colonne `", ru_col, "` absente de `points`.", call. = FALSE)
   assert_no_fine_extract_on_ifn(points, "coarse_safran")
@@ -615,7 +615,7 @@ ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm") 
   ma <- .maille_proche(xy[, 1], xy[, 2], mailles)
   ru <- suppressWarnings(as.numeric(points[[ru_col]]))
   ok <- is.finite(ru) & ru > 0
-  if (!any(ok)) stop("Aucune placette avec une réserve utile positive.", call. = FALSE)
+  if (!any(ok)) stop("Aucune placette avec une r\u00e9serve utile positive.", call. = FALSE)
   if (!is.null(emprise)) {
     b <- .as_bbox(emprise)
     m <- 8000 * sqrt(2) / 2
@@ -633,10 +633,10 @@ ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm") 
                  origine = "placettes de la maille", stringsAsFactors = FALSE)
     } else if (!is.na(med_emp)) {
       data.frame(maille = m, ru_mm = med_emp, n_placettes = 0L,
-                 origine = "médiane des mailles de l'emprise", stringsAsFactors = FALSE)
+                 origine = "m\u00e9diane des mailles de l'emprise", stringsAsFactors = FALSE)
     } else {
       data.frame(maille = m, ru_mm = med_tout, n_placettes = 0L,
-                 origine = "médiane de toutes les placettes (GRECO)", stringsAsFactors = FALSE)
+                 origine = "m\u00e9diane de toutes les placettes (GRECO)", stringsAsFactors = FALSE)
     }
   })
   out <- do.call(rbind, lignes)
@@ -685,7 +685,10 @@ ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm") 
 #' Pour chaque cellule `x` de la grille, dans sa maille SAFRAN (8 km) :
 #' 1. rayonnement du jour `d` : rg(x, d) = SSI(maille, d) × 0,01 × k(x, mois de d)
 #'    (SSI en J/cm², unité vérifiée dans le document « Données quotidiennes SIM » de
-#'    Météo-France du 2026-03-31 ; k de [solar_factor()]) ;
+#'    Météo-France du 2026-03-31 ; k de [solar_factor()]). Ce document nomme `SSI`
+#'    « Rayonnement visible » : il est lu ici comme le rayonnement global de courte
+#'    longueur d'onde, **à vérifier** ; la hauteur du vent `FF` (10 m supposés par
+#'    `biljouR`) est aussi **à vérifier** ;
 #' 2. ETP de Penman de `biljouR` ([biljouR::safran_to_meteo()] avec `compute_pet = TRUE` :
 #'    `penman_pet(T, rg, wind_to_2m(FF, 10), HU, doy, latitude, altitude)`) ; latitude du
 #'    centre de la maille, altitude = moyenne de `altitude` dans la maille (**provisoire**) ;
@@ -734,7 +737,7 @@ ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm") 
 #' @param seed Graine du tirage des cellules de contrôle.
 #' @param k_methode Méthode de `k` (`attr(k, "methode")` par défaut).
 #' @return Grille : `SpatRaster` `is_topo`, `nj_topo`, `is_plat`, `k_sv`, `ru_maille`,
-#'   `grad_hydrique` (= `-is_topo`, plus haut = plus humide). Points : `points` avec ces
+#'   `grad_hydrique_25m` (= `-is_topo`, plus haut = plus humide). Points : `points` avec ces
 #'   colonnes et `maille_safran`. Attributs `methode`, `k_methode`, `ecart`, `mailles`,
 #'   `parametres`, `sens`, `repli`.
 #' @examples
@@ -755,13 +758,13 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
                                budburst = 110, leaf_fall = 300, pas_k = 0.02, pas_ru = 10,
                                n_controle = 30, seed = 1, k_methode = attr(k, "methode")) {
   if (!inherits(k, "SpatRaster") || terra::nlyr(k) != 12L) {
-    stop("`k` doit être un SpatRaster à 12 couches (solar_factor()).", call. = FALSE)
+    stop("`k` doit \u00eatre un SpatRaster \u00e0 12 couches (solar_factor()).", call. = FALSE)
   }
   assert_crs_2154(k)
   if (is.null(k_methode)) k_methode <- "inconnue"
   pts <- !is.null(points)
   if (pts) {
-    if (!inherits(points, "sf")) stop("`points` doit être un sf de points.", call. = FALSE)
+    if (!inherits(points, "sf")) stop("`points` doit \u00eatre un sf de points.", call. = FALSE)
     assert_crs_2154(points)
     # regle bloquante : k est une variable fine, jamais aux placettes IFN
     assert_no_fine_extract_on_ifn(points, names(k))
@@ -773,20 +776,20 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
   } else if (inherits(ru, "SpatRaster")) {
     assert_crs_2154(ru)
     if (!terra::compareGeom(ru, k, stopOnError = FALSE)) {
-      stop("`ru` (raster) doit être sur la grille de `k`.", call. = FALSE)
+      stop("`ru` (raster) doit \u00eatre sur la grille de `k`.", call. = FALSE)
     }
   } else {
-    stop("`ru` doit être un data.frame (maille, ru_mm) ou un SpatRaster.", call. = FALSE)
+    stop("`ru` doit \u00eatre un data.frame (maille, ru_mm) ou un SpatRaster.", call. = FALSE)
   }
   if (!is.null(altitude)) assert_crs_2154(altitude)
   if (!is.numeric(pas_k) || length(pas_k) != 1L || !(pas_k > 0)) {
-    stop("`pas_k` doit être un nombre positif.", call. = FALSE)
+    stop("`pas_k` doit \u00eatre un nombre positif.", call. = FALSE)
   }
   param <- list(lai_max = lai_max, forest_type = forest_type, budburst = budburst,
                 leaf_fall = leaf_fall, pas_k = pas_k, pas_ru = pas_ru, n_controle = n_controle,
-                rg = "SSI x 0,01 x k (SSI en J/cm2, vérifié 2026-11-18)",
-                etp = "Penman biljouR (penman_pet, vent ramené à 2 m depuis 10 m)",
-                statut = "provisoire (référentiels § 25.5, mission 021)")
+                rg = "SSI x 0,01 x k (SSI en J/cm2, v\u00e9rifi\u00e9 2026-11-18)",
+                etp = "Penman biljouR (penman_pet, vent ramen\u00e9 \u00e0 2 m depuis 10 m)",
+                statut = "provisoire (r\u00e9f\u00e9rentiels \u00a7 25.5, mission 021)")
 
   # cellules ou points : coordonnees (x = est, y = nord), facteurs, RU
   if (pts) {
@@ -799,7 +802,7 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
   colnames(K) <- NULL
   valid <- stats::complete.cases(K)
 
-  noms <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille", "grad_hydrique")
+  noms <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille", "grad_hydrique_25m")
   rendre <- function(res, methode, ecart = NULL, mailles = NULL, repli = NULL) {
     if (pts) {
       out <- points
@@ -834,8 +837,8 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
   if (is.data.frame(ru) && is.null(mailles)) ru_c <- rep(NA_real_, nrow(K))
   res[, "ru_maille"] <- ru_c
   if (!is.null(raison)) {
-    warning("Carte hydrique en repli sur la réserve utile : ", raison, ".", call. = FALSE)
-    res[, "grad_hydrique"] <- ru_c
+    warning("Carte hydrique en repli sur la r\u00e9serve utile : ", raison, ".", call. = FALSE)
+    res[, "grad_hydrique_25m"] <- ru_c
     return(rendre(res, "repli_ru", repli = raison))
   }
 
@@ -845,7 +848,7 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
   }
   if (!is.null(annees)) {
     s <- s[as.integer(substr(as.character(s$DATE), 1, 4)) %in% annees, , drop = FALSE]
-    if (!nrow(s)) stop("Aucune journée SAFRAN pour les années demandées.", call. = FALSE)
+    if (!nrow(s)) stop("Aucune journ\u00e9e SAFRAN pour les ann\u00e9es demand\u00e9es.", call. = FALSE)
   }
   cle <- paste(s$LAMBX, s$LAMBY, sep = "_")
   bio <- list(lai_max = lai_max, forest_type = forest_type, budburst = budburst,
@@ -873,7 +876,7 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
       res[i, "nj_topo"] <- .interp1(U, r[, "nj"], ru_c[i])
     }
     res[, "is_plat"] <- res[, "is_topo"]
-    res[, "grad_hydrique"] <- -res[, "is_topo"]
+    res[, "grad_hydrique_25m"] <- -res[, "is_topo"]
     return(rendre(res, "climatique_etp_safran", repli = msg))
   }
 
@@ -962,7 +965,7 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
     infos[[m]] <- data.frame(maille = m, latitude = lat, altitude = alt, n_cellules = length(i),
                              n_noeuds_k = length(knodes), n_noeuds_ru = length(U))
   }
-  res[, "grad_hydrique"] <- -res[, "is_topo"]
+  res[, "grad_hydrique_25m"] <- -res[, "is_topo"]
   methode <- if (identical(k_methode, "climatique")) "biljou_climatique" else "biljou_topo"
   ecart <- if (length(ecarts)) do.call(rbind, ecarts) else
     data.frame(maille = character(), n_controle = integer(), is_direct_moyen = numeric(),
@@ -972,4 +975,53 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
   if (!is.null(inf)) rownames(inf) <- NULL
   rendre(res, methode, ecart = ecart, mailles = inf,
          repli = if (methode == "biljou_climatique") "k = 1 (GRASS absent)" else NULL)
+}
+
+#' Écrire les couches de la carte hydrique de 25 m
+#'
+#' Écrit `hydrique_25m.tif` dans `out_dir/<ser_code>/` (couches `is_topo`, `nj_topo`,
+#' `is_plat`, `k_sv`, `ru_maille` de [hydric_stress_grid()]), en **COG** si le pilote
+#' GDAL `COG` est disponible, sinon en GeoTIFF tuilé compressé, comme [write_outputs()].
+#' Si `synthetic = TRUE`, le fichier est préfixé `synth_` (CLAUDE.md). Les cellules hors
+#' de `forest` (couche `foret` de [forest_mask()]) sont mises à `NA`.
+#'
+#' @param r `SpatRaster` de [hydric_stress_grid()] (EPSG:2154).
+#' @param out_dir Dossier racine des sorties.
+#' @param ser_code Code SER (sous-dossier).
+#' @param forest `NULL` ou `SpatRaster` du masque forestier (couche `foret`).
+#' @param synthetic `TRUE` pour préfixer le fichier par `synth_`.
+#' @param cog Demander un COG.
+#' @return Un `data.frame` (`fichier`, `format`), de façon invisible.
+#' @examples
+#' r <- terra::rast(xmin = 1015500, xmax = 1015550, ymin = 6793500, ymax = 6793550,
+#'                  resolution = 25, crs = "EPSG:2154", nlyrs = 5)
+#' terra::values(r) <- matrix(1, 4, 5)
+#' names(r) <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille")
+#' w <- write_hydric_grid(r, tempdir(), "D11", synthetic = TRUE)
+#' basename(w$fichier)
+#' @export
+write_hydric_grid <- function(r, out_dir, ser_code, forest = NULL, synthetic = FALSE,
+                              cog = TRUE) {
+  couches <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille")
+  if (!inherits(r, "SpatRaster") || !all(couches %in% names(r))) {
+    stop("`r` doit \u00eatre un SpatRaster de hydric_stress_grid() (couches ",
+         paste(couches, collapse = ", "), ").", call. = FALSE)
+  }
+  assert_crs_2154(r)
+  if (!is.character(out_dir) || length(out_dir) != 1L || !nzchar(out_dir)) {
+    stop("`out_dir` doit \u00eatre un chemin.", call. = FALSE)
+  }
+  if (!is.character(ser_code) || length(ser_code) != 1L || !nzchar(ser_code)) {
+    stop("`ser_code` doit \u00eatre un code SER.", call. = FALSE)
+  }
+  h <- r[[couches]]
+  if (!is.null(forest)) {
+    assert_crs_2154(forest)
+    h <- terra::mask(h, forest[["foret"]])
+  }
+  dir <- file.path(out_dir, ser_code)
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  f <- file.path(dir, paste0(if (isTRUE(synthetic)) "synth_" else "", "hydrique_25m.tif"))
+  fmt <- .write_raster_cog(h, f, cog)
+  invisible(data.frame(fichier = f, format = fmt, stringsAsFactors = FALSE))
 }

@@ -51,7 +51,7 @@ ou \code{SpatRaster} (mm) sur la grille de \code{k}.}
 }
 \value{
 Grille : \code{SpatRaster} \code{is_topo}, \code{nj_topo}, \code{is_plat}, \code{k_sv}, \code{ru_maille},
-\code{grad_hydrique} (= \code{-is_topo}, plus haut = plus humide). Points : \code{points} avec ces
+\code{grad_hydrique_25m} (= \code{-is_topo}, plus haut = plus humide). Points : \code{points} avec ces
 colonnes et \code{maille_safran}. Attributs \code{methode}, \code{k_methode}, \code{ecart}, \code{mailles},
 \code{parametres}, \code{sens}, \code{repli}.
 }
@@ -66,7 +66,10 @@ Pour chaque cellule \code{x} de la grille, dans sa maille SAFRAN (8 km) :
 \enumerate{
 \item rayonnement du jour \code{d} : rg(x, d) = SSI(maille, d) × 0,01 × k(x, mois de d)
 (SSI en J/cm², unité vérifiée dans le document « Données quotidiennes SIM » de
-Météo-France du 2026-03-31 ; k de \code{\link[=solar_factor]{solar_factor()}}) ;
+Météo-France du 2026-03-31 ; k de \code{\link[=solar_factor]{solar_factor()}}). Ce document nomme \code{SSI}
+« Rayonnement visible » : il est lu ici comme le rayonnement global de courte
+longueur d'onde, \strong{à vérifier} ; la hauteur du vent \code{FF} (10 m supposés par
+\code{biljouR}) est aussi \strong{à vérifier} ;
 \item ETP de Penman de \code{biljouR} (\code{\link[biljouR:safran_to_meteo]{biljouR::safran_to_meteo()}} avec \code{compute_pet = TRUE} :
 \code{penman_pet(T, rg, wind_to_2m(FF, 10), HU, doy, latitude, altitude)}) ; latitude du
 centre de la maille, altitude = moyenne de \code{altitude} dans la maille (\strong{provisoire}) ;

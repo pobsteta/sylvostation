@@ -422,13 +422,13 @@ solar_factor <- function(dtm, days = .JOURS_TYPES, linke = 3, albedo = 0.2, step
                          nprocs = 1, grass = Sys.which("grass")) {
   .check_dtm(dtm)
   if (!is.numeric(days) || length(days) != 12L || anyNA(days) || any(days < 1 | days > 365)) {
-    stop("`days` doit contenir 12 jours de l'année (1 à 365).", call. = FALSE)
+    stop("`days` doit contenir 12 jours de l'ann\u00e9e (1 \u00e0 365).", call. = FALSE)
   }
   param <- list(ciel = "clair", linke = linke, albedo = albedo, step_h = step,
-                jours = days, statut = "provisoire (référentiels § 25.5)")
+                jours = days, statut = "provisoire (r\u00e9f\u00e9rentiels \u00a7 25.5)")
   noms <- sprintf("k_%02d", 1:12)
   repli <- function(msg) {
-    .warn_non_calcule(paste0("Facteur de rayonnement k = 1 (méthode climatique) : ", msg))
+    .warn_non_calcule(paste0("Facteur de rayonnement k = 1 (m\u00e9thode climatique) : ", msg))
     un <- terra::ifel(is.na(dtm), NA, 1)
     out <- terra::rast(rep(list(un), 12))
     names(out) <- noms
@@ -437,7 +437,7 @@ solar_factor <- function(dtm, days = .JOURS_TYPES, linke = 3, albedo = 0.2, step
     attr(out, "parametres") <- param
     out
   }
-  if (!nzchar(grass)) return(repli("GRASS GIS (`grass`) introuvable, à installer."))
+  if (!nzchar(grass)) return(repli("GRASS GIS (`grass`) introuvable, \u00e0 installer."))
 
   names(dtm) <- "z"
   slope <- terra::terrain(dtm, "slope", unit = "degrees", neighbors = 8)
@@ -475,7 +475,7 @@ solar_factor <- function(dtm, days = .JOURS_TYPES, linke = 3, albedo = 0.2, step
                                   stdout = TRUE, stderr = TRUE))
   sorties <- f(c(sprintf("g%02d.tif", 1:12), sprintf("p%02d.tif", 1:12)))
   if (!all(file.exists(sorties))) {
-    return(repli(paste0("échec de GRASS `r.sun` : ",
+    return(repli(paste0("\u00e9chec de GRASS `r.sun` : ",
                         paste(utils::tail(res, 2), collapse = " "))))
   }
   n <- terra::ncell(dtm)
@@ -489,7 +489,7 @@ solar_factor <- function(dtm, days = .JOURS_TYPES, linke = 3, albedo = 0.2, step
     pv <- terra::values(p, mat = FALSE)
     ifelse(is.finite(gv) & is.finite(pv) & pv > 0, gv / pv, NA_real_)
   }, numeric(n))
-  if (all(is.na(vals))) return(repli("grille de sortie de GRASS différente de celle du MNT."))
+  if (all(is.na(vals))) return(repli("grille de sortie de GRASS diff\u00e9rente de celle du MNT."))
   vals[is.na(terra::values(slope, mat = FALSE)), ] <- NA_real_   # pourtour : pente inconnue
   out <- terra::rast(dtm, nlyrs = 12)
   terra::values(out) <- vals

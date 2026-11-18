@@ -93,12 +93,17 @@ topographie module l'**ETP** par le rayonnement reçu par la pente, jamais la r�
   maille sur les classes de `k_sv` (pas `hydric_pas_k`), écart à un calcul direct sur
   `hydric_n_controle` cellules par maille, sans seuil bloquant (`hydrique_ecart_table.csv`).
 - RU uniforme par maille (`ru_by_safran_cell()`, `hydrique_mailles.csv`) : provisoire.
-- Sorties : couche `hydric` de `gradients.tif` (= -Istress), `hydrique_25m.tif`
-  (`is_topo`, `nj_topo`, `is_plat`, `k_sv`, `ru_maille`, masqués par la forêt), ligne
-  « 6 bis » de l'état de preuve (méthode, RU, écart, échelle, limites).
+- Sorties : couche `hydric` de `gradients.tif` (= `grad_hydrique_25m` = -Istress),
+  `hydrique_25m.tif` écrit par `write_hydric_grid()` (COG, préfixe `synth_` si
+  synthétique ; `is_topo`, `nj_topo`, `is_plat`, `k_sv`, `ru_maille`, masqués par la
+  forêt), ligne « 6 bis » de l'état de preuve (méthode, RU, écart, échelle, limites ;
+  état « repli » si la méthode n'est pas `biljou_topo`).
 - **Placettes IFN** : Istress sans k, sur la RU de la placette (`hydric_stress()`, règle
-  des 700 m) ; la carte et les placettes ne sont pas à la même échelle, et les types des
-  placettes sont discrétisés avec les seuils de la carte.
+  des 700 m) ; la carte et les placettes ne sont pas à la même échelle. Les placettes
+  sont pourtant discrétisées avec les seuils de la carte de 25 m alors que leur Istress
+  est calculé sans k : cet écart d'échelle peut déplacer une placette d'un type hydrique
+  à l'autre et changer les fusions de types rares (`merge_rare(plots = …)`). Le calcul
+  n'est pas corrigé ; l'état de preuve (ligne « 6 bis ») le dit.
 - **TWI, MRVBF et `hauteur_reseau`** restent hors de BILJOU : ce sont des prédicteurs du
   seul modèle local trophique (ancrages GBIF, en ligne) ; aucun modèle hydrique local
   n'existe, la composante hydrique locale passe par Istress seul.

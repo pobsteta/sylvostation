@@ -14,7 +14,8 @@ FINE_VARIABLES <- c(
   "exposition_cos", "exposition_sin", "surface_drainee",
   "tpi_100", "tpi_300", "tpi_1000",
   # facteur de rayonnement r.sun et indice hydrique de la grille de 25 m (mission 021)
-  sprintf("k_%02d", 1:12), "k_sv", "is_topo", "nj_topo", "is_plat"
+  sprintf("k_%02d", 1:12), "k_sv", "is_topo", "nj_topo", "is_plat",
+  "grad_hydrique_25m"
 )
 
 #' Variables à maille large (autorisées aux placettes IFN)

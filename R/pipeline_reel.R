@@ -1161,37 +1161,43 @@ evidence_table_real <- function(f) {
   m <- f$methode_hydrique_carte
   etape <- "6 bis. Carte hydrique de 25 m (BILJOU, rayonnement de la pente)"
   if (is.null(m)) {
-    return(e(etape, "non exécuté", "Carte hydrique de 25 m non calculée.", dans = "non"))
+    return(e(etape, "non ex\u00e9cut\u00e9", "Carte hydrique de 25 m non calcul\u00e9e.", dans = "non"))
   }
   chiffre <- function(x) if (is.null(x) || !length(x) || is.na(x)) "NA" else format(signif(x, 3))
   quoi <- switch(m,
     biljou_topo = paste0("ETP de Penman (biljouR) sur le rayonnement SAFRAN (SSI, J/cm2) ",
-                         "multiplié par k (r.sun, ciel clair)"),
+                         "multipli\u00e9 par k (r.sun, ciel clair)"),
     biljou_climatique = paste0("repli : k = 1 (GRASS absent), ETP de Penman (biljouR) sur le ",
                                "rayonnement SAFRAN, sans modulation topographique"),
     climatique_etp_safran = paste0("repli : colonnes SAFRAN T, FF, HU ou SSI absentes, BILJOU ",
                                    "sur l'ETP SAFRAN, sans k"),
-    repli_ru = "repli : SAFRAN ou biljouR absent, la réserve utile tient lieu d'indice",
+    repli_ru = "repli : SAFRAN ou biljouR absent, la r\u00e9serve utile tient lieu d'indice",
     m)
-  e(etape, reel, paste0(
-    "Istress à 25 m = BILJOU(ETP, P et RU de la maille SAFRAN) ; méthode ", m, " (", quoi,
+  # etat \u00ab repli \u00bb des que la carte n'est pas modulee par le rayonnement r.sun
+  etat <- if (identical(m, "biljou_topo")) reel else "repli"
+  e(etape, etat, paste0(
+    "Istress \u00e0 25 m = BILJOU(ETP, P et RU de la maille SAFRAN) ; m\u00e9thode ", m, " (", quoi,
     ") ; k : ", if (is.null(f$k_methode)) "NA" else f$k_methode,
-    ". Plat de référence par la même formule (k = 1). ",
-    "RU uniforme par maille SAFRAN, provisoire : médiane euptf2 des placettes IFN de la maille (",
+    ". Plat de r\u00e9f\u00e9rence par la m\u00eame formule (k = 1). ",
+    "RU uniforme par maille SAFRAN, provisoire : m\u00e9diane euptf2 des placettes IFN de la maille (",
     if (is.null(f$ru_origine)) "NA" else f$ru_origine,
-    "), jamais modulée par la topographie. Écart de la table au calcul direct (",
-    chiffre(f$n_controle), " cellule(s) de contrôle) : moyen ", chiffre(f$ecart_moyen_abs),
-    ", maximal ", chiffre(f$ecart_max_abs), " (unités d'Istress). ",
+    "), jamais modul\u00e9e par la topographie. \u00c9cart de la table au calcul direct (",
+    chiffre(f$n_controle), " cellule(s) de contr\u00f4le) : moyen ", chiffre(f$ecart_moyen_abs),
+    ", maximal ", chiffre(f$ecart_max_abs), " (unit\u00e9s d'Istress). ",
     "La couche hydric de la carte est -Istress de 25 m. Placettes IFN : Istress sans k, sur la ",
-    "RU de la placette (règle des 700 m) ; carte et placettes ne sont pas à la même ",
-    "échelle (RU de la placette contre médiane de la maille, plat contre pente). TWI, MRVBF et ",
-    "hauteur_reseau sont des prédicteurs du seul modèle local trophique (ancrages GBIF) ; la ",
-    "composante hydrique locale passe par Istress seul. Limites : (a) k en ciel clair appliqué au ",
-    "rayonnement nuageux, contraste d'exposition surestimé ; (b) ombres du relief hors de ",
-    "l'emprise non vues au bord ; (c) le Penman de biljouR plafonne rg/rso à 1 : au-delà, le ",
+    "RU de la placette (r\u00e8gle des 700 m) ; carte et placettes ne sont pas \u00e0 la m\u00eame ",
+    "\u00e9chelle (RU de la placette contre m\u00e9diane de la maille, plat contre pente). ",
+    "Les placettes IFN sont discr\u00e9tis\u00e9es avec les seuils de la carte de 25 m alors que leur ",
+    "Istress est calcul\u00e9 sans k : cet \u00e9cart d'\u00e9chelle peut d\u00e9placer des placettes d'un type ",
+    "hydrique \u00e0 l'autre et changer les fusions de types rares (merge_rare) ; le calcul n'est ",
+    "pas corrig\u00e9. TWI, MRVBF et ",
+    "hauteur_reseau sont des pr\u00e9dicteurs du seul mod\u00e8le local trophique (ancrages GBIF) ; la ",
+    "composante hydrique locale passe par Istress seul. Limites : (a) k en ciel clair appliqu\u00e9 au ",
+    "rayonnement nuageux, contraste d'exposition surestim\u00e9 ; (b) ombres du relief hors de ",
+    "l'emprise non vues au bord ; (c) le Penman de biljouR plafonne rg/rso \u00e0 1 : au-del\u00e0, le ",
     "terme de grandes ondes ne suit plus k ; (d) RU uniforme par maille, provisoire ; (e) aucune ",
-    "validation française à 25 m (adaptation non validée de Dyer 2009) ; apports latéraux et ",
-    "engorgement non captés. Valeurs provisoires : référentiels § 25.5."))
+    "validation fran\u00e7aise \u00e0 25 m (adaptation non valid\u00e9e de Dyer 2009) ; apports lat\u00e9raux et ",
+    "engorgement non capt\u00e9s. Valeurs provisoires : r\u00e9f\u00e9rentiels \u00a7 25.5."))
 }
 
 #' Points d'ancrage GBIF : mailles de bioindication et prédicteurs

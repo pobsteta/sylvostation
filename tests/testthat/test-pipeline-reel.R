@@ -583,8 +583,42 @@ test_that("evidence_table_real : ligne 6 bis de la carte hydrique de 25 m (missi
   expect_true(any(grepl("Composante régionale seulement", e$detail)))
   expect_true(any(grepl("validation croisée", e$detail[grepl("^10", e$etape)])))
   expect_true(all(e$etat[e$dans_ce_run == "oui"] == "réel réduit"))
+  expect_true(grepl("seuils de la carte de 25 m", l$detail, fixed = TRUE))
+  expect_true(grepl("merge_rare", l$detail, fixed = TRUE))
+  # toute autre méthode que biljou_topo : état « repli »
+  for (m in c("biljou_climatique", "climatique_etp_safran", "repli_ru")) {
+    f$methode_hydrique_carte <- m
+    l2 <- evidence_table_real(f)
+    l2 <- l2[grepl("6 bis", l2$etape), ]
+    expect_identical(l2$etat, "repli", info = m)
+    expect_identical(l2$dans_ce_run, "oui")
+  }
   f$methode_hydrique_carte <- "biljou_climatique"
   expect_match(evidence_table_real(f)$detail[grepl("6 bis", e$etape)], "GRASS absent")
+})
+
+test_that("write_hydric_grid : COG ou GeoTIFF, prefixe synth_, masque forestier", {
+  r <- terra::rast(xmin = 1015500, xmax = 1015550, ymin = 6793500, ymax = 6793550,
+                   resolution = 25, crs = "EPSG:2154", nlyrs = 6)
+  terra::values(r) <- matrix(c(10, 20, 30, 40), 4, 6)
+  names(r) <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille", "grad_hydrique_25m")
+  d <- tempfile("hyd")
+  w <- write_hydric_grid(r, d, "D11")
+  expect_identical(basename(w$fichier), "hydrique_25m.tif")
+  expect_true(w$format %in% c("COG", "GTiff"))
+  h <- terra::rast(w$fichier)
+  expect_identical(names(h), c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille"))
+  expect_error(assert_crs_2154(h), NA)
+  # point connu (x = est, y = nord) : cellule nord-ouest
+  expect_equal(terra::extract(h, cbind(1015510, 6793540))[1, "is_topo"], 10)
+  foret <- r[[1]]
+  terra::values(foret) <- c(1, NA, 1, NA)
+  names(foret) <- "foret"
+  ws <- write_hydric_grid(r, d, "D11", forest = foret, synthetic = TRUE)
+  expect_identical(basename(ws$fichier), "synth_hydrique_25m.tif")
+  expect_equal(terra::values(terra::rast(ws$fichier))[, "is_topo"], c(10, NA, 30, NA))
+  expect_error(write_hydric_grid(r[[1:2]], d, "D11"), "hydric_stress_grid")
+  expect_error(write_hydric_grid(terra::project(r, "EPSG:4326"), d, "D11"), "2154")
 })
 
 test_that("read_safran : garde T, FF, HU et SSI quand ils existent (mission 021)", {

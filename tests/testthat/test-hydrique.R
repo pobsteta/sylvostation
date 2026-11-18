@@ -370,7 +370,7 @@ test_that("hydric_stress_grid : k = 1 donne le plat ; versant sud > plat > versa
   h <- hydric_stress_grid(k, ru, s, n_controle = 4)
   expect_s4_class(h, "SpatRaster")
   expect_identical(names(h), c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille",
-                               "grad_hydrique"))
+                               "grad_hydrique_25m"))
   expect_identical(attr(h, "methode"), "biljou_topo")
   expect_equal(attr(h, "sens"), "plus haut = plus humide")
   v <- terra::values(h)
@@ -379,7 +379,7 @@ test_that("hydric_stress_grid : k = 1 donne le plat ; versant sud > plat > versa
   expect_true(v[1, "k_sv"] > 1 && v[4, "k_sv"] < 1)
   expect_gt(v[1, "is_topo"], v[2, "is_topo"])                 # sud plus contraint
   expect_lt(v[4, "is_topo"], v[2, "is_topo"])                 # nord moins contraint
-  expect_equal(v[, "grad_hydrique"], -v[, "is_topo"])
+  expect_equal(v[, "grad_hydrique_25m"], -v[, "is_topo"])
   expect_true(all(v[, "ru_maille"] == 100))                   # RU uniforme de la maille
   # le plat = BILJOU sur l'ETP de Penman de biljouR (SSI x 0,01), meme formule
   sm <- s[s$LAMBX == 9640 & s$LAMBY == 23690, ]
@@ -468,7 +468,7 @@ test_that("hydric_stress_grid : points precis en calcul direct ; placettes IFN r
   expect_identical(p$maille_safran, "9640_23690")
   expect_equal(p$is_topo, unname(g[1, "is_topo"]))
   expect_equal(p$is_plat, unname(g[1, "is_plat"]))
-  expect_equal(p$grad_hydrique, -p$is_topo)
+  expect_equal(p$grad_hydrique_25m, -p$is_topo)
 })
 
 test_that("hydric_stress_grid : replis signales (k = 1, SAFRAN sans SSI, SAFRAN absent)", {

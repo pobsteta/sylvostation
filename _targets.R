@@ -416,7 +416,7 @@ if (!isTRUE(cfg$demo)) {
       b <- sylvostation::apply_bioclim(predictors, attr(ifn_gradients, "bioclim_axis"))
       # hydrique : -Istress de 25 m calcule (mission 021) ; le modele regional hydrique
       # (placettes IFN) ne sert qu'a la validation croisee
-      r <- c(maps$trophic[["pred"]], hydric_grid$r[["grad_hydrique"]], b)
+      r <- c(maps$trophic[["pred"]], hydric_grid$r[["grad_hydrique_25m"]], b)
       names(r) <- c("trophic", "hydric", "bioclim")
       if (!is.null(forest)) r <- terra::mask(r, forest[["foret"]])
       r
@@ -560,11 +560,9 @@ if (!isTRUE(cfg$demo)) {
       # table attributaire jointe aux polygones (EPSG:2154), sans couche sans geometrie
       sylvostation::write_types_gpkg_real(w$fichier[basename(w$fichier) == "types.gpkg"], type_table)
       # couches de la carte hydrique (Istress de la pente et du plat, k_sv, RU de la maille)
-      h <- hydric_grid$r[[c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille")]]
-      if (!is.null(forest)) h <- terra::mask(h, forest[["foret"]])
-      fh <- file.path(cfg$out_dir, cfg$ser_code, "hydrique_25m.tif")
-      terra::writeRaster(h, fh, overwrite = TRUE)
-      c(w$fichier, fh)
+      wh <- sylvostation::write_hydric_grid(hydric_grid$r, cfg$out_dir, cfg$ser_code,
+                                            forest = forest, synthetic = FALSE)
+      c(w$fichier, wh$fichier)
     }, format = "file"),
     # comparaison a la reference : seulement si reference_path est fourni
     tar_target(comparison_table, if (is.null(src$reference)) NULL else {
