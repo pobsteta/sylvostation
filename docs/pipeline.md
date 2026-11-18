@@ -19,7 +19,7 @@ Choix de conception :
 - le pipeline appelle `sylvostation::...` : pour utiliser le paquet chargé par
   `devtools::load_all()`, lancer `tar_make(callr_function = NULL)` (sinon le sous-processus
   charge le paquet installé) ;
-- la cible `rapport` n'existe que si le paquet `quarto` et le CLI Quarto sont disponibles ;
+- la cible `rapport` n'existe que si le paquet `quarto` et le CLI Quarto sont disponibles ; elle écrit `rapport.html` et, si un moteur LaTeX est disponible, `rapport.pdf` (voir « Rapport HTML et PDF ») ;
 - les trois gradients (`trophic`, `hydric`, `bioclim`) sont modélisés sur les points
   synthétiques ; un modèle régional sur les placettes IFN (couches à maille large
   seulement) est validé à part ;
@@ -163,3 +163,27 @@ prédicteurs et nommées dans l'état de preuve (`empty_layers()`).
 - Correspondance « réserve utile = gradient hydrique » pour le repère de R² de 0,43.
 - Pilote COG : les balises `terra::metags` ne sont pas conservées ; la marque synthétique
   est le préfixe `synth_` du nom de fichier.
+
+## Rapport HTML et PDF (mission 022)
+
+La cible `rapport` rend `inst/rapport/rapport.qmd` (copié dans `out_dir/<ser_code>/`) en
+**HTML** puis en **PDF** (Quarto, moteur `xelatex`, A4). Le modèle ne lit que les fichiers
+écrits par `write_outputs()` (CSV et GeoTIFF) : il ne dépend pas du paquet et ne calcule
+rien. Le rendu est dans `inst/rapport/rendre_rapport.R` (`rendre_rapport()`, lu par
+`_targets.R` et par les tests).
+
+- **Contenu** : données d'entrée (tableau des sources avec état et volume du run, fiches
+  version / date / licence / URL ou DOI d'après `inst/extdata/SOURCES.md` et
+  `docs/referentiels.md`) ; calculs réalisés (schéma de la chaîne et tableau par étape :
+  méthode, référence, valeurs provisoires, règle des 700 m) ; cartes produites (types,
+  gradient hydrique de 25 m `is_topo` et `k_sv` de `hydrique_25m.tif`, incertitude `sd_cv`
+  et `aoa`, gradients), chacune avec légende, échelle, flèche du nord, EPSG:2154 et ses
+  limites ; puis état de preuve, types, fiches, clé, validation, limites, reproductibilité.
+- **Démo** : encadré « DONNÉES SYNTHÉTIQUES » en tête du HTML et du PDF ; la carte hydrique
+  de 25 m n'existe qu'en mode réel (le rapport le dit à sa place).
+- **Le PDF n'est jamais obligatoire** : sans moteur LaTeX (`xelatex` absent), ou si son
+  rendu échoue, le HTML est livré seul, un avertissement dit pourquoi (attribut
+  `pdf_message` du résultat) et aucun PDF ancien ne reste dans le dossier. Sans Quarto, la
+  cible n'existe pas (comme avant).
+- **Dépendance LaTeX** : polices DejaVu, paquets `longtable`, `booktabs`, `etoolbox`,
+  `fontspec` ; `tinytex` installe un paquet manquant par `tlmgr` s'il a le réseau.
