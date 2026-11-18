@@ -78,13 +78,18 @@ aggregate_dtm <- function(dtm, res = c(5, 20)) {
 #'   prétraitement hydrologique **à vérifier** ;
 #' * `mrvbf` : indice multi-résolution de fond de vallée (Gallant et Dowling 2003), par
 #'   l'extension GRASS `r.valley.bottom` (`whitebox` n'a pas d'outil MRVBF, référentiels
-#'   § 20), paramètres **par défaut** de l'extension (provisoires). `NA` et avertissement
+#'   § 20). Seuil de pente initial adapté à la maille (mission 027) : 16 % à 25 m
+#'   (Gallant et Dowling 2003), divisé par 2 par grossissement x 3 (manuel de
+#'   l'extension), règle prolongée aux mailles fines (44,2 % à 5 m, **provisoire, à
+#'   vérifier**) ; `t_vf = 0,3` (défaut documenté) ; autres paramètres par défaut. Avec
+#'   16 % à 5 m, le MRVBF était quasi nul partout sur les dalles vosgiennes. `NA` et avertissement
 #'   de classe `sylvostation_non_calcule` si `mrvbf = FALSE` ou si GRASS (`grass`) ou
 #'   l'extension est absent. Calcul lent (2 à 4 minutes mesurées pour 1 600 à 57 600
 #'   cellules) ;
 #' * `hauteur_reseau` (m), voir [height_above_network()] : HAND (altitude moins celle de
 #'   la première cellule du réseau atteinte en suivant les directions D8 de
-#'   `surface_drainee`). `NA` si l'écoulement n'atteint pas le réseau ; jamais négatif ;
+#'   `surface_drainee`, les cuvettes intérieures étant franchies par leur col). `NA` si
+#'   l'écoulement n'atteint pas le réseau dans l'emprise ; jamais négatif ;
 #'   `NA` avec avertissement si `streams` est `NULL` ;
 #' * `rayonnement` (kWh/m2/an) : rayonnement direct potentiel **hors atmosphère et sans
 #'   ombres portées**, 12 jours types (Klein 1977), pas de 30 min, formules d'incidence
@@ -169,10 +174,34 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
   ext %in% trimws(res)
 }
 
+# Seuil de pente initial du MRVBF (%) pour une maille `res_m` (m). Manuel de
+# r.valley.bottom (GRASS 8.4.2) : 16 pour un MNT de 25 m (Gallant et Dowling 2003), divise
+# par 2 a chaque pas de grossissement x 3 au-dessus de 25 m. En dessous de 25 m, la meme
+# regle est prolongee (x 2 par affinement x 3) : 44,2 a 5 m, 18,4 a 20 m. Prolongement
+# provisoire, a verifier ; coherent avec l'exemple du manuel (MNT de 6 m, t_slope = 40).
+# Mission 027 : avec 16 a 5 m, la pente mediane des cellules du reseau (23 %) depasse le
+# seuil et le MRVBF est quasi nul partout.
+.mrvbf_t_slope <- function(res_m) {
+  if (!is.numeric(res_m) || length(res_m) != 1L || is.na(res_m) || res_m <= 0) {
+    stop("`res_m` doit être une résolution positive (m).", call. = FALSE)
+  }
+  16 * 2^(log(25 / res_m, base = 3))
+}
+
+# Commande r.valley.bottom. t_vf = 0,3 (defaut documente par le manuel de l'extension) :
+# le script lit t_vf dans l'option t_rf (`t_vf = float(options["t_rf"])`, lu le
+# 2026-11-18, defaut 0,35), d'ou t_rf = 0,3 aussi (MRRTF non calcule).
+.mrvbf_command <- function(t_slope) {
+  paste0("r.valley.bottom elevation=dem mrvbf=mrvbf t_slope=",
+         format(round(t_slope, 2), nsmall = 1), " t_vf=0.3 t_rf=0.3 --quiet")
+}
+
 # MRVBF par GRASS (extension r.valley.bottom) dans un projet temporaire : le MNT est
 # ecrit en GeoTIFF, lu par r.in.gdal, le resultat relu par terra. Sans GRASS, ou si
-# l'extension echoue : NA et avertissement `sylvostation_non_calcule`.
-.mrvbf_grass <- function(dtm, grass = Sys.which("grass")) {
+# l'extension echoue : NA et avertissement `sylvostation_non_calcule`. Seuil de pente
+# adapte a la maille (.mrvbf_t_slope).
+.mrvbf_grass <- function(dtm, grass = Sys.which("grass"),
+                         t_slope = .mrvbf_t_slope(terra::res(dtm)[1])) {
   na_out <- function(msg) {
     .warn_non_calcule(paste0("`mrvbf` non calcul\u00e9 (NA) : ", msg))
     dtm * NA
@@ -188,7 +217,7 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
   writeLines(c("set -e",
                paste0("r.in.gdal input='", inp, "' output=dem --quiet"),
                "g.region raster=dem",
-               "r.valley.bottom elevation=dem mrvbf=mrvbf --quiet",
+               .mrvbf_command(t_slope),
                paste0("r.out.gdal input=mrvbf output='", outp,
                       "' format=GTiff --overwrite --quiet -c -m")), sh)
   res <- suppressWarnings(system2(grass, c("--tmp-project", shQuote(inp), "--exec", "sh",
@@ -282,8 +311,10 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
 }
 
 # HAND : pour chaque cellule, altitude moins celle de la premiere cellule du reseau
-# atteinte en suivant les directions D8 (sans remplissage). NA si l'ecoulement n'atteint
-# pas le reseau (puits, sortie du MNT, cellule en aval du reseau) : jamais negatif.
+# atteinte en suivant les directions D8, les cuvettes interieures etant franchies par
+# leur col de debordement (.route_pits, mission 027). NA si l'ecoulement n'atteint pas le
+# reseau (sortie du MNT, cellule en aval du reseau). Une cellule de cuvette plus basse que
+# le reseau atteint vaut 0 (jamais negatif).
 .height_above_streams <- function(dtm, streams, tg = .d8_targets(dtm)) {
   nr <- terra::nrow(dtm); nc <- terra::ncol(dtm)
   out <- dtm * NA
@@ -298,17 +329,124 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
   perm <- as.vector(matrix(seq_len(nr * nc), nr, nc, byrow = TRUE))
   z_cm <- zr[perm]
   s_cm <- is_s[perm]
-  ref <- rep(NA_real_, nr * nc)
-  ref[s_cm] <- z_cm[s_cm]
-  for (i in order(z_cm, na.last = NA)) {      # du plus bas au plus haut
-    if (s_cm[i]) next
-    t <- tg[i]
-    if (t > 0L) ref[i] <- ref[t]
-  }
+  tg2 <- .route_pits(z_cm, nr, nc, tg, s_cm)
+  ref <- .first_on_path(z_cm, s_cm, tg2)
   h <- numeric(nr * nc)
-  h[perm] <- z_cm - ref
+  h[perm] <- pmax(z_cm - ref, 0)
   terra::values(out) <- h
   out
+}
+
+# Altitude de la premiere cellule `stop` atteinte en suivant `tg` (index lineaire par
+# colonnes, 0 = fin), par doublement de pointeurs (vectoriel, ne suppose pas que la cible
+# soit plus basse). NA si le chemin finit sans rencontrer `stop`.
+.first_on_path <- function(z, stop, tg, max_iter = 64L) {
+  val <- ifelse(stop, z, NA_real_)
+  nxt <- ifelse(stop | is.na(z), 0L, as.integer(tg))
+  for (k in seq_len(max_iter)) {
+    act <- which(is.na(val) & nxt > 0L)
+    if (!length(act)) break
+    j <- nxt[act]
+    val[act] <- val[j]
+    nxt[act] <- nxt[j]
+  }
+  val
+}
+
+# Franchissement des cuvettes pour le HAND (mission 027). Sur le MNT LiDAR, les directions
+# D8 sans remplissage finissent dans des cuvettes interieures (remblais, artefacts) : leur
+# bassin restait NA. Chaque cuvette (puits D8 ni sur le reseau, ni au bord du MNT) est
+# reliee, par son col de debordement, au bassin voisin. Le col est choisi comme dans un
+# remplissage par inondation prioritaire (Barnes, Lehman et Mulla 2014, Computers &
+# Geosciences 62, 117-127) : arbre couvrant minimal des bassins (poids = altitude du col,
+# max des deux cellules), les exutoires (reseau, bord, NA) etant relies a une racine. Le
+# puits pointe alors vers la cellule de l'autre cote du col. `z`, `stop`, `tg` sont en
+# index lineaire par colonnes ; renvoie les cibles modifiees.
+.route_pits <- function(z, nr, nc, tg, stop) {
+  n <- nr * nc
+  ok <- !is.na(z)
+  term <- rep(NA_integer_, n)
+  for (i in order(z, na.last = NA)) {          # cibles toujours plus basses
+    t <- tg[i]
+    term[i] <- if (t > 0L) term[t] else i
+  }
+  # bord : une des 8 voisines est NA ou hors du MNT
+  zm <- matrix(z, nr, nc)
+  zp <- matrix(NA_real_, nr + 2, nc + 2)
+  zp[2:(nr + 1), 2:(nc + 1)] <- zm
+  edge <- matrix(FALSE, nr, nc)
+  for (di in -1:1) for (dj in -1:1) {
+    edge <- edge | is.na(zp[(2:(nr + 1)) + di, (2:(nc + 1)) + dj])
+  }
+  edge <- as.vector(edge)
+  pits <- which(ok & tg == 0L & !stop & !edge)
+  if (!length(pits)) return(tg)
+  # paires de cellules voisines (8-connexite) de bassins differents
+  is_out <- function(l) stop[l] | edge[l]
+  tm <- matrix(term, nr, nc)
+  pr <- function(r1, c1, r2, c2) {   # decalage traite a part : memoire bornee
+    if (!length(r1) || !length(c1)) return(NULL)
+    a <- as.vector(tm[r1, c1, drop = FALSE]); b <- as.vector(tm[r2, c2, drop = FALSE])
+    k <- which(!is.na(a) & !is.na(b) & a != b)
+    k <- k[!(is_out(a[k]) & is_out(b[k]))]
+    if (!length(k)) return(NULL)
+    rr <- rep(r1, length(c1))[k]; cc <- rep(c1, each = length(r1))[k]
+    i1 <- (cc - 1L) * nr + rr
+    i2 <- (cc + (c2[1] - c1[1]) - 1L) * nr + rr + (r2[1] - r1[1])
+    cbind(i1, i2)
+  }
+  s1 <- seq_len(nr - 1L); s2 <- seq_len(nc - 1L)
+  p <- rbind(pr(seq_len(nr), s2, seq_len(nr), s2 + 1L),
+             pr(s1, seq_len(nc), s1 + 1L, seq_len(nc)),
+             pr(s1, s2, s1 + 1L, s2 + 1L),
+             pr(s1, s2 + 1L, s1 + 1L, s2))
+  if (is.null(p) || !nrow(p)) return(tg)
+  la <- term[p[, 1]]; lb <- term[p[, 2]]
+  w <- pmax(z[p[, 1]], z[p[, 2]])
+  # un seul col (le plus bas) par paire de bassins
+  key <- pmin(la, lb) * (n + 1) + pmax(la, lb)
+  o <- order(w)
+  o <- o[!duplicated(key[o])]
+  p <- p[o, , drop = FALSE]; la <- la[o]; lb <- lb[o]
+  # union-find sur les bassins ; racine 0 = exutoires
+  labs <- unique(c(la, lb))
+  ix <- function(l) match(l, labs)
+  parent <- seq_along(labs)
+  parent[is_out(labs)] <- 0L
+  find <- function(i) {
+    while (i != 0L && parent[i] != i) {
+      if (parent[i] != 0L) parent[i] <<- if (parent[parent[i]] == 0L) 0L else parent[parent[i]]
+      i <- parent[i]
+    }
+    i
+  }
+  a <- ix(la); b <- ix(lb)
+  mst <- logical(length(a))
+  reste <- sum(parent != 0L)
+  for (k in seq_along(a)) {
+    if (!reste) break
+    ra <- find(a[k]); rb <- find(b[k])
+    if (ra == rb) next
+    if (ra == 0L) parent[rb] <- 0L else parent[ra] <- rb
+    reste <- reste - 1L
+    mst[k] <- TRUE
+  }
+  # orientation vers les exutoires (parcours en largeur)
+  ea <- a[mst]; eb <- b[mst]; ca <- p[mst, 1]; cb <- p[mst, 2]
+  vu <- is_out(labs)
+  file <- which(vu)
+  tg2 <- tg
+  while (length(file)) {
+    u <- file[1]; file <- file[-1]
+    for (k in which((ea == u & !vu[eb]) | (eb == u & !vu[ea]))) {
+      if (ea[k] == u) { v <- eb[k]; tgt <- ca[k] } else { v <- ea[k]; tgt <- cb[k] }
+      if (vu[v]) next
+      vu[v] <- TRUE
+      tg2[labs[v]] <- tgt   # le puits du bassin v deborde vers l'autre cote du col
+      file <- c(file, v)
+    }
+  }
+  tg2
 }
 
 # Jours types (Klein 1977) et nombre de jours par mois.

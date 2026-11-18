@@ -111,6 +111,11 @@ topographie module l'**ETP** par le rayonnement reçu par la pente, jamais la r�
 - **TWI, MRVBF et `hauteur_reseau`** restent hors de BILJOU : ce sont des prédicteurs du
   seul modèle local trophique (ancrages GBIF, en ligne) ; aucun modèle hydrique local
   n'existe, la composante hydrique locale passe par Istress seul.
+- **MRVBF et `hauteur_reseau` depuis la mission 027** (référentiels § 28) : le MRVBF est
+  calculé sur le MNT à 5 m avec un seuil de pente adapté à la maille (44,2 % au lieu de
+  16 %, provisoire) et `t_vf = 0,3` ; le HAND franchit les cuvettes du MNT par leur col.
+  Les sorties produites avant cette mission (run de 018) sont à recalculer depuis la cible
+  `terrain`.
 - Replis signalés (attribut `methode`) : `biljou_climatique` (GRASS absent, k = 1),
   `climatique_etp_safran` (SAFRAN sans `T`, `FF`, `HU` ou `SSI`), `repli_ru`.
 

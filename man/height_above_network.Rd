@@ -19,11 +19,25 @@ avertissement de classe \code{sylvostation_non_calcule} si aucun tronçon ne tou
 \description{
 HAND (\emph{height above nearest drainage}) : pour chaque cellule du MNT, altitude moins celle
 de la \strong{première cellule du réseau} atteinte en suivant les directions d'écoulement D8
-(les mêmes que \code{surface_drainee} de \code{\link[=derive_terrain]{derive_terrain()}}, \strong{sans remplissage} des
-cuvettes). Le réseau est rastérisé (cellules touchées). Résultat \code{NA} là où
-l'écoulement n'atteint pas le réseau (cuvette, sortie du MNT, cellule en aval du
-dernier point du réseau) ; \strong{jamais négatif}, car l'écoulement descend. Variable
-\strong{fine} : jamais aux coordonnées des placettes IFN.
+(les mêmes que \code{surface_drainee} de \code{\link[=derive_terrain]{derive_terrain()}}, sans remplissage). Le réseau est
+rastérisé (cellules touchées).
+}
+\details{
+\strong{Cuvettes} (mission 027) : sur le MNT LiDAR à 5 m, l'écoulement D8 finit souvent
+dans une cuvette intérieure (remblai de route, artefact) ; 70 \% des \code{NA} des 4 dalles
+d'essai venaient de 40 cuvettes. Chaque cuvette (puits ni sur le réseau, ni au bord du
+MNT) est désormais reliée au bassin voisin par son \strong{col de débordement}, choisi comme
+dans un remplissage par inondation prioritaire (Barnes, Lehman et Mulla 2014,
+\emph{Computers & Geosciences} 62, 117-127) : arbre couvrant minimal des bassins, poids =
+altitude du col. Le MNT n'est pas modifié ; une cellule de cuvette plus basse que le
+réseau atteint vaut \strong{0}. Le HAND publié (Rennó et al. 2008, \emph{Remote Sensing of
+Environment} 112, 3469-3481 ; Nobre et al. 2011, \emph{Journal of Hydrology} 404, 13-29)
+part d'un MNT hydrologiquement corrigé (détail du traitement des cuvettes \strong{à
+vérifier} dans le texte, non lu).
+
+Résultat \code{NA} là où l'écoulement n'atteint pas le réseau dans l'emprise (sortie du MNT,
+cellule en aval du dernier point du réseau) ; \strong{jamais négatif}. Variable \strong{fine} :
+jamais aux coordonnées des placettes IFN.
 }
 \examples{
 d <- terra::rast(nrows = 20, ncols = 20, xmin = 980000, xmax = 980500,
