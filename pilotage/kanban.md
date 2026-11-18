@@ -14,6 +14,9 @@
 
 ## Validé
 
+- [027-diagnostic-mrvbf-hand](missions/027-diagnostic-mrvbf-hand.md) · depuis le cycle 5 · dev
+- [028-cout-hydrique](missions/028-cout-hydrique.md) · depuis le cycle 5 · dev
+
 
 
 
