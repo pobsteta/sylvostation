@@ -19,11 +19,24 @@
 #' réseau n'a lieu. Sinon, avec `offline = TRUE`, la fonction **s'arrête** (le mode
 #' hors ligne ne télécharge jamais) ; sinon elle télécharge par `downloader`.
 #'
+#' **Reprise sur incident réseau** (mission 026) : un échec du téléchargement (erreur ou
+#' état non nul, par exemple « Stream error in the HTTP/2 framing layer ») est repris,
+#' jusqu'à `retries` tentatives au total, avec une attente croissante (`wait`). Le fichier
+#' partiel est supprimé avant chaque reprise et un message est émis à chaque tentative.
+#' Après la dernière, la fonction s'arrête avec une erreur claire (adresse, nombre de
+#' tentatives, dernière cause).
+#'
 #' @param url Adresse du fichier.
 #' @param dir Dossier de cache (créé si besoin, hors dépôt : sous `data/`).
 #' @param offline `TRUE` pour interdire tout téléchargement.
 #' @param downloader Fonction de téléchargement, de signature de
 #'   [utils::download.file()] (remplaçable dans les tests).
+#' @param retries Nombre total de tentatives (au moins 1). Par défaut l'option
+#'   `sylvostation.download_retries`, sinon 3 (valeur provisoire ; en mode réel, `_targets.R`
+#'   pose l'option depuis la clé `download_retries` de `config.yml`).
+#' @param wait Attentes (secondes) avant la 2e, la 3e... tentative ; la dernière valeur
+#'   est répétée si besoin. Défaut : 5, 20, 60 (provisoire).
+#' @param sleeper Fonction d'attente (remplaçable dans les tests).
 #' @return Le chemin du fichier local.
 #' @examples
 #' d <- tempfile("cache")
@@ -31,9 +44,18 @@
 #' writeLines("x", file.path(d, "a.csv"))
 #' fetch_cached("https://exemple.invalid/a.csv", d, offline = TRUE)
 #' @export
-fetch_cached <- function(url, dir, offline = FALSE, downloader = utils::download.file) {
+fetch_cached <- function(url, dir, offline = FALSE, downloader = utils::download.file,
+                         retries = getOption("sylvostation.download_retries", 3L),
+                         wait = c(5, 20, 60), sleeper = Sys.sleep) {
   if (!is.character(url) || length(url) != 1L || !nzchar(url)) {
     stop("`url` doit \u00eatre une adresse.", call. = FALSE)
+  }
+  if (!is.numeric(retries) || length(retries) != 1L || !is.finite(retries) || retries < 1 ||
+      retries != round(retries)) {
+    stop("`retries` doit \u00eatre un entier >= 1.", call. = FALSE)
+  }
+  if (!is.numeric(wait) || length(wait) < 1L || anyNA(wait) || any(wait < 0)) {
+    stop("`wait` doit contenir au moins une dur\u00e9e (s) >= 0.", call. = FALSE)
   }
   dest <- file.path(dir, basename(sub("[?#].*$", "", url)))
   if (file.exists(dest) && file.size(dest) > 0) return(dest)
@@ -42,13 +64,44 @@ fetch_cached <- function(url, dir, offline = FALSE, downloader = utils::download
   }
   dir.create(dir, recursive = TRUE, showWarnings = FALSE)
   tmp <- paste0(dest, ".part")
-  status <- downloader(url, tmp, mode = "wb", quiet = TRUE)
-  if (!identical(as.integer(status), 0L) || !file.exists(tmp)) {
-    unlink(tmp)
-    stop("T\u00e9l\u00e9chargement impossible : ", url, call. = FALSE)
-  }
+  .retry_download(url, tmp, downloader, as.integer(retries), wait, sleeper)
   file.rename(tmp, dest)
   dest
+}
+
+# Telechargement avec reprise pour les appels hors `fetch_cached()` (SER, dalles LiDAR,
+# tableau d'assemblage WFS, TOPAGE ; mission 026). `tmp` : fichier partiel, supprime avant
+# chaque reprise. Le telechargeur et l'attente se remplacent dans les tests par les options
+# `sylvostation.downloader` et `sylvostation.sleeper` ; le nombre de tentatives vient de
+# l'option `sylvostation.download_retries` (3 par defaut, config.yml: download_retries).
+.download_retry <- function(url, tmp) {
+  .retry_download(url, tmp,
+                  getOption("sylvostation.downloader", utils::download.file),
+                  as.integer(getOption("sylvostation.download_retries", 3L)),
+                  c(5, 20, 60), getOption("sylvostation.sleeper", Sys.sleep))
+}
+
+# Tente `downloader(url, tmp)` jusqu'a `retries` fois ; supprime `tmp` avant chaque reprise.
+.retry_download <- function(url, tmp, downloader, retries, wait, sleeper) {
+  cause <- ""
+  for (k in seq_len(retries)) {
+    unlink(tmp)
+    cause <- tryCatch({
+      status <- downloader(url, tmp, mode = "wb", quiet = TRUE)
+      if (identical(as.integer(status), 0L) && file.exists(tmp)) "" else
+        paste0("\u00e9tat ", paste(status, collapse = ","))
+    }, error = function(e) conditionMessage(e))
+    if (!nzchar(cause)) return(invisible(tmp))
+    unlink(tmp)
+    if (k < retries) {
+      w <- wait[min(k, length(wait))]
+      message("T\u00e9l\u00e9chargement en \u00e9chec (tentative ", k, "/", retries, ") : ", url,
+              " \u2014 ", cause, ". Nouvelle tentative dans ", w, " s.")
+      sleeper(w)
+    }
+  }
+  stop("T\u00e9l\u00e9chargement impossible apr\u00e8s ", retries, " tentative(s) : ", url,
+       " (derni\u00e8re cause : ", cause, ").", call. = FALSE)
 }
 
 #' Sources du mode réel (fichiers locaux ou téléchargement)
@@ -188,8 +241,9 @@ assert_not_synthetic <- function(paths, entree = "entr\u00e9e") {
       }
     } else if (ext == "xlsx" && requireNamespace("readxl", quietly = TRUE)) {
       for (fe in readxl::excel_sheets(p)) {
-        if ("synthetic" %in% names(readxl::read_excel(p, sheet = fe, n_max = 0))) {
-          d <- readxl::read_excel(p, sheet = fe)
+        if ("synthetic" %in% names(readxl::read_excel(p, sheet = fe, n_max = 0,
+                                                              .name_repair = "minimal"))) {
+          d <- readxl::read_excel(p, sheet = fe, .name_repair = "minimal")
           if (vrai(d[["synthetic"]])) arret(p, "colonne synthetic = TRUE")
         }
       }
@@ -1109,6 +1163,10 @@ evidence_table_real <- function(f) {
       e("7. Points d'ancrage (GBIF)", "non ex\u00e9cut\u00e9",
         "Hors ligne : pas d'extrait GBIF r\u00e9el (un DOI exige un t\u00e9l\u00e9chargement occ_download avec compte).",
         dans = "non")
+    } else if (n_gbif == 0) {
+      e("7. Points d'ancrage (GBIF)", "non atteint (aucune maille GBIF)",
+        "Aucune maille de bioindication avec occurrence lisible sur l'emprise : ancrages vides, rien n'est substitu\u00e9.",
+        dans = "non")
     } else {
       e("7. Points d'ancrage (GBIF)", "r\u00e9el", paste0(n_gbif, " maille(s) de bioindication."))
     },
@@ -1125,7 +1183,7 @@ evidence_table_real <- function(f) {
              if (!is.null(f$methode_hydrique_carte)) paste0(
                "Hydrique : la carte est l'indice Istress de 25 m calcul\u00e9 (ligne 6 bis) ; le mod\u00e8le ",
                "r\u00e9gional hydrique ne sert qu'\u00e0 la validation crois\u00e9e. ") else "",
-             if (off || is.na(n_gbif)) "Composante locale (pr\u00e9dicteurs fins, ancrages GBIF) non ex\u00e9cut\u00e9e." else
+             if (off || is.na(n_gbif) || n_gbif == 0) "Composante locale (pr\u00e9dicteurs fins, ancrages GBIF) non ex\u00e9cut\u00e9e." else
                "Composante locale trophique sur les ancrages GBIF.")),
     e("11. Typologie (seuils, fusion des types rares)", reel,
       paste0(g("n_types"), " type(s) ; seuils provisoires par quantiles ; aucun type azonal reconnu (azonal = FALSE).")),
@@ -1215,7 +1273,9 @@ evidence_table_real <- function(f) {
 #'   servi à `cells`.
 #' @param predictors `SpatRaster` des prédicteurs (fins et à maille large).
 #' @return Un `sf` de points : `cell_id`, `source`, `loc_precision_m`, `n_occ_maille`,
-#'   `trophic`, une colonne par couche de `predictors`. Attribut `n_ecartees`.
+#'   `trophic`, une colonne par couche de `predictors`. Attribut `n_ecartees`. Si aucune
+#'   maille n'est bioindiquée : `sf` de 0 ligne aux mêmes colonnes et avertissement de
+#'   classe `sylvostation_non_calcule` (l'aval, modèle trophique local, reste sauté).
 #' @examples
 #' cel <- sf::st_sf(cell_id = "a", ph = 5, azote = 4,
 #'   geometry = sf::st_sfc(sf::st_polygon(list(rbind(c(1015500, 6793500), c(1015550, 6793500),
@@ -1243,6 +1303,18 @@ gbif_anchors <- function(cells, occ, predictors) {
     if (!length(v) || anyNA(v)) NA_real_ else max(v)
   }, numeric(1))
   garde <- !is.na(prec)
+  if (!any(garde)) {
+    # aucune maille bioindiquee : resultat vide signale, pas d'erreur (mission 026)
+    .warn_non_calcule(paste0("Aucune maille GBIF bioindiqu\u00e9e (", nrow(cells),
+                             " maille(s), aucune avec occurrence lisible) : ancrages vides."))
+    out <- sf::st_sf(
+      cell_id = character(), source = character(), loc_precision_m = numeric(),
+      n_occ_maille = integer(), trophic = numeric(),
+      stats::setNames(rep(list(numeric()), length(names(predictors))), names(predictors)),
+      geometry = sf::st_sfc(crs = sf::st_crs(cells)))
+    attr(out, "n_ecartees") <- length(garde)
+    return(out)
+  }
   pts <- suppressWarnings(sf::st_centroid(cells[garde, ]))
   pts$source <- "gbif"
   pts$loc_precision_m <- prec[garde]

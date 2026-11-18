@@ -100,7 +100,9 @@ read_config <- function(path = "config.yml") {
   forest_mask = TRUE, forest_height_m = 5, cache_dir = "data/cache",
   # carte hydrique de 25 m (mission 021), valeurs provisoires (referentiels § 25.5)
   solar_linke = 3, solar_albedo = 0.2, solar_step_h = 0.5, hydric_pas_k = 0.02,
-  hydric_n_controle = 30L
+  hydric_n_controle = 30L,
+  # reprise sur incident reseau des telechargements (mission 026), provisoire
+  download_retries = 3L
 )
 
 .config_reel <- function(cfg) {
@@ -139,6 +141,11 @@ read_config <- function(path = "config.yml") {
   if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0 || x != round(x)) {
     stop("`hydric_n_controle` doit \u00eatre un entier >= 0.", call. = FALSE)
   }
+  x <- cfg$download_retries
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 1 || x != round(x)) {
+    stop("`download_retries` doit \u00eatre un entier >= 1.", call. = FALSE)
+  }
+  cfg$download_retries <- as.integer(x)
   if (!cfg$emprise %in% c("test", "ser")) {
     stop("`emprise` doit valoir test ou ser.", call. = FALSE)
   }

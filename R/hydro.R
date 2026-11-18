@@ -16,10 +16,7 @@
   tmp <- tempfile(fileext = ".xml")
   on.exit(unlink(tmp), add = TRUE)
   url <- .wfs_url(base, c(SERVICE = "WFS", VERSION = "2.0.0", REQUEST = "GetCapabilities"))
-  status <- utils::download.file(url, tmp, mode = "wb", quiet = TRUE)
-  if (!identical(as.integer(status), 0L)) {
-    stop("GetCapabilities de la BD TOPAGE impossible.", call. = FALSE)
-  }
+  .download_retry(url, tmp)  # reprise sur incident reseau (mission 026)
   txt <- paste(readLines(tmp, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
   noms <- regmatches(txt, gregexpr("sa:TronconHydrographique_FXX_Topage[0-9]{4}", txt))[[1]]
   noms <- sort(unique(noms[grepl(.TOPAGE_LAYER_RE, noms)]), decreasing = TRUE)
@@ -90,11 +87,7 @@ get_hydro_network <- function(emprise, source = c("wfs", "file"), path = NULL,
              TYPENAMES = couche, SRSNAME = "urn:ogc:def:crs:EPSG::2154", BBOX = bbox,
              COUNT = taille_page, STARTINDEX = debut)
       tmp <- tempfile(fileext = ".gml")
-      status <- utils::download.file(.wfs_url(.TOPAGE_URL, q), tmp, mode = "wb", quiet = TRUE)
-      if (!identical(as.integer(status), 0L)) {
-        unlink(tmp)
-        stop("Requ\u00eate WFS BD TOPAGE impossible.", call. = FALSE)
-      }
+      .download_retry(.wfs_url(.TOPAGE_URL, q), tmp)  # reprise (mission 026)
       p <- sf::st_read(tmp, quiet = TRUE)
       unlink(tmp)
       if (!nrow(p)) break

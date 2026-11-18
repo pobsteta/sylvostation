@@ -16,7 +16,9 @@ servi à \code{cells}.}
 }
 \value{
 Un \code{sf} de points : \code{cell_id}, \code{source}, \code{loc_precision_m}, \code{n_occ_maille},
-\code{trophic}, une colonne par couche de \code{predictors}. Attribut \code{n_ecartees}.
+\code{trophic}, une colonne par couche de \code{predictors}. Attribut \code{n_ecartees}. Si aucune
+maille n'est bioindiquée : \code{sf} de 0 ligne aux mêmes colonnes et avertissement de
+classe \code{sylvostation_non_calcule} (l'aval, modèle trophique local, reste sauté).
 }
 \description{
 Centres des mailles de \code{\link[=grid_bioindication]{grid_bioindication()}} (\code{source = "gbif"}), niveau trophique
