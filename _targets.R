@@ -307,7 +307,8 @@ if (!isTRUE(cfg$demo)) {
       b <- sf::st_bbox(terra::ext(grid) + 1000, crs = sf::st_crs(2154))
       sylvostation::get_hydro_network(b, source = src$hydro$source, path = src$hydro$path)
     }),
-    tar_target(terrain, sylvostation::real_terrain(dtm, grid, streams = hydro, mrvbf = TRUE)),
+    tar_target(terrain, sylvostation::real_terrain(dtm, grid, streams = hydro, mrvbf = TRUE,
+                                                     mrvbf_res = cfg$mrvbf_res_m)),
     tar_target(forest, if (isTRUE(cfg$forest_mask)) {
       sylvostation::forest_mask(lidar_files, grid, height = cfg$forest_height_m)
     } else NULL),

@@ -11,7 +11,8 @@
 #'   et les clés du mode réel (mission 016, valeurs par défaut si absentes) : `offline`
 #'   (`FALSE` ; `TRUE` = mode réel sans réseau sur les extraits réels de `inst/extdata`),
 #'   `max_tiles` (`NULL` = toutes les dalles), `emprise` (`"test"` ou `"ser"`),
-#'   `lidar_block_size` (3), `lidar_buffer_m` (20), `lidar_ncores` (3),
+#'   `mrvbf_res_m` (maille en m du MNT sur lequel le MRVBF est calculé, multiple de 5 ;
+#'   défaut `resolution_m` ; provisoire, à vérifier, mission 027), `lidar_block_size` (3), `lidar_buffer_m` (20), `lidar_ncores` (3),
 #'   `taxref_version` (`"18"`, figée), `indicator_source` (`"tichy"`), `ru_source`
 #'   (`"euptf2"`), `safran_annees` (1996-2025), `saison_vegetation` (mois 4 à 9),
 #'   `bdcharm_departements`, `gbif_method` (`"search"`), `forest_mask` (`TRUE`),
@@ -113,6 +114,12 @@ read_config <- function(path = "config.yml") {
     if (!is.logical(cfg[[k]]) || length(cfg[[k]]) != 1L || is.na(cfg[[k]])) {
       stop("`", k, "` doit \u00eatre true ou false.", call. = FALSE)
     }
+  }
+  # maille de calcul du MRVBF (mission 027) : par defaut celle de la grille
+  if (is.null(cfg$mrvbf_res_m)) cfg$mrvbf_res_m <- cfg$resolution_m
+  if (!is.numeric(cfg$mrvbf_res_m) || length(cfg$mrvbf_res_m) != 1L ||
+      !is.finite(cfg$mrvbf_res_m) || cfg$mrvbf_res_m <= 0) {
+    stop("`mrvbf_res_m` doit \u00eatre un nombre strictement positif (m).", call. = FALSE)
   }
   logique("offline")
   logique("forest_mask")

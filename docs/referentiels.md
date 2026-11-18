@@ -1147,3 +1147,103 @@ transmission à des tiers, usage non commercial). Toutes fermées à un dépôt 
 4. VegFrance : 3 058 relevés ([D]) contre 25 341 ([F]) : EVA n'a sans doute reçu qu'une partie.
 5. Numérotation de ce document : deux sections portent le n° 26 (cartes de comparaison,
    Sentinel-2).
+
+## 28. MRVBF et HAND sur MNT LiDAR à 5 m : paramètres et diagnostic (mission 027)
+
+Diagnostic du 2026-11-18 sur les 4 dalles du run de la mission 018 (MNT à 5 m,
+`1013-6798`, `1014-6797`, `1014-6798`, `1014-6799`, 4 km² ; 30 tronçons TOPAGE, 4,3 km, soit
+1,08 km/km²). Références vérifiées par Crossref (titre, revue, volume, pages) le 2026-11-18 :
+Gallant et Dowling 2003, *Water Resources Research* 39(12), doi:10.1029/2002WR001426 ; Rennó
+et al. 2008, *Remote Sensing of Environment* 112, 3469-3481, doi:10.1016/j.rse.2008.03.018 ;
+Nobre et al. 2011, *Journal of Hydrology* 404, 13-29, doi:10.1016/j.jhydrol.2011.03.051 ;
+Barnes, Lehman et Mulla 2014, *Computers & Geosciences* 62, 117-127,
+doi:10.1016/j.cageo.2013.04.024. Le texte des articles n'a pas été lu (résumés seulement).
+
+### 28.1 MRVBF (`r.valley.bottom`, extension GRASS, lue en entier le 2026-11-18)
+
+| Point | État | Source | Constat |
+|---|---|---|---|
+| Seuil de pente `t_slope` | **vérifié** (manuel) | `~/.grass8/addons/docs/html/r.valley.bottom.html` | Défaut 16 (%), « conçu pour un MNT de 25 m » ; « divisé par 2 à chaque pas (grossissement x 3) au-dessus de 25 m » ; exemple : MNT de 6 m, `t_slope=40`. |
+| Seuil aux mailles fines | **provisoire, à vérifier** | prolongement de la règle du manuel | t = 16 x 2^(log3(25 / maille)) : **44,2 à 5 m**, 18,4 à 20 m, 39,4 à 6 m (le manuel donne 40). |
+| `t_vf` | **vérifié** (code) | script `r.valley.bottom`, ligne `t_vf = float(options["t_rf"])` | Défaut documenté 0,3, mais le script lit `t_rf` (0,35). sylvostation passe `t_vf=0.3 t_rf=0.3`. |
+| Niveaux | **vérifié** (exécuté) | message `step` de l'extension | 8 pas sur le MNT de 5 m (5, 5, 15, 45, 135, 405, 1 215, 3 645 m) ; le seuil est divisé par 2 à chaque pas. |
+| Cause du MRVBF quasi nul | **vérifié** (exécuté) | calcul de contrôle | Pente médiane des cellules du réseau TOPAGE à 5 m : **23 %** (12,95°), au-dessus du seuil de 16 % (8 % au pas 2) : aplanissement < 0,5 même en fond de vallon. Ce n'est ni l'unité, ni la lecture de la sortie (Float64), ni la marge de `NA` (résultat identique sans marge). |
+
+Chiffres (MNT à 5 m, 160 000 cellules) :
+
+| | médiane | q90 | max | part >= 0,5 | part >= 1,5 | médiane sur le réseau | réseau >= 0,5 |
+|---|---|---|---|---|---|---|---|
+| avant (`t_slope=16`, `t_vf`=0,35) | 5,4e-7 | 0,18 | 2,96 | 3,6 % | 0,5 % | 0,004 | 28 % |
+| après (`t_slope=44,2`, `t_vf=0,3`) | 0,17 | 1,32 | 3,98 | 23,8 % | 7,9 % | 1,04 | 68 % |
+| `t_slope=44,2`, `t_vf`=0,35 | 0,10 | 0,77 | 3,96 | 15,0 % | 4,5 % | 0,87 | 62 % |
+
+Calcul à la maille de la grille (décision de l'orchestrateur du 2026-11-18 : MNT agrégé à
+20 m, `t_slope` = 18,4 %, `t_vf` = 0,3, résultat rééchantillonné en bilinéaire sur 5 m ;
+`derive_terrain(mrvbf_res = 20)`), mêmes 4 dalles, même emprise (160 000 cellules à 5 m) :
+
+| | médiane | q90 | max | part >= 0,5 | part >= 1,5 | médiane sur le réseau | réseau >= 0,5 |
+|---|---|---|---|---|---|---|---|
+| avant (16 %, 5 m) | 0,0 | 0,18 | 2,96 | 3,6 % | 0,5 % | 0,004 | 28 % |
+| 5 m, 44,2 % | 0,17 | 1,32 | 3,98 | 23,8 % | 7,9 % | 1,03 | 68 % |
+| 20 m, 18,4 % | 0,0 | 0,39 | 2,90 | 7,6 % | 0,8 % | 0,60 | 58 % |
+
+Sur la grille de 20 m (moyenne des valeurs à 5 m, 10 000 cellules) : part >= 0,5 de 2,7 %
+(018), 24,1 % (5 m), 7,4 % (20 m) ; sur le réseau : 13,6 %, 73,8 %, 52,7 % ; corrélation 5 m /
+20 m : 0,85. **Lecture** : à 20 m, le MRVBF est plus sélectif (7,4 % des cellules >= 0,5,
+contre 24 %), reste net sur le réseau (médiane 0,6) et sort du domaine extrapolé ; il
+**perd les fonds étroits** (< 40 à 60 m de large, part >= 1,5 : 0,8 % contre 7,9 %). Aucune
+des deux mailles n'est validée sur le terrain ; le calcul à 5 m reste la référence de
+comparaison. Durée GRASS (machine chargée) : 3,9 min à 20 m, 4,4 min à 5 m.
+
+Le manuel situe le fond de vallon à partir de 0,5 (0,5 à 1,5 : fonds étroits et pentus ;
+> 1,5 : fonds larges). Valeurs de 0 à environ 4 ici : relief vosgien à vallons étroits.
+
+### 28.2 HAND (`hauteur_reseau`)
+
+| Point | État | Constat |
+|---|---|---|
+| Part de `NA` (21,8 % à 20 m, 23,5 % à 5 m) | **vérifié** (exécuté) | 70 % des `NA` finissaient dans **40 cuvettes intérieures** du MNT (directions D8 sans remplissage ; jusqu'à 6 589 cellules, 16 ha, par cuvette), 30 % sortaient du MNT. **Défaut corrigé** : franchissement des cuvettes par leur col (`.route_pits`, inondation prioritaire, Barnes et al. 2014). Reste : l'eau qui sort de l'emprise avant de rencontrer le réseau (`NA` légitime ; moindre sur 225 dalles). |
+| Valeurs de 200 à 325 m | **vérifié** (exécuté) | Ce n'est pas un défaut de calcul : corrélation 0,93 entre HAND et distance au réseau ; les cellules > 200 m (16 %) sont à 555 m médians du réseau, à 817 m d'altitude médiane (MNT de 504 à 919 m). Le réseau TOPAGE (1,08 km/km²) ne remonte pas jusqu'aux têtes de bassin. |
+| Densification par seuil d'accumulation | **piste, non retenue** (aucun seuil sourcé) | Réseau TOPAGE + cellules de surface drainée D8 >= S (MNT non rempli) ; voir 28.3. Le HAND publié (Rennó 2008, Nobre 2011) part d'un réseau extrait du MNT par seuil : valeur du seuil **à lire** dans ces articles avant de choisir. |
+
+### 28.3 Avant et après sur les 4 dalles (MNT à 5 m, sortie agrégée à 20 m)
+
+Grille de 20 m (10 000 cellules renseignées), moyenne des valeurs à 5 m comme
+`real_terrain()`. Le recalcul « avant » reproduit exactement l'objet `terrain` du store de 018.
+
+| | MRVBF médiane | q90 | max | part >= 0,5 | HAND médiane | q90 | max | `NA` |
+|---|---|---|---|---|---|---|---|---|
+| avant | 2,5e-6 | 0,24 | 1,84 | 2,7 % | 88,7 m | 238 m | 325 m | 21,8 % |
+| après | 0,21 | 1,19 | 3,95 | 24,2 % | 86,8 m | 227 m | 325 m | 10,1 % |
+
+Sensibilité du HAND à une densification (MNT à 5 m, cuvettes franchies) :
+
+| Seuil S | cellules réseau | `NA` | médiane | q90 | max |
+|---|---|---|---|---|---|
+| TOPAGE seul | 0,47 % | 11,0 % | 86,6 m | 227 m | 325 m |
+| + 50 ha | 0,51 % | 7,1 % | 86,3 m | 224 m | 325 m |
+| + 10 ha | 0,68 % | 2,6 % | 74,3 m | 182 m | 318 m |
+| + 5 ha | 0,83 % | 2,6 % | 68,7 m | 164 m | 318 m |
+| + 2 ha | 1,21 % | 1,2 % | 59,1 m | 149 m | 318 m |
+
+### 28.4 Vallons des 4 dalles à confronter à une vue QGIS (Lambert-93, x = est, y = nord)
+
+Dalles du run (convention LiDAR HD, § 2 : la dalle `XXXX-YYYY` couvre x de XXXX à XXXX+1 km et
+y de YYYY-1 à YYYY km) : `1013-6798` (x 1013-1014, y 6797-6798), `1014-6797` (y 6796-6797),
+`1014-6798` (y 6797-6798), `1014-6799` (y 6798-6799) ; emprise du MNT lue sur le raster :
+x 1 013 000-1 015 000, y 6 796 000-6 799 000. (Les dalles `1013-6803` à `1014-6804` citées dans
+d'autres notes sont d'un autre jeu, hors de ces 4 dalles.) Toponymes : champ `TopoOH` de
+TOPAGE. Valeurs lues sur les rasters de MRVBF (cellule de 5 m contenant le point, `terra::extract`),
+altitude lue sur le MNT :
+
+| Lieu | x (est) | y (nord) | Dalle | Cellule de 5 m (index) | Altitude | MRVBF 5 m (44,2 %) | MRVBF 20 m (18,4 %) |
+|---|---|---|---|---|---|---|---|
+| Ruisseau le Strengbach, fond de vallon (26 cellules de 20 m >= 1,5 aux deux mailles, toutes sur ce ruisseau) | 1 013 470 | 6 797 810 | 1013-6798 | 95 295 | 735,2 m | 3,97 | 2,84 |
+| Ruisseau l'Adelsbach | 1 014 790 | 6 798 790 | 1014-6799 | 17 159 | 538,5 m | 2,87 | 1,51 |
+| Ruisseau le Muesbach | 1 014 330 | 6 796 730 | 1014-6797 | 181 867 | 608,4 m | 1,15 | 1,25 |
+| Crête (contrôle : point haut à plus de 150 m de tout tronçon) | 1 014 390 | 6 796 090 | 1014-6797 | 233 079 | 904,8 m | 0,00 | 0,00 |
+
+Les cellules sont indexées sur le MNT de 5 m (1 ligne = 400 cellules, du nord au sud). À
+confronter : le fond du Strengbach doit apparaître comme un fond plat bordé de versants, la
+crête non. Les moyennes à 20 m de la grille (Strengbach 3,65 à 5 m, 2,78 à 20 m) diffèrent
+de ces valeurs de cellule.

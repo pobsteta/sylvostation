@@ -233,6 +233,74 @@ test_that(".mrvbf_grass : GRASS absent ou en echec => NA et avertissement, sans 
   expect_true(all(is.na(terra::values(m2))))
 })
 
+test_that(".mrvbf_at_res : multiple entier exige, grille du MNT conservee, NA sans GRASS", {
+  d <- make_synth_dtm(nc = 40, res = 5)
+  expect_error(sylvostation:::.mrvbf_at_res(d, 12), "multiple entier")
+  expect_error(sylvostation:::.mrvbf_at_res(d, 2.5), "multiple entier")
+  expect_warning(m <- sylvostation:::.mrvbf_at_res(d, 20, grass = ""),
+                 class = "sylvostation_non_calcule")
+  expect_equal(as.vector(terra::ext(m)), as.vector(terra::ext(d)))
+  expect_equal(terra::res(m), terra::res(d))          # remis sur la maille du MNT (5 m)
+  expect_true(all(is.na(terra::values(m))))
+  # res NULL ou egale a la maille : calcul direct a la maille du MNT
+  expect_warning(m0 <- sylvostation:::.mrvbf_at_res(d, NULL, grass = ""),
+                 class = "sylvostation_non_calcule")
+  expect_equal(terra::res(m0), terra::res(d))
+})
+
+test_that("MRVBF GRASS agrege a 20 m : fond de vallon reconnu sur la grille a 5 m (lent)", {
+  skip_if(!nzchar(Sys.which("grass")), "GRASS absent")
+  skip_if(!sylvostation:::.grass_has_extension("r.valley.bottom"), "extension absente")
+  skip_if(nzchar(Sys.getenv("SYLVOSTATION_SKIP_GRASS")), "SYLVOSTATION_SKIP_GRASS defini")
+  d <- make_synth_dtm(nc = 80, res = 5, fun = function(x, y) {
+    500 + 0.3 * pmax(0, abs(x - 980200) - 40) + 0.1 * (y - 6800000)
+  })                                                    # fond plat de 80 m, versants a 30 %
+  m <- sylvostation:::.mrvbf_at_res(d, 20)
+  expect_equal(terra::res(m), c(5, 5))
+  fond <- terra::cellFromXY(d, cbind(980202.5, 6800202.5))   # x = est, y = nord
+  vers <- terra::cellFromXY(d, cbind(980042.5, 6800202.5))
+  expect_gt(m[fond][[1]], 0.5)
+  expect_lt(m[vers][[1]], m[fond][[1]])
+})
+
+test_that(".mrvbf_t_slope : 16 a 25 m, /2 par grossissement x3, x2 par affinement x3", {
+  expect_equal(sylvostation:::.mrvbf_t_slope(25), 16)
+  expect_equal(sylvostation:::.mrvbf_t_slope(75), 8)        # exemple du manuel
+  expect_equal(sylvostation:::.mrvbf_t_slope(225), 4)
+  expect_equal(sylvostation:::.mrvbf_t_slope(25 / 3), 32)
+  expect_equal(sylvostation:::.mrvbf_t_slope(5), 44.17, tolerance = 1e-3)
+  expect_equal(sylvostation:::.mrvbf_t_slope(6), 39.4, tolerance = 1e-2)  # manuel : 40 a 6 m
+  expect_error(sylvostation:::.mrvbf_t_slope(0), "positive")
+})
+
+test_that(".mrvbf_command : seuil de pente et t_vf = 0,3 transmis a r.valley.bottom", {
+  cmd <- sylvostation:::.mrvbf_command(sylvostation:::.mrvbf_t_slope(5))
+  expect_match(cmd, "t_slope=44.17", fixed = TRUE)
+  expect_match(cmd, "t_vf=0.3 t_rf=0.3", fixed = TRUE)
+  expect_match(sylvostation:::.mrvbf_command(16), "t_slope=16.0 ", fixed = TRUE)
+})
+
+test_that("MRVBF GRASS a 5 m : fond de vallon en pente (20 %) reconnu (mission 027, lent)", {
+  skip_if(!nzchar(Sys.which("grass")), "GRASS absent")
+  skip_if(!sylvostation:::.grass_has_extension("r.valley.bottom"),
+          "extension r.valley.bottom absente (g.extension extension=r.valley.bottom)")
+  skip_if(nzchar(Sys.getenv("SYLVOSTATION_SKIP_GRASS")), "SYLVOSTATION_SKIP_GRASS defini")
+  # vallon nord-sud : fond de 30 m (x = 980150 +/- 15 m) qui descend vers le sud a 20 %
+  # (pente mediane du reseau TOPAGE sur les 4 dalles : 23 %), versants a 60 %.
+  d <- make_synth_dtm(nc = 60, res = 5, fun = function(x, y) {
+    500 + 0.6 * pmax(0, abs(x - 980150) - 15) + 0.2 * (y - 6800000)
+  })
+  m <- sylvostation:::.mrvbf_grass(d)
+  fond <- terra::cellFromXY(d, cbind(980152.5, 6800152.5))    # x = est, y = nord
+  vers <- terra::cellFromXY(d, cbind(980037.5, 6800152.5))
+  expect_equal(unname(terra::xyFromCell(d, fond)[1, ]), c(980152.5, 6800152.5))
+  expect_gt(m[fond][[1]], 0.5)          # fond de vallon (seuil 0,5 du manuel)
+  expect_lt(m[vers][[1]], m[fond][[1]])
+  # avec le seuil de 25 m (16 %) applique a 5 m, le fond n'est pas reconnu : le defaut
+  m16 <- sylvostation:::.mrvbf_grass(d, t_slope = 16)
+  expect_lt(m16[fond][[1]], 0.5)
+})
+
 test_that(".grass_has_extension : FALSE sans GRASS", {
   expect_false(sylvostation:::.grass_has_extension("r.valley.bottom", grass = ""))
 })

@@ -343,6 +343,22 @@ test_that("real_grid : grille alignée sur l'intersection emprise et MNT", {
   expect_error(real_grid(loin, d, 25), "recoupe")
 })
 
+test_that("real_terrain transmet mrvbf_res et mrvbf a derive_terrain (mission 027)", {
+  dtm <- make_synth_dtm(nc = 40, res = 5, xmin = 1015000, ymin = 6793000)
+  g <- build_grid(c(1015000, 6793000, 1015200, 6793200), 25)
+  vu <- new.env()
+  testthat::local_mocked_bindings(derive_terrain = function(dtm, tpi_radii, streams, mrvbf,
+                                                            mrvbf_res) {
+    vu$mrvbf <- mrvbf; vu$res <- mrvbf_res
+    out <- dtm * 0; names(out) <- "pente"; out
+  })
+  real_terrain(dtm, g, mrvbf = TRUE, mrvbf_res = 20)
+  expect_true(vu$mrvbf)
+  expect_equal(vu$res, 20)
+  real_terrain(dtm, g, mrvbf = FALSE)
+  expect_null(vu$res)                       # defaut : maille du MNT
+})
+
 test_that("real_terrain et empty_layers : dérivés agrégés à la grille, couches vides nommées", {
   dtm <- make_synth_dtm(nc = 40, res = 5, xmin = 1015000, ymin = 6793000)
   g <- build_grid(c(1015000, 6793000, 1015200, 6793200), 25)

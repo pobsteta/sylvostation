@@ -8,7 +8,8 @@ derive_terrain(
   dtm,
   tpi_radii = c(100, 300, 1000),
   streams = NULL,
-  mrvbf = FALSE
+  mrvbf = FALSE,
+  mrvbf_res = NULL
 )
 }
 \arguments{
@@ -22,6 +23,11 @@ EPSG:2154, ou \code{NULL}.}
 \item{mrvbf}{\code{TRUE} pour calculer le MRVBF par GRASS (lent : 2 à 4 minutes mesurées pour 1 600 à
 57 600 cellules) ; \code{FALSE} (défaut) laisse la couche à \code{NA} avec
 avertissement. Le pipeline en mode réel doit passer \code{TRUE}.}
+
+\item{mrvbf_res}{Résolution (m) du MNT sur lequel le MRVBF est calculé : multiple entier
+de la maille du MNT, \code{NULL} (défaut) = la maille du MNT. Le MNT est agrégé (moyenne)
+avant GRASS ; le seuil \code{t_slope} suit la maille de calcul (mission 027, provisoire sous
+25 m, à vérifier).}
 }
 \value{
 Un \code{SpatRaster} multicouche nommé.
@@ -53,13 +59,21 @@ de 0,1 degré pour éviter les infinis ;
 prétraitement hydrologique \strong{à vérifier} ;
 \item \code{mrvbf} : indice multi-résolution de fond de vallée (Gallant et Dowling 2003), par
 l'extension GRASS \code{r.valley.bottom} (\code{whitebox} n'a pas d'outil MRVBF, référentiels
-§ 20), paramètres \strong{par défaut} de l'extension (provisoires). \code{NA} et avertissement
+§ 20). Seuil de pente initial adapté à la maille (mission 027) : 16 \% à 25 m
+(Gallant et Dowling 2003), divisé par 2 par grossissement x 3 (manuel de
+l'extension), règle prolongée aux mailles fines (44,2 \% à 5 m, \strong{provisoire, à
+vérifier}) ; \verb{t_vf = 0,3} (défaut documenté) ; autres paramètres par défaut (\code{p_slope}
+= 4, \code{p_pctl} = 3 : de l'exemple de 6 m du manuel, seul \code{t_slope} est repris, \code{p_slope}
+= 3 et \code{p_pctl} = 2 ne le sont pas). Avec 16 \% à 5 m, le MRVBF était quasi nul partout
+sur les dalles vosgiennes. Le calcul peut se faire sur une version agrégée du MNT
+(\code{mrvbf_res}), puis rééchantillonnée (bilinéaire) sur la maille du MNT. \code{NA} et avertissement
 de classe \code{sylvostation_non_calcule} si \code{mrvbf = FALSE} ou si GRASS (\code{grass}) ou
 l'extension est absent. Calcul lent (2 à 4 minutes mesurées pour 1 600 à 57 600
 cellules) ;
 \item \code{hauteur_reseau} (m), voir \code{\link[=height_above_network]{height_above_network()}} : HAND (altitude moins celle de
 la première cellule du réseau atteinte en suivant les directions D8 de
-\code{surface_drainee}). \code{NA} si l'écoulement n'atteint pas le réseau ; jamais négatif ;
+\code{surface_drainee}, les cuvettes intérieures étant franchies par leur col). \code{NA} si
+l'écoulement n'atteint pas le réseau dans l'emprise ; jamais négatif ;
 \code{NA} avec avertissement si \code{streams} est \code{NULL} ;
 \item \code{rayonnement} (kWh/m2/an) : rayonnement direct potentiel \strong{hors atmosphère et sans
 ombres portées}, 12 jours types (Klein 1977), pas de 30 min, formules d'incidence
