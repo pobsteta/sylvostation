@@ -142,10 +142,11 @@ mesurés en mission 018. `error = "stop"` : jamais de mosaïque partielle silenc
 - **Reprise réseau** (mission 026) : `fetch_cached()` reprend un téléchargement en échec
   (3 tentatives par défaut, attentes 5, 20 puis 60 s, fichier partiel supprimé, message à
   chaque tentative, erreur claire à la fin). Nombre de tentatives : argument `retries` ou
-  option `sylvostation.download_retries` ; la clé `download_retries` de `config.yml` reste
-  **à brancher** (hors périmètre de 026). Les téléchargements de dalles LiDAR
-  (`.download_once()`, `R/emprise.R`), du TOPAGE (`R/hydro.R`) et de la SER ne passent pas
-  par `fetch_cached()` : **non repris pour l'instant**.
+  option `sylvostation.download_retries`, posée au démarrage du mode réel par `_targets.R`
+  depuis la clé `download_retries` de `config.yml` (3, provisoire, entier >= 1). Les
+  téléchargements hors `fetch_cached()` (SER et dalles LiDAR par `.download_once()`,
+  tableau d'assemblage WFS LiDAR, GetCapabilities et pages TOPAGE) passent par le même
+  mécanisme (`.download_retry()`).
 - **Géologie avec `emprise: ser`** : `geology_coverage()` avertit si plus de 1 % de la SER
   tombe hors des départements de `bdcharm_departements`.
 

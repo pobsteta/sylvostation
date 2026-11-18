@@ -65,6 +65,18 @@ fetch_cached <- function(url, dir, offline = FALSE, downloader = utils::download
   dest
 }
 
+# Telechargement avec reprise pour les appels hors `fetch_cached()` (SER, dalles LiDAR,
+# tableau d'assemblage WFS, TOPAGE ; mission 026). `tmp` : fichier partiel, supprime avant
+# chaque reprise. Le telechargeur et l'attente se remplacent dans les tests par les options
+# `sylvostation.downloader` et `sylvostation.sleeper` ; le nombre de tentatives vient de
+# l'option `sylvostation.download_retries` (3 par defaut, config.yml: download_retries).
+.download_retry <- function(url, tmp) {
+  .retry_download(url, tmp,
+                  getOption("sylvostation.downloader", utils::download.file),
+                  as.integer(getOption("sylvostation.download_retries", 3L)),
+                  c(5, 20, 60), getOption("sylvostation.sleeper", Sys.sleep))
+}
+
 # Tente `downloader(url, tmp)` jusqu'a `retries` fois ; supprime `tmp` avant chaque reprise.
 .retry_download <- function(url, tmp, downloader, retries, wait, sleeper) {
   cause <- ""

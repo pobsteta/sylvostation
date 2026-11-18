@@ -59,6 +59,9 @@ solar_albedo: 0.2
 solar_step_h: 0.5
 hydric_pas_k: 0.02
 hydric_n_controle: 30
+# Téléchargements (SER, dalles LiDAR, WFS, TOPAGE, SAFRAN, IFN) : nombre total de tentatives
+# avant arrêt (attentes 5, 20, 60 s). Provisoire (mission 026).
+download_retries: 3
 # Départements BD Charm-50 de l'emprise (référentiels § 5) : liste explicite.
 bdcharm_departements: ["067", "068", "088"]
 ifn_archive_url: "https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip"

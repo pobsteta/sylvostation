@@ -271,6 +271,7 @@ pipeline <- list(
 # =====================================================================================
 if (!isTRUE(cfg$demo)) {
   src <- sylvostation::real_sources(cfg)
+  options(sylvostation.download_retries = cfg$download_retries)  # reprise reseau (026)
   hors_ligne <- isTRUE(src$offline)
   cache <- cfg$cache_dir
   lidar_dir <- file.path(cfg$data_dir, "lidar")
