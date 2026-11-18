@@ -96,6 +96,41 @@ topographie module l'**ETP** par le rayonnement reçu par la pente, jamais la r�
   maille SAFRAN, BILJOU ; plat de référence par la même formule (k = 1) ; table par
   maille sur les classes de `k_sv` (pas `hydric_pas_k`), écart à un calcul direct sur
   `hydric_n_controle` cellules par maille, sans seuil bloquant (`hydrique_ecart_table.csv`).
+- **Coût de calcul (mission 028).** Le temps de `hydric_grid` et de `ifn_gradients` était
+  presque entièrement `biljouR::biljou_run()` (boucle de 11 000 jours qui réécrit un
+  `data.frame` à chaque jour ; 9,9 s par passe de 30 ans mesurés, machine chargée, voir plus bas), appelée une fois par classe
+  de `k_sv` (et par RU), plus une fois par cellule de contrôle, et une fois par couple
+  (maille, RU) pour les placettes. `.biljou_cols()` fait avancer **toutes ces passes d'une
+  maille ensemble**, jour par jour, en vecteurs (même bilan, mêmes fonctions de `biljouR`
+  pour l'interception, la transpiration et le sous-bois ; seule la boucle d'état est
+  réécrite) ; l'ETP de Penman des profils de `k` ne relit plus les dates ; l'attribution des
+  mailles est vectorisée. Résultats **identiques** (égalité exacte mesurée, tolérance écrite
+  et testée : 1e-12 en relatif contre `biljou_run()`, `.biljou_ru_ref()`). Pas de
+  parallélisme : la vectorisation suffit.
+  **Mesures** (2026-11-18, machine chargée : charge 10 sur 8 cœurs, pendant le run des 225
+  dalles, donc des temps pessimistes ; ancien code = commit 38f3a39 ; extrait SAFRAN réel de
+  12 mailles, 2003-2004, 731 jours ; résultats identiques à 1e-12, mesuré) :
+  grille de 5 671 cellules (150 m, 2 mailles) : **61,1 s → 1,6 s** (×38) ; 200 placettes
+  fictives (RU distinctes, 12 mailles, `synth_`, hors IFN réel) : **73,7 s → 1,2 s** (×59) ;
+  `.biljou_ru` seul, 20 RU sur 731 jours : ×73. Une passe de 30 ans (10 965 jours) : 9,9 s
+  par `biljou_run()`, 1,4 s pour une colonne vectorisée, 2,4 s pour 60 colonnes (0,02 s par
+  colonne en plus).
+  **Profil** (`Rprof`) : ancien code, 97 à 99 % du temps dans `biljou_run()` (dont
+  `rainfall_interception` 28 %, `$<-.data.frame` 19 à 25 %, `pmax`/`pmin` 19 %,
+  `match.arg` 8 %) ; interpolation par cellule, extraction et lecture : moins de 1 %.
+  Nouveau code (grille) : ETP de Penman des profils de `k` 32 %, boucle d'état 66 %, le reste
+  négligeable ; placettes : boucle d'état 65 %.
+  **Projection** (extrapolée, non mesurée sur les 225 dalles) : le coût dépend du nombre de
+  **mailles SAFRAN touchées** et de la durée de la série, pas du nombre de cellules (grille
+  de 51 200 cellules à 50 m : pas de surcoût mesurable contre 5 671). Sur 30 ans, mesuré sur
+  l'extrait (série 2003-2004 répétée 15 fois, `synth_`) : nouveau code 4,4 s par maille ;
+  ancien code ≈ 458 s par maille (30,5 s sur 2 ans × 15, linéaire en jours). Pour
+  `hydric_grid` sur 562 500 cellules à 20 m, avec **5 mailles touchées (hypothèse)** : ancien
+  ≈ 38 min, nouveau ≈ 22 s plus le coût par cellule, non mesuré à cette taille (inférieur à
+  une minute d'après les 51 200 cellules). Pour `ifn_gradients` (2 894 placettes) : le coût
+  est proportionnel au nombre de couples (maille, RU) distincts, inconnu sans les données
+  réelles ; l'ancien run de 19 min pour 9 392 placettes ramené à 2 894 placettes donne au
+  plus 6 min (proportionnel), soit ≈ 6 s avec le facteur ×60 mesuré.
 - RU uniforme par maille (`ru_by_safran_cell()`, `hydrique_mailles.csv`) : provisoire.
 - Sorties : couche `hydric` de `gradients.tif` (= `grad_hydrique_carte` = -Istress),
   `hydrique.tif` écrit par `write_hydric_grid()` (COG, préfixe `synth_` si

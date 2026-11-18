@@ -333,24 +333,108 @@ ru_from_texture <- function(pl, ru_source = c("euptf2", "bruand2004"),
 # Maille la plus proche de chaque point (x = est, y = nord, Lambert-93) ; NA au-dela de
 # la demi-diagonale d'une maille de 8 km (point hors de la grille fournie).
 .maille_proche <- function(x, y, mailles, dmax = 8000 * sqrt(2) / 2 + 1) {
-  vapply(seq_along(x), function(i) {
-    d <- sqrt((mailles$x - x[i])^2 + (mailles$y - y[i])^2)
-    j <- which.min(d)
-    if (!length(j) || d[j] > dmax) NA_character_ else mailles$maille[j]
-  }, character(1))
+  .maille_proche_vec(x, y, mailles, dmax)   # vectorise (mission 028) : meme resultat
+}
+
+# ATTENTION : cette fonction REECRIT les internes de biljouR 0.1.0 (boucle d'etat de
+# `biljou_run()`). Elle n'est valable que pour `biljou_soil(ewm = r)`, un sol a UNE couche
+# sans macroporosite. Garde-fou : les tests la comparent a `biljou_run()` (sautes si biljouR
+# est absent) et un test echoue si biljouR n'est plus en version 0.1.0 : il faut alors
+# reverifier la boucle contre la nouvelle version avant de changer ce test.
+# Coeur BILJOU vectorise (mission 028). Meme bilan que `biljouR::biljou_run()` pour un sol
+# a UNE couche (`biljou_soil(ewm = r)`, sans macroporosite), mais toutes les colonnes
+# (couples profil de PET x reserve utile) avancent ensemble, jour par jour, au lieu d'une
+# passe de 11 000 jours par colonne. Les fonctions de `biljouR` (interception, transpiration,
+# sous-bois, LAI) sont appelees telles quelles, une fois, sur la serie entiere ; seule la
+# boucle d'etat (reserve du sol) est ecrite ici, avec les memes operations dans le meme ordre
+# (egalite a l'arrondi pres, testee contre `.biljou_ru_ref()`). Les sommes annuelles passent
+# par `colSums()` comme `sum()` (accumulateur etendu).
+#   meteo    : data.frame de `biljouR::safran_to_meteo()` (date, doy, rain, pet), tri par date ;
+#   PET      : matrice (jours x profils) d'ETP, ou NULL (colonne `meteo$pet`) ;
+#   prof_idx : profil de PET de chaque colonne ;  ewm : reserve utile (mm > 0) de chaque colonne.
+# Rend une matrice (colonnes x is, nj, n) comme `.biljou_ru()`.
+.biljou_cols <- function(meteo, PET = NULL, prof_idx = NULL, ewm, param, chunk = 200L) {
+  rew_c <- 0.4; k <- 0.5; et_max_ratio <- 1.2; wet <- 0.2   # defauts de biljou_run()
+  nd <- nrow(meteo)
+  np <- length(ewm)
+  out <- matrix(NA_real_, np, 3, dimnames = list(NULL, c("is", "nj", "n")))
+  if (!np) return(out)
+  if (is.null(PET)) PET <- matrix(meteo$pet, ncol = 1L)
+  if (is.null(prof_idx)) prof_idx <- rep(1L, np)
+  if (anyNA(meteo$rain) || anyNA(PET) || any(!is.finite(ewm)) || any(ewm <= 0)) {
+    stop("BILJOU : pluie, ETP ou r\u00e9serve utile manquante ou non positive.", call. = FALSE)
+  }
+  ft <- match.arg(param$forest_type, c("broadleaved", "coniferous"))
+  doy <- if ("doy" %in% names(meteo)) meteo$doy else as.integer(format(as.Date(meteo$date), "%j"))
+  year <- if (inherits(meteo$date, "Date")) as.integer(format(meteo$date, "%Y")) else rep(1L, nd)
+  lai <- biljouR::biljou_lai(doy, param$lai_max, ft, param$budburst, param$leaf_fall)
+  inter <- biljouR::rainfall_interception(meteo$rain, lai, ft, k = k)
+  tf <- meteo$rain - inter
+  ip <- if (ft == "broadleaved" && !is.null(param$budburst)) {
+    doy >= param$budburst & doy <= param$leaf_fall
+  } else rep(TRUE, nd)
+  ipi <- cumsum(ip)                  # rang du jour dans la saison
+  yr_ip <- year[ip]
+  ans <- sort(unique(yr_ip))
+  if (!length(ans)) return(out)
+  for (d0 in seq(1L, np, by = chunk)) {
+    cols <- d0:min(np, d0 + chunk - 1L)
+    nc <- length(cols)
+    P <- PET[, prof_idx[cols], drop = FALSE]
+    tp0 <- t(matrix(pmax(0, biljouR::potential_transpiration(P, lai) - wet * inter), nd))
+    eu0 <- t(biljouR::potential_understorey_evap(P, lai, k = k))
+    cap <- t(et_max_ratio * P)
+    w <- ewm[cols]
+    ew <- w * 1
+    SWD <- matrix(0, sum(ip), nc)
+    NJ <- matrix(0, sum(ip), nc)
+    for (t in seq_len(nd)) {
+      rb <- ew / w
+      low <- rb < rew_c
+      tp <- tp0[, t]
+      eu <- eu0[, t]
+      if (any(low)) {
+        f <- rb[low] / rew_c
+        tp[low] <- tp[low] * f
+        eu[low] <- eu[low] * f
+      }
+      eu <- pmax(0, eu)
+      dry <- tp + eu
+      sc <- (dry + inter[t] > cap[, t]) & dry > 0
+      if (any(sc)) {
+        s <- pmax(0, cap[sc, t] - inter[t]) / dry[sc]
+        tp[sc] <- tp[sc] * s
+        eu[sc] <- eu[sc] * s
+      }
+      ew <- ew + pmin(tf[t], w - ew)        # infiltration (une couche)
+      eut <- pmin(eu, ew)
+      ew <- ew - eut
+      ok <- tp > 1e-12 & ew > 1e-12          # prelevement racinaire (une couche)
+      if (any(ok)) ew[ok] <- ew[ok] - pmin(tp[ok], ew[ok])
+      if (ip[t]) {
+        SWD[ipi[t], ] <- pmax(0, rew_c * w - ew)
+        NJ[ipi[t], ] <- (ew / w) < rew_c
+      }
+    }
+    IS <- NJs <- matrix(NA_real_, length(ans), nc)
+    for (a in seq_along(ans)) {
+      r <- which(yr_ip == ans[a])
+      IS[a, ] <- colSums(SWD[r, , drop = FALSE]) / w / rew_c
+      NJs[a, ] <- colSums(NJ[r, , drop = FALSE])
+    }
+    out[cols, "is"] <- apply(IS, 2, mean)
+    out[cols, "nj"] <- apply(NJs, 2, mean)
+    out[cols, "n"] <- length(ans)
+  }
+  out
 }
 
 # Indices BILJOU moyens (sur les annees) pour une meteo et des reserves utiles.
 .biljou_ru <- function(meteo, ru, param) {
-  t(vapply(ru, function(r) {
-    if (is.na(r) || r <= 0) return(c(is = NA_real_, nj = NA_real_, n = NA_real_))
-    soil <- biljouR::biljou_soil(ewm = r)
-    run <- biljouR::biljou_run(meteo, soil, lai_max = param$lai_max,
-                               forest_type = param$forest_type,
-                               budburst = param$budburst, leaf_fall = param$leaf_fall)
-    idx <- biljouR::biljou_indices(run)
-    c(is = mean(idx$Istress), nj = mean(idx$NJstress), n = nrow(idx))
-  }, numeric(3)))
+  out <- matrix(NA_real_, length(ru), 3, dimnames = list(NULL, c("is", "nj", "n")))
+  ok <- !is.na(ru) & ru > 0
+  if (any(ok)) out[ok, ] <- .biljou_cols(meteo, NULL, NULL, ru[ok], param)
+  out
 }
 
 .SENS_HYDRIQUE <- "plus haut = plus humide"
@@ -899,15 +983,33 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
     on.exit(assign(".Random.seed", old, envir = globalenv()), add = TRUE)
   }
   set.seed(seed)
-  for (m in unique(stats::na.omit(ma))) {
+  mm <- Filter(function(m) length(which(ma == m & valid & is.finite(ru_c) & ru_c > 0)) > 0,
+               unique(stats::na.omit(ma)))
+  # pre-passe sequentielle : controle de plausibilite du SSI (avertissements dans l'ordre)
+  # et tirage des cellules de controle (meme suite de nombres aleatoires qu'en une seule
+  # boucle, quel que soit le nombre de coeurs)
+  ctls <- list()
+  for (m in mm) {
     i <- which(ma == m & valid & is.finite(ru_c) & ru_c > 0)
-    if (!length(i)) next
+    sm <- s[cle == m, , drop = FALSE]
+    sm <- sm[order(sm$DATE), , drop = FALSE]
+    doy <- as.integer(format(as.Date(as.character(sm$DATE), "%Y%m%d"), "%j"))
+    .check_ssi(.ssi_mj(sm$SSI), doy, lat_m[mailles$maille == m])
+    if (!pts) {
+      ctls[[m]] <- if (n_controle > 0) i[sample.int(length(i), min(n_controle, length(i)))] else
+        integer(0)
+    }
+  }
+
+  # une maille : toutes les passes BILJOU (plat, classes de k, cellules de controle ou points)
+  # avancent ensemble dans `.biljou_cols()` (mission 028)
+  calcul_maille <- function(m) {
+    i <- which(ma == m & valid & is.finite(ru_c) & ru_c > 0)
     sm <- s[cle == m, , drop = FALSE]
     sm <- sm[order(sm$DATE), , drop = FALSE]
     lat <- lat_m[mailles$maille == m]
     alt <- unname(alt_m[m])
     doy <- as.integer(format(as.Date(as.character(sm$DATE), "%Y%m%d"), "%j"))
-    .check_ssi(.ssi_mj(sm$SSI), doy, lat)
     # poids mensuels : rayonnement SAFRAN des jours de la saison BILJOU
     mois <- as.integer(substr(as.character(sm$DATE), 5, 6))
     sv <- doy >= budburst & doy <= leaf_fall
@@ -915,55 +1017,88 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
     if (sum(w) <= 0) w <- rep(1, 12)
     w <- w / sum(w)
     kc <- as.numeric(K[i, , drop = FALSE] %*% w)
-    res[i, "k_sv"] <- kc
     U <- sort(unique(ru_c[i]))
     if (!is.data.frame(ru) && length(U) > 1L) {
       U <- seq(pas_ru * floor(min(U) / pas_ru), pas_ru * ceiling(max(U) / pas_ru), by = pas_ru)
       U <- U[U > 0]
     }
-    plat <- .biljou_ru(.meteo_topo(sm, rep(1, 12), lat, alt), U, bio)
-    res[i, "is_plat"] <- .interp1(U, plat[, "is"], ru_c[i])
+    o <- list(i = i, k_sv = kc)
+    # profils mensuels de k a passer dans Penman : plat, puis classes, puis controles/points
     if (pts) {
-      # points : calcul direct, profil propre a chaque point
-      for (c in i) {
-        r <- .biljou_ru(.meteo_topo(sm, K[c, ], lat, alt), ru_c[c], bio)
-        res[c, c("is_topo", "nj_topo")] <- r[1, c("is", "nj")]
-      }
-      infos[[m]] <- data.frame(maille = m, latitude = lat, altitude = alt, n_cellules = length(i),
-                               n_noeuds_k = NA_integer_, n_noeuds_ru = length(U))
-      next
+      ctl <- i
+    } else {
+      cl <- floor(kc / pas_k)
+      grp <- sort(unique(cl))
+      prof <- t(vapply(grp, function(g) colMeans(K[i[cl == g], , drop = FALSE]), numeric(12)))
+      knodes <- as.numeric(prof %*% w)
+      ctl <- ctls[[m]]
     }
-    cl <- floor(kc / pas_k)
-    grp <- sort(unique(cl))
-    prof <- t(vapply(grp, function(g) colMeans(K[i[cl == g], , drop = FALSE]), numeric(12)))
-    knodes <- as.numeric(prof %*% w)
-    tab_is <- tab_nj <- matrix(NA_real_, length(U), length(grp))
-    for (g in seq_along(grp)) {
-      r <- .biljou_ru(.meteo_topo(sm, prof[g, ], lat, alt), U, bio)
-      tab_is[, g] <- r[, "is"]
-      tab_nj[, g] <- r[, "nj"]
+    profs <- c(list(rep(1, 12)),
+               if (!pts) lapply(seq_along(grp), function(g) prof[g, ]),
+               lapply(ctl, function(c) K[c, ]))
+    # meteo (dates, pluie) lue une fois via le plat ; les autres profils ne changent que
+    # le rayonnement, donc l'ETP : Penman direct, sans relire les dates (mission 028)
+    met0 <- .meteo_topo(sm, profs[[1]], lat, alt)
+    vent2 <- biljouR::wind_to_2m(sm$FF, 10)
+    PET <- do.call(cbind, c(list(met0$pet), lapply(profs[-1], function(p) {
+      as.numeric(biljouR::penman_pet(tmean = sm$T, rg = .ssi_mj(sm$SSI) * p[mois], wind = vent2,
+                                     rh = sm$HU, doy = doy, latitude = lat, altitude = alt))
+    })))
+    ng <- if (pts) 0L else length(grp)
+    # colonnes : plat x U ; classes x U ; un calcul direct par controle (RU de la cellule)
+    pidx <- c(rep(1L, length(U)), rep(seq_len(ng) + 1L, each = length(U)),
+            seq_along(ctl) + 1L + ng)
+    ew <- c(U, rep(U, ng), ru_c[ctl])
+    r <- .biljou_cols(met0, PET, pidx, ew, bio)
+    plat <- r[seq_along(U), , drop = FALSE]
+    o$is_plat <- .interp1(U, plat[, "is"], ru_c[i])
+    dir <- r[length(U) * (1L + ng) + seq_along(ctl), , drop = FALSE]
+    if (pts) {
+      o$is_topo <- dir[, "is"]
+      o$nj_topo <- dir[, "nj"]
+      o$info <- data.frame(maille = m, latitude = lat, altitude = alt, n_cellules = length(i),
+                           n_noeuds_k = NA_integer_, n_noeuds_ru = length(U))
+      return(o)
+    }
+    tab_is <- tab_nj <- matrix(NA_real_, length(U), ng)
+    for (g in seq_len(ng)) {
+      rg <- r[length(U) * g + seq_along(U), , drop = FALSE]
+      tab_is[, g] <- rg[, "is"]
+      tab_nj[, g] <- rg[, "nj"]
     }
     # noeud du plat (k = 1) : deja calcule
     knodes <- c(knodes, 1)
     tab_is <- cbind(tab_is, plat[, "is"])
     tab_nj <- cbind(tab_nj, plat[, "nj"])
-    res[i, "is_topo"] <- .interp_table(knodes, U, tab_is, kc, ru_c[i])
-    res[i, "nj_topo"] <- .interp_table(knodes, U, tab_nj, kc, ru_c[i])
+    o$is_topo <- .interp_table(knodes, U, tab_is, kc, ru_c[i])
+    o$nj_topo <- .interp_table(knodes, U, tab_nj, kc, ru_c[i])
     # ecart a un calcul direct sur un echantillon de cellules
-    ctl <- if (n_controle > 0) i[sample.int(length(i), min(n_controle, length(i)))] else integer(0)
     if (length(ctl)) {
-      direct <- vapply(ctl, function(c) {
-        .biljou_ru(.meteo_topo(sm, K[c, ], lat, alt), ru_c[c], bio)[1, "is"]
-      }, numeric(1))
-      e <- res[ctl, "is_topo"] - direct
-      ecarts[[m]] <- data.frame(maille = m, n_controle = length(ctl),
-                                is_direct_moyen = mean(direct),
-                                ecart_moyen_abs = mean(abs(e)), ecart_max_abs = max(abs(e)),
-                                ecart_relatif = if (mean(abs(direct)) > 0)
-                                  mean(abs(e)) / mean(abs(direct)) else NA_real_)
+      direct <- dir[, "is"]
+      e <- o$is_topo[match(ctl, i)] - direct
+      o$ecart <- data.frame(maille = m, n_controle = length(ctl),
+                            is_direct_moyen = mean(direct),
+                            ecart_moyen_abs = mean(abs(e)), ecart_max_abs = max(abs(e)),
+                            ecart_relatif = if (mean(abs(direct)) > 0)
+                              mean(abs(e)) / mean(abs(direct)) else NA_real_)
     }
-    infos[[m]] <- data.frame(maille = m, latitude = lat, altitude = alt, n_cellules = length(i),
-                             n_noeuds_k = length(knodes), n_noeuds_ru = length(U))
+    o$info <- data.frame(maille = m, latitude = lat, altitude = alt, n_cellules = length(i),
+                         n_noeuds_k = length(knodes), n_noeuds_ru = length(U))
+    o
+  }
+  sorties <- lapply(mm, calcul_maille)
+  names(sorties) <- mm
+  for (m in mm) {
+    o <- sorties[[m]]
+    if (inherits(o, "try-error") || is.null(o)) {
+      stop("Carte hydrique : \u00e9chec du calcul de la maille ", m, ".", call. = FALSE)
+    }
+    res[o$i, "k_sv"] <- o$k_sv
+    res[o$i, "is_plat"] <- o$is_plat
+    res[o$i, "is_topo"] <- o$is_topo
+    res[o$i, "nj_topo"] <- o$nj_topo
+    if (!is.null(o$ecart)) ecarts[[m]] <- o$ecart
+    infos[[m]] <- o$info
   }
   res[, "grad_hydrique_carte"] <- -res[, "is_topo"]
   methode <- if (identical(k_methode, "climatique")) "biljou_climatique" else "biljou_topo"
