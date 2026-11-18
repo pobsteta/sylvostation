@@ -18,6 +18,8 @@
 
 ## Planifié
 
+- [026-robustesse-run-reel](missions/026-robustesse-run-reel.md) · depuis le cycle 5 · dev
+
 - [025-grille-20m](missions/025-grille-20m.md) · après 022 · depuis le cycle 5 · dev
 
 
