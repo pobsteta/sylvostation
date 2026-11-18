@@ -14,6 +14,9 @@
 
 ## Validé
 
+- [029-plan-echantillonnage-gnss](missions/029-plan-echantillonnage-gnss.md) · depuis le cycle 5 · dev
+- [030-sophy](missions/030-sophy.md) · depuis le cycle 5 · acquereur
+
 - [027-diagnostic-mrvbf-hand](missions/027-diagnostic-mrvbf-hand.md) · depuis le cycle 5 · dev
 - [028-cout-hydrique](missions/028-cout-hydrique.md) · depuis le cycle 5 · dev
 
