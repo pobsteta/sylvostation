@@ -17,11 +17,11 @@
 
 ## Planifié
 
-- [016-mode-reel](missions/016-mode-reel.md) · après 014, 015, 019 · dev (opus)
 - [018-execution-ser-pilote](missions/018-execution-ser-pilote.md) · après 016, 017 · dev
 
 ## Terminé
 
+- [016-mode-reel](missions/016-mode-reel.md) · cycle 5 · dev (opus) · mode réel branché, hors ligne sans réseau
 - [019-gradient-hydrique-biljour](missions/019-gradient-hydrique-biljour.md) · cycle 5 · dev · RU par texture, Is biljouR
 - [014-terrain-complements](missions/014-terrain-complements.md) · cycle 5 · dev · MRVBF GRASS, HAND TOPAGE
 - [015-indicateurs-sols-reels](missions/015-indicateurs-sols-reels.md) · cycle 5 · dev · Tichý 77,7 % des occurrences, RU provisoire
