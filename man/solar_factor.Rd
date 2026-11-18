@@ -15,7 +15,7 @@ solar_factor(
 )
 }
 \arguments{
-\item{dtm}{\code{SpatRaster} à une couche, EPSG:2154, maille carrée (25 m dans le pipeline),
+\item{dtm}{\code{SpatRaster} à une couche, EPSG:2154, maille carrée (\code{resolution_m} dans le pipeline),
 altitudes en mètres.}
 
 \item{days}{Jours de l'année des 12 mois (jours types de Klein 1977).}
@@ -58,7 +58,9 @@ relief situé hors du MNT fourni ne sont pas vues (bord de l'emprise).
 
 Coût mesuré (GRASS 8.4.2, 3 fils, 2026-11-18, mission 021) : 4,1 s par jour type
 avec ombres et 0,9 s pour le plat sur 360 000 cellules de 25 m (225 dalles), soit
-environ une minute pour les 12 mois ; plus de 10 minutes par jour à 5 m.
+environ une minute pour les 12 mois ; plus de 10 minutes par jour à 5 m. Mesure de la
+mission 025 (2026-11-18, machine chargée, 1 cœur disponible, 12 mois avec ombres) : 36 s
+pour 90 000 cellules de 20 m et 301 s pour 562 500 cellules de 20 m (225 dalles).
 
 k est une variable \strong{fine} (\code{k_01} à \code{k_12}, voir \link{FINE_VARIABLES}) : jamais aux
 placettes IFN (\code{\link[=assert_no_fine_extract_on_ifn]{assert_no_fine_extract_on_ifn()}}).

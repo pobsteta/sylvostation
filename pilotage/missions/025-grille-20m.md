@@ -8,7 +8,7 @@ avec une origine sur des multiples de 20 m, et rendre le code indépendant de la
 se rééchantillonnent sur notre grille sans changement d'échelle (décision de Pascal du
 2026-11-18).
 
-**Redite par l'agent :** _à compléter par l'agent._
+**Redite par l'agent :** passer la grille de sortie à 20 m en Lambert-93 (origine sur des multiples de 20 m) et rendre le code indépendant de la résolution (noms de couches et de fichiers, textes, masque forestier), pour que les bandes Sentinel-2 à 20 m se rééchantillonnent sur notre grille.
 
 ## Les trois questions
 

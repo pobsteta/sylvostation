@@ -96,7 +96,11 @@ carte_continue <- function(r, titre, col = grDevices::hcl.colors(50, "YlGnBu", r
               plg = list(cex = 0.7))
   echelle_nord(r)
 }
-legende_crs <- paste0("Lambert-93 (EPSG:2154), mètres ; x = est, y = nord ; cellules de 25 m ; ",
+# Résolution de la grille : lue sur types.tif (resolution_m de config.yml), jamais figée.
+maille <- if (raster_ok("types.tif")) {
+  paste0(format(terra::res(lire_raster("types.tif"))[1], trim = TRUE), " m")
+} else "la résolution de la grille"
+legende_crs <- paste0("Lambert-93 (EPSG:2154), mètres ; x = est, y = nord ; cellules de ", maille, " ; ",
                       "nord vers le haut.")
 ```
 
@@ -125,7 +129,7 @@ Sylvoécorégion : **`r params$ser_code`**.
 Ce document présente, dans l'ordre : les **données d'entrée** (d'où elles viennent, leur
 licence, ce qui en a été utilisé), les **calculs réalisés** (la chaîne de traitement, avec
 ses valeurs provisoires), les **cartes produites** (types de stations, gradient hydrique à
-25 m, incertitude), puis l'état de preuve, les types, la clé de terrain, la validation et
+`r maille`, incertitude), puis l'état de preuve, les types, la clé de terrain, la validation et
 les limites. Il est produit à partir des seuls fichiers écrits par le pipeline ; aucun
 calcul n'est fait dans le rapport.
 
@@ -248,9 +252,9 @@ croisée.
 #| fig-height: 3.6
 #| fig-width: 7
 #| fig-cap: "Chaîne de traitement : de la dalle LiDAR au catalogue."
-etapes <- c("1  LiDAR HD\nMNT et MHC", "2  Terrain 25 m\nmasque forestier",
+etapes <- c("1  LiDAR HD\nMNT et MHC", paste0("2  Terrain ", maille, "\nmasque forestier"),
             "3  Gradients des\nplacettes IFN",
-            "4  Modèles, validation\ncroisée, incertitude", "5  Cartes des gradients\n(dont hydrique 25 m)",
+            "4  Modèles, validation\ncroisée, incertitude", "5  Cartes des gradients\n(dont hydrique)",
             "6  Typologie\n(seuils, fusions)",
             "7  Caractérisation\ndes types", "8  Clé de\ndétermination terrain",
             "9  Validation")
@@ -278,13 +282,13 @@ graphics::par(op)
 ```{r}
 #| label: etapes
 etapes_tab <- data.frame(
-  `Étape` = c("1. LiDAR HD, MNT et MHC", "2. Terrain 25 m et masque forestier",
+  `Étape` = c("1. LiDAR HD, MNT et MHC", paste0("2. Terrain ", maille, " et masque forestier"),
               "3. Gradients des placettes IFN", "4. Modèles et incertitude",
-              "5. Carte hydrique de 25 m", "6. Typologie", "7. Caractérisation des types",
+              "5. Carte hydrique", "6. Typologie", "7. Caractérisation des types",
               "8. Clé de terrain", "9. Validation"),
   `Méthode` = c(
     "`lasR`, une lecture par bloc de 3 x 3 dalles. MNT à 1 m par triangulation des points classés sol (2), eau (9) et points virtuels (66) ; MHC à 1 m (nuage normalisé, hauteur maximale par cellule) ; mosaïque à 5 m.",
-    "Pente, exposition, courbures, TPI, TWI, MRVBF (GRASS) et hauteur au-dessus du réseau TOPAGE, sur la grille de 25 m. Masque : cellule forestière si au moins la moitié de ses pixels de MHC dépasse 5 m.",
+    paste0("Pente, exposition, courbures, TPI, TWI, MRVBF (GRASS) et hauteur au-dessus du réseau TOPAGE, sur la grille de ", maille, ". Masque : cellule forestière si au moins la moitié de ses pixels de MHC dépasse 5 m."),
     "Trophique : moyenne des valeurs indicatrices (Tichý) des espèces du relevé. Hydrique : indice de contrainte BILJOU (`biljouR`) sur SAFRAN, réserve utile par la texture IFN (`euptf2`). Bioclimat : axe 1 de P - ETP et de la température.",
     "Forêt aléatoire (`ranger`), validation croisée spatiale par blocs, zone d'applicabilité (`aoa`), écart-type recalé sur l'erreur de validation croisée (`sd_cv`).",
     "Istress BILJOU par cellule : ETP de Penman (`biljouR`) sur le rayonnement SAFRAN multiplié par k, rapport du rayonnement `r.sun` (GRASS, ciel clair) de la pente à celui du plat ; réserve utile uniforme par maille SAFRAN. Gradient hydrique = - Istress.",
@@ -304,7 +308,7 @@ etapes_tab <- data.frame(
     "Brief technique § 4, étape 9 et § 9"),
   `Valeurs provisoires` = c(
     "bloc de 3 x 3 dalles, tampon de 20 m",
-    "maille de 25 m ; seuil de 5 m ; BD Forêt non branchée",
+    paste0("maille de ", maille, " ; seuil de 5 m ; BD Forêt non branchée"),
     "saison avril-septembre ; axe bioclimatique ; paramètres de végétation ; réserve utile (à vérifier)",
     paste0(if (synth) "200" else "500", " arbres, 5 plis, graine 1"),
     "trouble de Linke 3,0 ; albédo 0,2 ; pas de 0,5 h ; pas de k 0,02 ; 30 cellules de contrôle par maille ; réserve utile par maille",
@@ -329,13 +333,13 @@ tab(etapes_tab, larg = c(2.2, 5.0, 2.7, 2.9, 2.6))
 ```{r}
 #| results: asis
 if (synth) cat("En mode démonstration, les entrées de ces étapes sont fabriquées (voir l'état de preuve) : la chaîne s'enchaîne, mais aucun résultat n'est un résultat sur données réelles.\n") else
-  cat("Les étapes dont l'entrée manque (GBIF, relevés GNSS, référence AgroParisTech, sols) sont signalées dans l'état de preuve, jamais remplacées.", if (hors_ligne) " Hors ligne, seule la composante régionale à maille large est produite ; le LiDAR et le terrain sont calculés mais n'entrent dans aucun modèle, sauf la couche hydrique de 25 m.", "\n", sep = "")
+  cat("Les étapes dont l'entrée manque (GBIF, relevés GNSS, référence AgroParisTech, sols) sont signalées dans l'état de preuve, jamais remplacées.", if (hors_ligne) " Hors ligne, seule la composante régionale à maille large est produite ; le LiDAR et le terrain sont calculés mais n'entrent dans aucun modèle, sauf la couche hydrique.", "\n", sep = "")
 ```
 
 ## Cartes produites {#sec-cartes}
 
 Toutes les cartes sont en **Lambert-93 (EPSG:2154)**, en mètres (x = est, y = nord), sur
-une grille de 25 m, nord vers le haut ; l'échelle et la flèche du nord sont tracées sur
+une grille de `r maille`, nord vers le haut ; l'échelle et la flèche du nord sont tracées sur
 chaque carte. Les cellules hors forêt (masque forestier) sont vides.
 
 ```{r}
@@ -378,7 +382,7 @@ régionaux : à l'intérieur d'une maille SAFRAN de 8 km, la carte varie peu. Au
 azonale (alluviale, tourbeuse, éboulis) n'est traitée. La carte oriente le diagnostic et ne
 remplace pas le sondage à la tarière.
 
-### Carte du gradient hydrique à 25 m
+### Carte du gradient hydrique
 
 L'indice de contrainte hydrique **Istress** (BILJOU) est calculé cellule par cellule :
 plus la valeur est grande, plus la contrainte est forte. Il module l'évapotranspiration
@@ -392,9 +396,9 @@ typologie est `- is_topo` (plus haut = plus humide).
 #| label: carte-hydrique
 #| fig-height: 3.6
 #| fig-width: 7
-#| fig-cap: !expr 'paste0("Gradient hydrique de 25 m : Istress de la pente (is_topo) et facteur de rayonnement (k_sv). ", legende_crs)'
-if (raster_ok("hydrique_25m.tif")) {
-  h <- lire_raster("hydrique_25m.tif")
+#| fig-cap: !expr 'paste0("Gradient hydrique : Istress de la pente (is_topo) et facteur de rayonnement (k_sv). ", legende_crs)'
+if (raster_ok("hydrique.tif")) {
+  h <- lire_raster("hydrique.tif")
   op <- graphics::par(mfrow = c(1, 2))
   carte_continue(h[["is_topo"]], "Istress de la pente (is_topo)",
                  col = grDevices::hcl.colors(50, "YlOrRd", rev = TRUE))
@@ -403,7 +407,7 @@ if (raster_ok("hydrique_25m.tif")) {
   graphics::par(op)
 } else {
   graphics::plot.new()
-  graphics::text(0.5, 0.5, "hydrique_25m.tif absent : carte hydrique de 25 m non calculée\n(mode démonstration)")
+  graphics::text(0.5, 0.5, "hydrique.tif absent : carte hydrique non calculée\n(mode démonstration)")
 }
 ```
 
@@ -411,7 +415,7 @@ if (raster_ok("hydrique_25m.tif")) {
 `k` est calculé en ciel clair et appliqué au rayonnement nuageux, ce qui surestime le
 contraste d'exposition ; les ombres du relief hors de l'emprise ne sont pas vues au bord ;
 la réserve utile est uniforme par maille SAFRAN (provisoire) ; les apports latéraux et
-l'engorgement ne sont pas captés ; aucune validation française à 25 m n'existe. Le pourtour
+l'engorgement ne sont pas captés ; aucune validation française à cette résolution n'existe. Le pourtour
 de la grille est vide (pente inconnue).
 
 ```{r}
@@ -598,7 +602,7 @@ if (synth) {
   cat("Référence **synthétique** (les rasters d'AgroParisTech n'ont pas été obtenus). ",
       "**La référence synthétique est fabriquée à partir de la même vérité synthétique que nos ",
       "gradients : un rho élevé est forcé par construction et ne mesure aucune performance.** ",
-      "Corrélation de rang à 50 m, puis accord des codes à trois chiffres (seuils de la ",
+      "Corrélation de rang à la maille de comparaison (plus petit multiple commun de la grille et des 50 m de la référence), puis accord des codes à trois chiffres (seuils de la ",
       "référence synthétiques ; ordre des chiffres à vérifier).\n\n")
   print(tab(lire("comparaison_gradients")))
   print(tab(lire("comparaison_types_3chiffres")))
@@ -644,7 +648,7 @@ if (!synth) {
     "prédicteurs à maille large (climat SAFRAN de 8 km) ; la composante locale à prédicteurs fins ",
     "(LiDAR) exige des points d'ancrage précis (GBIF, GNSS)", if (hors_ligne) ", absents hors ligne" else "",
     ". À l'intérieur d'une maille SAFRAN, la carte varie peu.\n",
-    "- **Masque forestier** : cellules de 25 m dont au moins la moitié des pixels du MHC LiDAR ",
+    "- **Masque forestier** : cellules de ", maille, " dont au moins la moitié des pixels du MHC LiDAR ",
     "dépassent 5 m (seuil provisoire) ; BD Forêt non branchée.\n",
     "- **Saison de végétation** : avril à septembre (provisoire) ; bioclimat = premier axe de ",
     "P - ETP et de la température (provisoire).\n",
@@ -662,7 +666,7 @@ Limites propres à cette version :
   y sont à ne pas interpréter. `sd_cv` est un niveau d'erreur *global* recalé sur la
   validation croisée (motif spatial de l'écart-type du modèle), pas une erreur locale.
 - **Précision à l'échelle de la parcelle** : la carte oriente le diagnostic et ne remplace
-  pas le sondage à la tarière. Cartes à 25 m (valeur provisoire, ADR 0004).
+  pas le sondage à la tarière. Cartes à `r maille` (valeur provisoire, ADR 0007).
 - **Valeurs provisoires** : seuils de discrétisation (quantiles), seuil de fusion des types
   rares (1 % ou 15 placettes), profondeur de la clé, âge de référence de la fertilité,
   réserve utile (à vérifier), recodage lithologique (non validé).

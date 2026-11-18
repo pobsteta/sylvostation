@@ -15,7 +15,7 @@
 #'   `taxref_version` (`"18"`, figée), `indicator_source` (`"tichy"`), `ru_source`
 #'   (`"euptf2"`), `safran_annees` (1996-2025), `saison_vegetation` (mois 4 à 9),
 #'   `bdcharm_departements`, `gbif_method` (`"search"`), `forest_mask` (`TRUE`),
-#'   `forest_height_m` (5), `cache_dir`, la carte hydrique de 25 m (mission 021,
+#'   `forest_height_m` (5), `cache_dir`, la carte hydrique (mission 021,
 #'   provisoires) : `solar_linke` (3), `solar_albedo` (0,2), `solar_step_h` (0,5),
 #'   `hydric_pas_k` (0,02), `hydric_n_controle` (30), `ifn_archive_url` et `taxref_url` (sans valeur
 #'   par défaut : seule source, config.yml ; exigées en ligne), et les
@@ -26,7 +26,7 @@
 #' writeLines(c(
 #'   'ser_code: "D11"',
 #'   "emprise_test: {xmin: 1007000, ymin: 6790000, xmax: 1022000, ymax: 6805000, crs: 2154}",
-#'   "buffer_m: 5000", "resolution_m: 25", "crs: 2154",
+#'   "buffer_m: 5000", "resolution_m: 20", "crs: 2154",
 #'   "data_dir: data", "laz_dir: data/laz", "out_dir: data/sorties",
 #'   "ifn_precision_m: 700"), f)
 #' read_config(f)$ser_code
@@ -98,7 +98,7 @@ read_config <- function(path = "config.yml") {
   ru_source = "euptf2", safran_annees = c(1996L, 2025L), saison_vegetation = c(4L, 9L),
   bdcharm_departements = c("067", "068", "088"), gbif_method = "search",
   forest_mask = TRUE, forest_height_m = 5, cache_dir = "data/cache",
-  # carte hydrique de 25 m (mission 021), valeurs provisoires (referentiels § 25.5)
+  # carte hydrique (mission 021), valeurs provisoires (referentiels § 25.5)
   solar_linke = 3, solar_albedo = 0.2, solar_step_h = 0.5, hydric_pas_k = 0.02,
   hydric_n_controle = 30L,
   # reprise sur incident reseau des telechargements (mission 026), provisoire

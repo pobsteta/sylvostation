@@ -44,7 +44,7 @@ test_that("le modèle de rapport a les trois parties demandées et les deux form
   expect_match(q, "\n  pdf:\n", fixed = TRUE)
   expect_match(q, "pdf-engine: xelatex", fixed = TRUE)
   for (t in c("## Données d'entrée", "## Calculs réalisés", "## Cartes produites",
-              "### Carte du gradient hydrique à 25 m", "### Carte de l'incertitude",
+              "### Carte du gradient hydrique", "### Carte de l'incertitude",
               "## État de preuve", "## Limites")) {
     expect_true(grepl(t, q, fixed = TRUE), info = t)
   }
@@ -105,7 +105,7 @@ test_that("mode démo : le PDF est rendu à côté du HTML, avec la mention synt
   }
   # les cartes (types, hydrique, incertitude) sont présentes : leurs légendes aussi
   expect_match(txt, "Carte des types de stations", fixed = TRUE)
-  expect_match(txt, "Gradient hydrique de 25 m", fixed = TRUE)
+  expect_match(txt, "Gradient hydrique", fixed = TRUE)
   expect_match(txt, "Zone d’applicabilité", fixed = TRUE)
 })
 
@@ -115,13 +115,13 @@ test_that("sans LaTeX : HTML seul, avertissement, aucun PDF ; mode réel avec la
   skip_if(is.null(quarto::quarto_path()), "Quarto absent : le rapport n'est pas rendu")
   e <- rendre_src()
   d <- sorties_rapport(FALSE)
-  # carte hydrique de 25 m posée à la main (couches is_topo et k_sv), EPSG:2154
+  # carte hydrique posée à la main (couches is_topo et k_sv), EPSG:2154
   g <- terra::rast(nrows = 4, ncols = 4, xmin = 1007000, xmax = 1007100,
                    ymin = 6790000, ymax = 6790100, crs = "EPSG:2154")
   h <- c(g, g)
   terra::values(h) <- cbind(seq(70, 85, length.out = 16), rep(c(0.9, 1.1), 8))
   names(h) <- c("is_topo", "k_sv")
-  terra::writeRaster(h, file.path(d, "hydrique_25m.tif"), overwrite = TRUE)
+  terra::writeRaster(h, file.path(d, "hydrique.tif"), overwrite = TRUE)
   file.create(file.path(d, "rapport.pdf"))  # un PDF d'un run précédent ne doit pas rester
   expect_warning(
     res <- e$rendre_rapport(d, "", "D11", TRUE, modele = modele_rapport(),
@@ -134,7 +134,7 @@ test_that("sans LaTeX : HTML seul, avertissement, aucun PDF ; mode réel avec la
   expect_match(html, "MODE RÉEL HORS LIGNE", fixed = TRUE)
   expect_false(grepl("DONNÉES SYNTHÉTIQUES", html, fixed = TRUE))
   expect_match(html, "Carte du gradient hydrique", fixed = TRUE)
-  expect_match(html, "Gradient hydrique de 25 m", fixed = TRUE)
+  expect_match(html, "Gradient hydrique", fixed = TRUE)
   expect_match(html, "500 arbres", fixed = TRUE)
   expect_false(grepl("essence fictive", html, fixed = TRUE))
   expect_match(html, "Données d.entrée")

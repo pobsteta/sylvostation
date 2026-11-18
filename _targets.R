@@ -63,10 +63,12 @@ tar_option_set(format = tar_format(
 ))
 
 extdata <- function(...) system.file("extdata", ..., package = "sylvostation")
+# Maille de comparaison a la reference (50 m) : plus petit multiple commun (20 m -> 100 m ; ADR 0007).
+res_comparaison <- sylvostation::comparison_res(cfg$resolution_m)
 rapport_modele <- function() system.file("rapport", "rapport.qmd", package = "sylvostation")
 
 # Emprise de demonstration : carre de 2 500 m au sud-ouest de l'emprise test
-# (x = est, y = nord, Lambert-93) ; 100 x 100 cellules de 25 m.
+# (x = est, y = nord, Lambert-93) ; environ 125 x 125 cellules de `resolution_m`.
 demo_emprise <- c(xmin = cfg$emprise_test$xmin, ymin = cfg$emprise_test$ymin,
                   xmax = cfg$emprise_test$xmin + 2500, ymax = cfg$emprise_test$ymin + 2500)
 emprise_test <- c(cfg$emprise_test$xmin, cfg$emprise_test$ymin,
@@ -219,7 +221,7 @@ pipeline <- list(
 
   # --- comparaison a la reference (synthetique) --------------------------------------
   tar_target(reference, sylvostation::load_reference(extdata("synth_reference.tif"))),
-  tar_target(comparison, sylvostation::compare_gradients(gradient_map, reference, res = 50)),
+  tar_target(comparison, sylvostation::compare_gradients(gradient_map, reference, res = res_comparaison)),
   tar_target(comparison_types, {
     refv <- terra::as.data.frame(comparison$ref, cells = TRUE, na.rm = TRUE)
     ov <- terra::as.data.frame(comparison$ours, cells = TRUE, na.rm = TRUE)
@@ -241,7 +243,8 @@ pipeline <- list(
   }),
 
   # --- sorties -----------------------------------------------------------------------
-  tar_target(evidence, sylvostation::evidence_table(n_ifn = nrow(ifn$placettes))),
+  tar_target(evidence, sylvostation::evidence_table(n_ifn = nrow(ifn$placettes),
+                                                                 resolution_m = cfg$resolution_m)),
   tar_target(outputs, {
     w <- sylvostation::write_outputs(
       out_dir = cfg$out_dir, ser_code = cfg$ser_code,
@@ -344,7 +347,7 @@ if (!isTRUE(cfg$demo)) {
     tar_target(ifn_gradients, sylvostation::ifn_real_gradients(
       ifn, indicateurs, climat, safran, ru_source = cfg$ru_source, annees = annees)),
 
-    # --- carte hydrique de 25 m (mission 021) : k r.sun, RU par maille, BILJOU --------
+    # --- carte hydrique (mission 021) : k r.sun, RU par maille, BILJOU --------
     # k = rayonnement r.sun (ciel clair) de la pente / plat ; variable fine, grille seule
     tar_target(solar_k, {
       k <- sylvostation::solar_factor(terrain[["altitude"]], linke = cfg$solar_linke,
@@ -415,9 +418,9 @@ if (!isTRUE(cfg$demo)) {
     }),
     tar_target(gradient_map, {
       b <- sylvostation::apply_bioclim(predictors, attr(ifn_gradients, "bioclim_axis"))
-      # hydrique : -Istress de 25 m calcule (mission 021) ; le modele regional hydrique
+      # hydrique : -Istress calcule (mission 021) ; le modele regional hydrique
       # (placettes IFN) ne sert qu'a la validation croisee
-      r <- c(maps$trophic[["pred"]], hydric_grid$r[["grad_hydrique_25m"]], b)
+      r <- c(maps$trophic[["pred"]], hydric_grid$r[["grad_hydrique_carte"]], b)
       names(r) <- c("trophic", "hydric", "bioclim")
       if (!is.null(forest)) r <- terra::mask(r, forest[["foret"]])
       r
@@ -520,7 +523,7 @@ if (!isTRUE(cfg$demo)) {
 
     # --- sorties ------------------------------------------------------------------------
     tar_target(evidence, sylvostation::evidence_table_real(list(
-      offline = hors_ligne, ser_code = cfg$ser_code, n_tiles = nrow(tiles),
+      offline = hors_ligne, ser_code = cfg$ser_code, resolution_m = cfg$resolution_m, n_tiles = nrow(tiles),
       n_ifn = nrow(ifn$placettes), greco = greco,
       mrvbf = !"mrvbf" %in% sylvostation::empty_layers(terrain), hydro_n = nrow(hydro),
       empty_layers = sylvostation::empty_layers(terrain),
@@ -549,7 +552,7 @@ if (!isTRUE(cfg$demo)) {
       if (!is.null(comparison_table)) {
         tabs$comparaison_gradients <- comparison_table
       }
-      # carte hydrique de 25 m (mission 021) : ecart table / calcul direct, RU par maille
+      # carte hydrique (mission 021) : ecart table / calcul direct, RU par maille
       if (NROW(hydric_grid$ecart)) tabs$hydrique_ecart_table <- hydric_grid$ecart
       tabs$hydrique_mailles <- if (is.null(hydric_grid$mailles)) ru_mailles else
         merge(ru_mailles, hydric_grid$mailles, by = "maille", all.x = TRUE)
@@ -568,7 +571,7 @@ if (!isTRUE(cfg$demo)) {
     # comparaison a la reference : seulement si reference_path est fourni
     tar_target(comparison_table, if (is.null(src$reference)) NULL else {
       cmp <- sylvostation::compare_gradients(gradient_map,
-                                             sylvostation::load_reference(src$reference), res = 50)
+                                             sylvostation::load_reference(src$reference), res = res_comparaison)
       cmp$correlation
     })
   )

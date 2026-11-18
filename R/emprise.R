@@ -140,7 +140,7 @@ get_ser <- function(ser_code, buffer_m = 0, source = c("download", "file"),
 #' @param res Résolution en mètres (cellules carrées).
 #' @return Un `SpatRaster` d'une couche, vide, en EPSG:2154.
 #' @examples
-#' g <- build_grid(c(xmin = 1007003, ymin = 6790010, xmax = 1007180, ymax = 6790099), res = 25)
+#' g <- build_grid(c(xmin = 1007003, ymin = 6790010, xmax = 1007180, ymax = 6790099), res = 20)
 #' terra::ext(g)
 #' @export
 build_grid <- function(emprise, res) {

@@ -30,7 +30,7 @@ TAXREF utilisé (\code{v18}...) : sinon la fonction s'arrête.
 f <- tempfile(fileext = ".yml")
 writeLines(c('ser_code: "D11"',
   "emprise_test: {xmin: 1007000, ymin: 6790000, xmax: 1022000, ymax: 6805000, crs: 2154}",
-  "buffer_m: 5000", "resolution_m: 25", "crs: 2154", "data_dir: data",
+  "buffer_m: 5000", "resolution_m: 20", "crs: 2154", "data_dir: data",
   "laz_dir: data/laz", "out_dir: data/sorties", "ifn_precision_m: 700",
   "demo: false", "offline: true"), f)
 names(real_sources(read_config(f)))

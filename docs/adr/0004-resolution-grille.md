@@ -1,7 +1,7 @@
 # ADR 0004 — Grille de 25 m calée sur 50 m, dérivés de terrain à 5 m
 
 - **Date :** 2026-11-16
-- **Statut :** acceptée par délégation (Claude, orchestrateur, pour Pascal), provisoire jusqu'à la mesure de l'incrément 1
+- **Statut :** maille de 25 m remplacée par 20 m (ADR 0007, 2026-11-18) ; acceptée par délégation (Claude, orchestrateur, pour Pascal), provisoire jusqu'à la mesure de l'incrément 1
 - **Proposée par :** contradicteur (mission 000, I3), reprise par l'orchestrateur
 - **Tranchée par :** Pascal, par délégation totale du 2026-11-16
 

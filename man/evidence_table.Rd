@@ -4,10 +4,13 @@
 \alias{evidence_table}
 \title{Tableau « état de preuve » du pipeline démo}
 \usage{
-evidence_table(n_ifn = NA_integer_)
+evidence_table(n_ifn = NA_integer_, resolution_m = NA_real_)
 }
 \arguments{
 \item{n_ifn}{Nombre de placettes IFN lues (pour le détail ; \code{NA} si inconnu).}
+
+\item{resolution_m}{Résolution de la grille (m), \code{resolution_m} de \code{config.yml} ; \code{NA}
+si inconnue (le texte dit alors « grille de sortie »).}
 }
 \value{
 Un \code{data.frame} : \code{etape}, \code{etat}, \code{dans_ce_run} (\code{oui} si l'étape a

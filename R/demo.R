@@ -33,17 +33,18 @@
 #' MNT synthétique du mode démo
 #'
 #' Prend le plan incliné de `inst/extdata/synth_dtm.tif` (surface analytique
-#' synthétique de 240 x 240 cellules de 25 m), en découpe autant de cellules que
+#' synthétique de 240 x 240 cellules de 25 m, jeu fabriqué), le ramène par interpolation
+#' bilinéaire à la maille de `grid` (20 m depuis la mission 025), en découpe autant de cellules que
 #' `grid`, replace le résultat **sur l'emprise de `grid`** (pour que la démo se situe
 #' sur le massif test) et y ajoute un relief lisse aléatoire (écart-type 40 m) pour que
 #' pente, TWI et TPI varient. **Entièrement synthétique** : balise `synthetic = TRUE`.
 #'
-#' @param grid `SpatRaster` vide en EPSG:2154 (voir [build_grid()]), de 25 m, pas plus
-#'   de 240 x 240 cellules.
+#' @param grid `SpatRaster` vide en EPSG:2154 (voir [build_grid()]), à `resolution_m`, pas plus
+#'   grand que l'emprise de `synth_dtm.tif` (6 000 m de côté).
 #' @param seed Graine du relief aléatoire.
 #' @return Un `SpatRaster` à une couche `z` (mètres) sur la grille de `grid`.
 #' @examples
-#' g <- build_grid(c(xmin = 1007000, ymin = 6790000, xmax = 1008000, ymax = 6791000), 25)
+#' g <- build_grid(c(xmin = 1007000, ymin = 6790000, xmax = 1008000, ymax = 6791000), 20)
 #' terra::res(synth_demo_dtm(g))
 #' @export
 synth_demo_dtm <- function(grid, seed = 1L) {
@@ -53,8 +54,9 @@ synth_demo_dtm <- function(grid, seed = 1L) {
   if (!nzchar(f)) stop("synth_dtm.tif introuvable dans inst/extdata.", call. = FALSE)
   base <- terra::rast(f)
   if (any(abs(terra::res(grid) - terra::res(base)) > 1e-6)) {
-    stop("`grid` doit avoir la m\u00eame maille que synth_dtm.tif (", terra::res(base)[1], " m).",
-         call. = FALSE)
+    # maille de la grille (ex. 20 m) differente de celle du jeu fabrique (25 m)
+    base <- terra::resample(base, terra::rast(terra::ext(base), resolution = terra::res(grid),
+                                              crs = terra::crs(base)), method = "bilinear")
   }
   if (terra::nrow(grid) > terra::nrow(base) || terra::ncol(grid) > terra::ncol(base)) {
     stop("`grid` d\u00e9passe la taille de synth_dtm.tif (", terra::nrow(base), " x ",
@@ -270,7 +272,8 @@ synth_demo_biotic <- function(types, seed = 5L) {
 #' `inst/extdata/synth_reference.tif` (script `inst/scripts/synth_reference.R`).
 #'
 #' @param truth `SpatRaster` de [synth_demo_truth()].
-#' @param res Maille de la référence en mètres (50, comme la carte publiée).
+#' @param res Maille de la référence en mètres (50, comme la carte publiée). Si elle n'est
+#'   pas un multiple de la maille de `truth` (50 m sur 20 m), moyenne par rééchantillonnage.
 #' @param noise_sd Bruit ajouté.
 #' @param seed Graine.
 #' @return Un `SpatRaster` `trophic`, `hydric`, `bioclim`, balisé `synthetic`.
@@ -282,10 +285,16 @@ synth_demo_biotic <- function(types, seed = 5L) {
 synth_demo_reference <- function(truth, res = 50, noise_sd = 0.3, seed = 3L) {
   r0 <- terra::res(truth)[1]
   f <- res / r0
-  if (abs(f - round(f)) > 1e-6 || f < 1) {
-    stop("`res` doit \u00eatre un multiple entier de la maille de `truth`.", call. = FALSE)
+  if (f < 1 - 1e-6) {
+    stop("`res` ne peut pas \u00eatre plus fin que la maille de `truth`.", call. = FALSE)
   }
-  a <- if (round(f) > 1) terra::aggregate(truth, fact = round(f), fun = "mean") else truth
+  a <- if (abs(f - round(f)) <= 1e-6) {
+    if (round(f) > 1) terra::aggregate(truth, fact = round(f), fun = "mean") else truth
+  } else {
+    # res non multiple de la maille (ex. 50 m sur une grille de 20 m) : moyenne sur gabarit
+    terra::resample(truth, terra::rast(terra::ext(truth), resolution = res,
+                                       crs = terra::crs(truth)), method = "average")
+  }
   .with_seed(seed, {
     terra::values(a) <- terra::values(a) +
       matrix(stats::rnorm(terra::ncell(a) * terra::nlyr(a), sd = noise_sd), ncol = terra::nlyr(a))

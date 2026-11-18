@@ -108,7 +108,7 @@ cfg_dl <- function(...) {
   base <- list(ser_code = "D11",
                emprise_test = list(xmin = 1007000, ymin = 6790000, xmax = 1022000,
                                    ymax = 6805000, crs = 2154),
-               buffer_m = 5000, resolution_m = 25, crs = 2154, data_dir = "data",
+               buffer_m = 5000, resolution_m = 20, crs = 2154, data_dir = "data",
                laz_dir = "data/laz", out_dir = "data/sorties", ifn_precision_m = 700,
                demo = FALSE, offline = TRUE)
   yaml::write_yaml(utils::modifyList(base, list(...)), f)

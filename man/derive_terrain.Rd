@@ -67,7 +67,7 @@ de Duffie et Beckman (\emph{Solar Engineering of Thermal Processes}, éq. 1.6.2 
 1.10.3). Indice relatif d'exposition, non un flux au sol.
 }
 
-Choisir la résolution en amont avec \code{\link[=aggregate_dtm]{aggregate_dtm()}} (5 ou 25 m, ADR 0004). Le
+Choisir la résolution en amont avec \code{\link[=aggregate_dtm]{aggregate_dtm()}} (5 m puis \code{resolution_m}, ADR 0007). Le
 pourtour d'une cellule du MNT est \code{NA} pour la pente, l'exposition et les courbures.
 }
 \examples{

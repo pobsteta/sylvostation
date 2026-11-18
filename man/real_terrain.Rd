@@ -31,7 +31,7 @@ le raster, même sur une petite emprise), puis le résultat est rogné.
 \donttest{
 f <- system.file("extdata", "synth_dtm.tif", package = "sylvostation")
 d <- terra::rast(f)
-g <- build_grid(terra::ext(d)[c(1, 3, 2, 4)], 25)
+g <- build_grid(terra::ext(d)[c(1, 3, 2, 4)], 20)
 suppressWarnings(names(real_terrain(d, g, mrvbf = FALSE)))
 }
 }

@@ -585,6 +585,9 @@ write.table(out, "ifn_texture_dictionnaire.csv", sep = ";", quote = TRUE, row.na
 
 ## 25. Descente d'échelle hydrique : moduler BILJOU par la topographie
 
+> Note du 2026-11-18 : ce paragraphe a été rédigé pour la grille de 25 m. Depuis l'ADR 0007, lire
+> `resolution_m` (20 m) ; les mesures historiques à 25 m sont laissées telles quelles.
+
 - **Décision éclairée :** quelle grandeur la mission 021 module par la topographie (RU, ETP,
   rayonnement, apports latéraux) pour la carte de l'indice `Istress` à 25 m, par quelle
   équation, sans coefficient inventé.
@@ -1046,3 +1049,18 @@ AgroParisTech reste la référence du brief (§ 9), et les relevés GNSS restent
   le nom de l'archive IFN change à chaque campagne ; l'URL `url_npl` du LiDAR contient la
   date d'édition (2024-12-20) ; la page PatriNat de TAXREF v18 sera retirée « dans les
   prochains mois » ; le millésime est dans le nom des couches TOPAGE.
+
+## 26. Sentinel-2 : grille et bandes à 20 m (mission 025)
+
+Source vérifiée le 2026-11-18 : SentiWiki, https://sentiwiki.copernicus.eu/web/s2-products et
+https://sentiwiki.copernicus.eu/web/s2-mission (aucun téléchargement de données).
+
+- **Tuiles** : produits L1C et L2A découpés en tuiles de 110 km x 110 km, définies en
+  **UTM/WGS84** sur un pas de 100 km (recouvrement de 10 km). Le CRS n'est donc **pas** EPSG:2154.
+- **Bandes à 20 m** : B5 (705 nm), B6 (740 nm), B7 (783 nm), B8a (865 nm), B11 (1610 nm), B12
+  (2190 nm). Bandes à 10 m : B2, B3, B4, B8 ; à 60 m : B1, B9, B10.
+- **Conséquence** : une grille Lambert-93 de 20 m ne se superpose pas pixel à pixel aux tuiles
+  (projections différentes) ; les bandes à 20 m se **rééchantillonnent** sur notre grille
+  (ADR 0007). Fuseau UTM de la SER D11 (Vosges, environ 7 degrés est, donc 32N) : **à vérifier**.
+- **Non vérifié** : nom des produits Sentinel-2 L2A servis par le fournisseur retenu, URL et
+  licence d'accès (mission 023), méthode de rééchantillonnage conseillée (bilinéaire ou moyenne).

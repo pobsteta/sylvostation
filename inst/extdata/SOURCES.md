@@ -189,3 +189,11 @@ Extraits le 2026-11-16, mission 001 (voir `docs/referentiels.md`, § 5 et § 7).
   écriture `;`. Sert au mode réel hors ligne (`offline: true`) et à la carte hydrique de
   25 m (`hydric_stress_grid()`).
 - **Licence :** Licence Ouverte 2.0 (`lov2`, champ licence de data.gouv.fr).
+
+## `synth_reference.tif` (SYNTHETIQUE, missions 010 et 025)
+
+Carte de reference **fabriquee** (substitut de celle de Gegout et al. 2008, dont les rasters
+AgroParisTech n ont pas ete obtenus) : trois gradients vrais synthetiques (grille de 20 m, `resolution_m`),
+moyennes a 50 m, plus un bruit. Fabriquee par `inst/scripts/synth_reference.R` (refaite le
+2026-11-18, mission 025, a partir de la grille de 20 m). `synthetic = TRUE`. Aucune licence a
+respecter : aucune donnee reelle. Ne dit rien sur la vraie carte.

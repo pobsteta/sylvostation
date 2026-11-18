@@ -10,13 +10,16 @@
 #' atteints » tant qu'ils n'ont pas tourné sur données réelles.
 #'
 #' @param n_ifn Nombre de placettes IFN lues (pour le détail ; `NA` si inconnu).
+#' @param resolution_m Résolution de la grille (m), `resolution_m` de `config.yml` ; `NA`
+#'   si inconnue (le texte dit alors « grille de sortie »).
 #' @return Un `data.frame` : `etape`, `etat`, `dans_ce_run` (`oui` si l'étape a
 #'   tourné dans le pipeline démo, `non` sinon : une ligne réelle non exécutée ici
 #'   reste réelle mais hors de ce run), `detail`.
 #' @examples
 #' evidence_table()
 #' @export
-evidence_table <- function(n_ifn = NA_integer_) {
+evidence_table <- function(n_ifn = NA_integer_, resolution_m = NA_real_) {
+  maille <- .res_txt(resolution_m)
   ifn <- if (is.na(n_ifn)) "placettes IFN de inst/extdata" else
     paste0(n_ifn, " placettes IFN de inst/extdata")
   e <- function(etape, etat, detail, dans_ce_run = "oui") {
@@ -25,7 +28,7 @@ evidence_table <- function(n_ifn = NA_integer_) {
   }
   out <- rbind(
     e("1. Emprise et grille", "r\u00e9el r\u00e9duit",
-      "Contour SER simplifi\u00e9 (ser_extrait.gpkg) ; grille de 25 m calcul\u00e9e sur l'emprise de d\u00e9monstration."),
+      paste0("Contour SER simplifi\u00e9 (ser_extrait.gpkg) ; grille ", maille, " calcul\u00e9e sur l'emprise de d\u00e9monstration.")),
     e("2. LiDAR HD et MNT (incr\u00e9ment 1)", "r\u00e9el r\u00e9duit",
       "4 dalles r\u00e9elles trait\u00e9es lors de la mission 003, hors pipeline d\u00e9mo ; la d\u00e9mo utilise un MNT synth\u00e9tique (synth_dtm.tif).",
       dans_ce_run = "non"),

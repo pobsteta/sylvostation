@@ -4,7 +4,7 @@
 \alias{aggregate_dtm}
 \title{Agréger un MNT à des résolutions plus grossières}
 \usage{
-aggregate_dtm(dtm, res = c(5, 25))
+aggregate_dtm(dtm, res = c(5, 20))
 }
 \arguments{
 \item{dtm}{\code{SpatRaster} à une couche, en Lambert-93 (EPSG:2154), à maille carrée.}
@@ -13,18 +13,18 @@ aggregate_dtm(dtm, res = c(5, 25))
 renvoie tel quel ; une résolution plus fine est refusée.}
 }
 \value{
-Une liste nommée (\code{res_5}, \code{res_25}, ...) de \code{SpatRaster}.
+Une liste nommée (\code{res_5}, \code{res_20}, ...) de \code{SpatRaster}.
 }
 \description{
 Agrège un modèle numérique de terrain par la \strong{moyenne} (brief technique, § 4
-étape 2 : indices de terrain sur 5 et 25 m, pas sur 1 m). Le facteur d'agrégation
+étape 2 : indices de terrain sur 5 m puis résumés à la maille de sortie, pas sur 1 m). Le facteur d'agrégation
 doit être entier ; si la maille d'origine est alignée sur un multiple de \code{res}
-(ADR 0004 : origine de la grille de 25 m sur un multiple de 50 m), la grille
+(ADR 0007 : grille de \code{resolution_m}, 20 m, d'origine multiple de 20 m), la grille
 agrégée l'est aussi.
 }
 \examples{
 r <- terra::rast(nrows = 100, ncols = 100, xmin = 980000, xmax = 980100,
                  ymin = 6800000, ymax = 6800100, crs = "EPSG:2154")
 terra::values(r) <- seq_len(terra::ncell(r))
-names(aggregate_dtm(r, res = c(5, 25)))
+names(aggregate_dtm(r, res = c(5, 20)))
 }

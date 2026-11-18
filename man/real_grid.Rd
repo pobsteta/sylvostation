@@ -17,7 +17,7 @@ real_grid(emprise, dtm, res)
 Un \code{SpatRaster} vide en EPSG:2154.
 }
 \description{
-Grille de \code{res} m (origine multiple de \code{res}, ADR 0004) sur l'intersection de
+Grille de \code{res} m (origine multiple de \code{res}, ADR 0007) sur l'intersection de
 l'emprise et de la partie renseignée du MNT (les dalles traitées).
 }
 \examples{
@@ -25,5 +25,5 @@ d <- terra::rast(xmin = 1015500, xmax = 1015580, ymin = 6793500, ymax = 6793580,
                  resolution = 5, crs = "EPSG:2154", vals = 1)
 e <- sf::st_as_sfc(sf::st_bbox(c(xmin = 1007000, ymin = 6790000, xmax = 1022000,
                    ymax = 6805000), crs = sf::st_crs(2154)))
-terra::ext(real_grid(e, d, 25))
+terra::ext(real_grid(e, d, 20))
 }
