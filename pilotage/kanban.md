@@ -27,6 +27,8 @@
 
 ## Terminé
 
+- [024-cartes-comparaison](missions/024-cartes-comparaison.md) · cycle 5 · acquereur
+
 - [021-descente-echelle-hydrique](missions/021-descente-echelle-hydrique.md) · cycle 5 · dev
 
 - [020-sources-descente-echelle-hydrique](missions/020-sources-descente-echelle-hydrique.md) · cycle 5 · acquereur
