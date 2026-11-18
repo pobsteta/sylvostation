@@ -81,8 +81,11 @@ aggregate_dtm <- function(dtm, res = c(5, 20)) {
 #'   § 20). Seuil de pente initial adapté à la maille (mission 027) : 16 % à 25 m
 #'   (Gallant et Dowling 2003), divisé par 2 par grossissement x 3 (manuel de
 #'   l'extension), règle prolongée aux mailles fines (44,2 % à 5 m, **provisoire, à
-#'   vérifier**) ; `t_vf = 0,3` (défaut documenté) ; autres paramètres par défaut. Avec
-#'   16 % à 5 m, le MRVBF était quasi nul partout sur les dalles vosgiennes. `NA` et avertissement
+#'   vérifier**) ; `t_vf = 0,3` (défaut documenté) ; autres paramètres par défaut (`p_slope`
+#'   = 4, `p_pctl` = 3 : de l'exemple de 6 m du manuel, seul `t_slope` est repris, `p_slope`
+#'   = 3 et `p_pctl` = 2 ne le sont pas). Avec 16 % à 5 m, le MRVBF était quasi nul partout
+#'   sur les dalles vosgiennes. Le calcul peut se faire sur une version agrégée du MNT
+#'   (`mrvbf_res`), puis rééchantillonnée (bilinéaire) sur la maille du MNT. `NA` et avertissement
 #'   de classe `sylvostation_non_calcule` si `mrvbf = FALSE` ou si GRASS (`grass`) ou
 #'   l'extension est absent. Calcul lent (2 à 4 minutes mesurées pour 1 600 à 57 600
 #'   cellules) ;
@@ -104,6 +107,10 @@ aggregate_dtm <- function(dtm, res = c(5, 20)) {
 #' @param mrvbf `TRUE` pour calculer le MRVBF par GRASS (lent : 2 à 4 minutes mesurées pour 1 600 à
 #'   57 600 cellules) ; `FALSE` (défaut) laisse la couche à `NA` avec
 #'   avertissement. Le pipeline en mode réel doit passer `TRUE`.
+#' @param mrvbf_res Résolution (m) du MNT sur lequel le MRVBF est calculé : multiple entier
+#'   de la maille du MNT, `NULL` (défaut) = la maille du MNT. Le MNT est agrégé (moyenne)
+#'   avant GRASS ; le seuil `t_slope` suit la maille de calcul (mission 027, provisoire sous
+#'   25 m, à vérifier).
 #' @param streams Réseau hydrographique (BD TOPAGE) : `SpatVector` ou `sf` de lignes en
 #'   EPSG:2154, ou `NULL`.
 #' @return Un `SpatRaster` multicouche nommé.
@@ -115,7 +122,7 @@ aggregate_dtm <- function(dtm, res = c(5, 20)) {
 #' }
 #' @export
 derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
-                           mrvbf = FALSE) {
+                           mrvbf = FALSE, mrvbf_res = NULL) {
   .check_dtm(dtm)
   if (!is.numeric(tpi_radii) || !length(tpi_radii) || anyNA(tpi_radii) ||
       any(tpi_radii <= 0)) {
@@ -148,7 +155,7 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
     hand <- .height_above_streams(dtm, streams, tg)
   }
   if (isTRUE(mrvbf)) {
-    mrvbf_r <- .mrvbf_grass(dtm)
+    mrvbf_r <- .mrvbf_at_res(dtm, mrvbf_res)
   } else {
     .warn_non_calcule("`mrvbf` non demand\u00e9 (`mrvbf = FALSE`) : NA (calcul GRASS lent).")
     mrvbf_r <- dtm * NA
@@ -183,7 +190,7 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
 # seuil et le MRVBF est quasi nul partout.
 .mrvbf_t_slope <- function(res_m) {
   if (!is.numeric(res_m) || length(res_m) != 1L || is.na(res_m) || res_m <= 0) {
-    stop("`res_m` doit être une résolution positive (m).", call. = FALSE)
+    stop("`res_m` doit \u00eatre une r\u00e9solution positive (m).", call. = FALSE)
   }
   16 * 2^(log(25 / res_m, base = 3))
 }
@@ -194,6 +201,23 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
 .mrvbf_command <- function(t_slope) {
   paste0("r.valley.bottom elevation=dem mrvbf=mrvbf t_slope=",
          format(round(t_slope, 2), nsmall = 1), " t_vf=0.3 t_rf=0.3 --quiet")
+}
+
+# MRVBF calcule a la maille `res_m` (multiple entier de celle du MNT ; NULL = celle du
+# MNT) : MNT agrege (moyenne), MRVBF reechantillonne (bilineaire) sur la grille du MNT.
+.mrvbf_at_res <- function(dtm, res_m = NULL, grass = Sys.which("grass")) {
+  r0 <- terra::res(dtm)[1]
+  if (is.null(res_m) || isTRUE(all.equal(res_m, r0))) return(.mrvbf_grass(dtm, grass))
+  f <- res_m / r0
+  if (!is.numeric(res_m) || length(res_m) != 1L || is.na(res_m) || f < 1 ||
+      abs(f - round(f)) > 1e-6) {
+    stop("`mrvbf_res` doit \u00eatre un multiple entier de la maille du MNT (m).", call. = FALSE)
+  }
+  agg <- terra::aggregate(dtm, fact = round(f), fun = "mean", na.rm = FALSE)
+  m <- .mrvbf_grass(agg, grass)
+  out <- terra::resample(m, dtm, method = "bilinear")
+  names(out) <- names(dtm)
+  out
 }
 
 # MRVBF par GRASS (extension r.valley.bottom) dans un projet temporaire : le MNT est
@@ -431,19 +455,24 @@ derive_terrain <- function(dtm, tpi_radii = c(100, 300, 1000), streams = NULL,
     reste <- reste - 1L
     mst[k] <- TRUE
   }
-  # orientation vers les exutoires (parcours en largeur)
+  # orientation vers les exutoires (parcours en largeur) : liste d'adjacence par bassin et
+  # file preallouee (lineaire ; mission 027, relecture)
   ea <- a[mst]; eb <- b[mst]; ca <- p[mst, 1]; cb <- p[mst, 2]
+  nl <- length(labs)
+  de <- c(ea, eb); vers <- c(eb, ea); cible <- c(ca, cb)  # le puits de `vers` vise `cible`
+  adj <- split(seq_along(de), factor(de, levels = seq_len(nl)))
   vu <- is_out(labs)
-  file <- which(vu)
+  file <- integer(nl); tete <- 1L; queue <- 0L
+  for (u in which(vu)) { queue <- queue + 1L; file[queue] <- u }
   tg2 <- tg
-  while (length(file)) {
-    u <- file[1]; file <- file[-1]
-    for (k in which((ea == u & !vu[eb]) | (eb == u & !vu[ea]))) {
-      if (ea[k] == u) { v <- eb[k]; tgt <- ca[k] } else { v <- ea[k]; tgt <- cb[k] }
+  while (tete <= queue) {
+    u <- file[tete]; tete <- tete + 1L
+    for (k in adj[[u]]) {
+      v <- vers[k]
       if (vu[v]) next
       vu[v] <- TRUE
-      tg2[labs[v]] <- tgt   # le puits du bassin v deborde vers l'autre cote du col
-      file <- c(file, v)
+      tg2[labs[v]] <- cible[k]   # le puits du bassin v deborde vers l'autre cote du col
+      queue <- queue + 1L; file[queue] <- v
     }
   }
   tg2

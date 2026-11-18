@@ -8,7 +8,8 @@ derive_terrain(
   dtm,
   tpi_radii = c(100, 300, 1000),
   streams = NULL,
-  mrvbf = FALSE
+  mrvbf = FALSE,
+  mrvbf_res = NULL
 )
 }
 \arguments{
@@ -22,6 +23,11 @@ EPSG:2154, ou \code{NULL}.}
 \item{mrvbf}{\code{TRUE} pour calculer le MRVBF par GRASS (lent : 2 à 4 minutes mesurées pour 1 600 à
 57 600 cellules) ; \code{FALSE} (défaut) laisse la couche à \code{NA} avec
 avertissement. Le pipeline en mode réel doit passer \code{TRUE}.}
+
+\item{mrvbf_res}{Résolution (m) du MNT sur lequel le MRVBF est calculé : multiple entier
+de la maille du MNT, \code{NULL} (défaut) = la maille du MNT. Le MNT est agrégé (moyenne)
+avant GRASS ; le seuil \code{t_slope} suit la maille de calcul (mission 027, provisoire sous
+25 m, à vérifier).}
 }
 \value{
 Un \code{SpatRaster} multicouche nommé.
@@ -56,8 +62,11 @@ l'extension GRASS \code{r.valley.bottom} (\code{whitebox} n'a pas d'outil MRVBF,
 § 20). Seuil de pente initial adapté à la maille (mission 027) : 16 \% à 25 m
 (Gallant et Dowling 2003), divisé par 2 par grossissement x 3 (manuel de
 l'extension), règle prolongée aux mailles fines (44,2 \% à 5 m, \strong{provisoire, à
-vérifier}) ; \verb{t_vf = 0,3} (défaut documenté) ; autres paramètres par défaut. Avec
-16 \% à 5 m, le MRVBF était quasi nul partout sur les dalles vosgiennes. \code{NA} et avertissement
+vérifier}) ; \verb{t_vf = 0,3} (défaut documenté) ; autres paramètres par défaut (\code{p_slope}
+= 4, \code{p_pctl} = 3 : de l'exemple de 6 m du manuel, seul \code{t_slope} est repris, \code{p_slope}
+= 3 et \code{p_pctl} = 2 ne le sont pas). Avec 16 \% à 5 m, le MRVBF était quasi nul partout
+sur les dalles vosgiennes. Le calcul peut se faire sur une version agrégée du MNT
+(\code{mrvbf_res}), puis rééchantillonnée (bilinéaire) sur la maille du MNT. \code{NA} et avertissement
 de classe \code{sylvostation_non_calcule} si \code{mrvbf = FALSE} ou si GRASS (\code{grass}) ou
 l'extension est absent. Calcul lent (2 à 4 minutes mesurées pour 1 600 à 57 600
 cellules) ;

@@ -111,11 +111,32 @@ topographie module l'**ETP** par le rayonnement reçu par la pente, jamais la r�
 - **TWI, MRVBF et `hauteur_reseau`** restent hors de BILJOU : ce sont des prédicteurs du
   seul modèle local trophique (ancrages GBIF, en ligne) ; aucun modèle hydrique local
   n'existe, la composante hydrique locale passe par Istress seul.
-- **MRVBF et `hauteur_reseau` depuis la mission 027** (référentiels § 28) : le MRVBF est
-  calculé sur le MNT à 5 m avec un seuil de pente adapté à la maille (44,2 % au lieu de
-  16 %, provisoire) et `t_vf = 0,3` ; le HAND franchit les cuvettes du MNT par leur col.
-  Les sorties produites avant cette mission (run de 018) sont à recalculer depuis la cible
-  `terrain`.
+- **MRVBF et `hauteur_reseau` depuis la mission 027** (référentiels § 28) :
+  - *MRVBF* : calculé sur le MNT agrégé à la maille choisie par `mrvbf_res`
+    (`derive_terrain()`, défaut = maille du MNT ; décision de l'orchestrateur du 2026-11-18 :
+    la maille de la grille, `resolution_m` = 20 m, plus proche du domaine de validation du
+    manuel, 25 m), puis rééchantillonné (bilinéaire) sur le MNT. Seuil de pente
+    `t_slope` = 16 % x 2^(log3(25 / maille)), soit 18,4 % à 20 m (**provisoire, à vérifier**
+    sous 25 m), `t_vf = 0,3`. Prix mesuré sur les 4 dalles : à 20 m le MRVBF reconnaît moins
+    de fonds étroits qu'à 5 m (part >= 0,5 : 7,4 % contre 24,1 %, sur la grille de 20 m).
+    Raccordement `config.yml` (clé `mrvbf_res_m`) et `real_terrain()` : voir la mission
+    suivante ; en attendant, `real_terrain()` calcule à 5 m (44,2 %).
+  - *HAND* : franchit les cuvettes du MNT par leur col ; réseau TOPAGE seul, **sans
+    densification** (décision de l'orchestrateur du 2026-11-18). Sensibilité mesurée au
+    seuil d'accumulation, si l'on densifiait (4 dalles, 5 m) : NA 11,0 % (TOPAGE seul), 7,1 %
+    (+ 50 ha), 2,6 % (+ 10 ha), 1,2 % (+ 2 ha) ; médiane 86,6 m, 86,3, 74,3, 59,1 m
+    (référentiels § 28.3). Les HAND de 200 à 325 m sont réels (têtes de bassin à plus de
+    500 m du réseau), pas un défaut de calcul.
+  - *Limites connues du franchissement* : (1) dans une **zone plate jouxtant le ruisseau**
+    (cellules de même altitude, p. ex. fond de vallée aplani, lac), les cols ont des
+    poids égaux et l'arbre couvrant minimal en choisit un **arbitrairement** (ordre des
+    cellules) : l'eau peut sortir par le bord du MNT plutôt que par le ruisseau voisin,
+    d'où des `NA` ; (2) un **MNT entièrement plat** avec réseau donne `NA` partout sauf sur
+    les cellules du réseau (essai : 30 x 30 cellules, 870 `NA`, 30 zéros) ; sans réseau dans
+    l'emprise, `NA` partout avec avertissement. Le LiDAR réel ne donne pas de plat parfait ;
+    à surveiller sur les lacs et les plans d'eau (classe 9) des 225 dalles.
+  - Les sorties produites avant cette mission (run de 018) sont à recalculer depuis la cible
+    `terrain`.
 - Replis signalés (attribut `methode`) : `biljou_climatique` (GRASS absent, k = 1),
   `climatique_etp_safran` (SAFRAN sans `T`, `FF`, `HU` ou `SSI`), `repli_ru`.
 

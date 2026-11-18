@@ -1177,6 +1177,24 @@ Chiffres (MNT à 5 m, 160 000 cellules) :
 | après (`t_slope=44,2`, `t_vf=0,3`) | 0,17 | 1,32 | 3,98 | 23,8 % | 7,9 % | 1,04 | 68 % |
 | `t_slope=44,2`, `t_vf`=0,35 | 0,10 | 0,77 | 3,96 | 15,0 % | 4,5 % | 0,87 | 62 % |
 
+Calcul à la maille de la grille (décision de l'orchestrateur du 2026-11-18 : MNT agrégé à
+20 m, `t_slope` = 18,4 %, `t_vf` = 0,3, résultat rééchantillonné en bilinéaire sur 5 m ;
+`derive_terrain(mrvbf_res = 20)`), mêmes 4 dalles, même emprise (160 000 cellules à 5 m) :
+
+| | médiane | q90 | max | part >= 0,5 | part >= 1,5 | médiane sur le réseau | réseau >= 0,5 |
+|---|---|---|---|---|---|---|---|
+| avant (16 %, 5 m) | 0,0 | 0,18 | 2,96 | 3,6 % | 0,5 % | 0,004 | 28 % |
+| 5 m, 44,2 % | 0,17 | 1,32 | 3,98 | 23,8 % | 7,9 % | 1,03 | 68 % |
+| 20 m, 18,4 % | 0,0 | 0,39 | 2,90 | 7,6 % | 0,8 % | 0,60 | 58 % |
+
+Sur la grille de 20 m (moyenne des valeurs à 5 m, 10 000 cellules) : part >= 0,5 de 2,7 %
+(018), 24,1 % (5 m), 7,4 % (20 m) ; sur le réseau : 13,6 %, 73,8 %, 52,7 % ; corrélation 5 m /
+20 m : 0,85. **Lecture** : à 20 m, le MRVBF est plus sélectif (7,4 % des cellules >= 0,5,
+contre 24 %), reste net sur le réseau (médiane 0,6) et sort du domaine extrapolé ; il
+**perd les fonds étroits** (< 40 à 60 m de large, part >= 1,5 : 0,8 % contre 7,9 %). Aucune
+des deux mailles n'est validée sur le terrain ; le calcul à 5 m reste la référence de
+comparaison. Durée GRASS (machine chargée) : 3,9 min à 20 m, 4,4 min à 5 m.
+
 Le manuel situe le fond de vallon à partir de 0,5 (0,5 à 1,5 : fonds étroits et pentus ;
 > 1,5 : fonds larges). Valeurs de 0 à environ 4 ici : relief vosgien à vallons étroits.
 
@@ -1207,3 +1225,17 @@ Sensibilité du HAND à une densification (MNT à 5 m, cuvettes franchies) :
 | + 10 ha | 0,68 % | 2,6 % | 74,3 m | 182 m | 318 m |
 | + 5 ha | 0,83 % | 2,6 % | 68,7 m | 164 m | 318 m |
 | + 2 ha | 1,21 % | 1,2 % | 59,1 m | 149 m | 318 m |
+
+### 28.4 Vallons des 4 dalles à confronter à une vue QGIS (Lambert-93, x = est, y = nord)
+
+Toponymes : champ `TopoOH` de TOPAGE (aucun autre nom de lieu dans les données).
+
+| Lieu | x (est) | y (nord) | Altitude | MRVBF 5 m | MRVBF 20 m |
+|---|---|---|---|---|---|
+| Ruisseau le Strengbach, fond de vallon (26 cellules de 20 m >= 1,5 aux deux mailles, toutes sur ce ruisseau) | 1 013 470 | 6 797 810 | 735 m | 3,65 | 2,78 |
+| Ruisseau l'Adelsbach | 1 014 790 | 6 798 790 | 539 m | 2,25 | 1,22 |
+| Ruisseau le Muesbach | 1 014 330 | 6 796 730 | 609 m | 1,30 | 1,07 |
+| Crête (contrôle, point haut éloigné de tout réseau) | 1 014 390 | 6 796 090 | 904 m | 0,00 | 0,00 |
+
+Valeurs à la maille de la grille (20 m, moyenne). À confronter : le fond du Strengbach doit
+apparaître comme un fond plat bordé de versants ; la crête ne doit pas l'être.
