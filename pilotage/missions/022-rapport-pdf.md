@@ -9,7 +9,7 @@ réalisés (chaîne de traitement, méthodes, valeurs provisoires) et les cartes
 gestionnaires disposent d'un document imprimable et diffusable (demande de Pascal du
 2026-11-18).
 
-**Redite par l'agent :** _à compléter par l'agent._
+**Redite par l'agent :** faire écrire par la cible `rapport` un `rapport.pdf` à côté du HTML (données d'entrée, calculs avec valeurs provisoires et règle des 700 m, cartes des types, hydrique 25 m et incertitude), pour que Pascal et les gestionnaires aient un document imprimable et diffusable ; le PDF reste facultatif (repli HTML seul si LaTeX manque).
 
 ## Les trois questions (règle de staffing)
 

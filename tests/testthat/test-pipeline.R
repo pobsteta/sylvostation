@@ -27,7 +27,7 @@ test_that("le pipeline démo s'exécute de bout en bout et écrit des sorties sy
     d <- file.path(cfg$out_dir, cfg$ser_code)
     fichiers <- list.files(d)
     # tout fichier de sortie des données est préfixé synth_ (le rapport et son modèle sont des documents)
-    donnees <- setdiff(fichiers, c("rapport.html", "rapport.qmd"))
+    donnees <- setdiff(fichiers, c("rapport.html", "rapport.pdf", "rapport.qmd"))
     expect_true(all(startsWith(donnees, "synth_")))
     for (f in c("synth_types.tif", "synth_gradients.tif", "synth_incertitude.tif",
                 "synth_types.gpkg", "synth_types.csv", "synth_etat_de_preuve.csv",
@@ -71,6 +71,9 @@ test_that("le pipeline démo s'exécute de bout en bout et écrit des sorties sy
       expect_match(html, "non atteints", fixed = TRUE)
       expect_match(html, "Limites", fixed = TRUE)
       expect_match(html, "tat de preuve", fixed = TRUE)
+      # mission 022 : le PDF accompagne le HTML quand un moteur LaTeX est disponible
+      lat <- nzchar(Sys.which("xelatex"))
+      if (lat) expect_true("rapport.pdf" %in% fichiers)
     }
 
     # Relancer ne refait rien (cache de targets)

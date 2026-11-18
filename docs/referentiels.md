@@ -758,6 +758,161 @@ carte modulée et les placettes ne sont donc pas sur la même échelle : l'écar
 
 ---
 
+# Passe 6 (mission 024, 2026-11-18) : cartes de comparaison
+
+## 26. Cartes de comparaison (stations, habitats, végétation) sur l'emprise test
+
+- **Décision éclairée :** quelle référence ouverte, au format SIG, sert à comparer la carte des
+  stations de D11 sur l'emprise test, et selon quel protocole (matrice de confusion par types
+  regroupés ou corrélation des gradients).
+- **Rédigé par :** agent `acquereur`, le 2026-11-18. **Propriétaire :** Pascal (délégué à
+  l'orchestrateur).
+- **Outils :** `WebSearch`, `WebFetch` (résumeur : les `numberMatched` et `timeStamp` sont ceux
+  du serveur ; les listes d'entités de 140 lignes au plus sont comptées par le résumeur), PDF
+  enregistrés par l'outil et lus en image page par page. **Rien d'exécuté en R, rien téléchargé
+  dans le dépôt.** GeoPackage de Pascal (`guides-stations-forestieres.gpkg`) : **lu par
+  l'orchestrateur et le relecteur (`ogrinfo`)** ; les identifiants, titres, dates, statuts et URL
+  des guides viennent de cette lecture, transmise à l'agent.
+- **Règle des 700 m : non concernée.** La comparaison se fait de grille à grille ; aucune
+  extraction n'a lieu aux placettes IFN, et les relevés des CBN qui entraînent CarHab ne sont pas
+  utilisés.
+- **Hôtes joints :** `data.geopf.fr` (WFS, CSW, WMS-R), `www.ecologie.gouv.fr`, `www.patrinat.fr`,
+  `assets.patrinat.fr`, `digitale.cbnhdf.fr`, `inventaire-forestier.ign.fr`, `cloud.cnpf.fr`.
+  **Refusés ou muets :** `inpn.mnhn.fr` (HTTP 500 ou page « Visualisateur CarHab » vide, y compris
+  pour la notice du Haut-Rhin), `hal.science` (page anti-robots « Access Denied »),
+  `www.grand-est.developpement-durable.gouv.fr` (HTTP 403 sur les PDF des DOCOB),
+  `cartes.gouv.fr` (page vide sans JavaScript).
+- Abréviation : `EMPRISE` = `CQL_FILTER=INTERSECTS(geom,SRID=2154;POLYGON((1007000 6790000,1022000 6790000,1022000 6805000,1007000 6805000,1007000 6790000)))`.
+
+### 26.1 Cartes trouvées
+
+| Carte | État | Producteur, année | Format, accès vérifié | Licence | Échelle | Nomenclature | Part de l'emprise |
+|---|---|---|---|---|---|---|---|
+| **CarHab, habitats du Haut-Rhin (68)** | **vérifié** (service interrogé) | PatriNat (OFB-MNHN-CNRS-IRD), IGN, EVS (univ. Saint-Étienne), CBN ; métadonnée publiée le 2023-06-01 ; livrable départemental « Version : Juin 2024 » (dictionnaire de l'Aisne, p. 4, même série) | WFS `WFS&REQUEST=GetFeature&TYPENAMES=Carhab_habitat:habitats_carhab` (trouvé par `GetCapabilities&NAMESPACE=Carhab_habitat` : un seul type, `DefaultCRS` EPSG:2154) ; GeoPackage départemental `https://assets.patrinat.fr/files/donnees/carhab/CarHab_68_Haut-Rhin.zip` (répond ; **528 030 697 octets**, environ 528 Mo, d'après le `content-length` relevé par l'orchestrateur ; contenu non ouvert ; **jamais dans `inst/extdata`** ; la page PatriNat dit ces liens « temporaires » et annonce une redirection vers `https://inpn.mnhn.fr/donnees-outils/donnees-SIG/CarHab` d'ici début 2027) ; téléchargement Géoplateforme `https://data.geopf.fr/telechargement/resource/CARHAB` (lu dans la métadonnée, non ouvert) | **Licence Ouverte / Open License** (Etalab), métadonnée CSW `https://data.geopf.fr/csw?SERVICE=CSW&VERSION=2.0.2&REQUEST=GetRecordById&ID=INPN-CARHAB_HABITATS&OUTPUTSCHEMA=http://www.isotc211.org/2005/gmd&ELEMENTSETNAME=full` ; `useLimitation` « Aucune contrainte » | 1/25 000 ; variables au pas de 10 m ; polygones d'au moins 0,5 ha (5 000 m²) | 1 habitat = 1 physionomie (code à 4 chiffres, 26 postes) × 1 biotope (code à 6 chiffres, 8 paramètres : littoralité, étage de végétation, ombroclimat, variante bioclimatique, enneigement, continentalité, **acidité édaphique**, **humidité édaphique**) ; correspondances EUNIS 2012 et HIC dans un GeoPackage séparé du livrable | **97,47 % de l'emprise** (part du département, § 5 : 219,302 / 225 km²), toute l'emprise avec 67 et 88 ; décomptes au § 26.2 |
+| CarHab, Bas-Rhin (67) et Vosges (88) | **vérifié** (lien de téléchargement listé) ; présence dans le WFS **non attribuée** | idem | `https://assets.patrinat.fr/files/donnees/carhab/CarHab_67_Bas-Rhin.zip`, `…/CarHab_88_Vosges.zip` (liens lus sur la page PatriNat, non ouverts) | idem | idem | idem | 67 : 3,931 km², 88 : 1,768 km² (§ 5). Dans le WFS, `layer LIKE 'CarHab_67%'` et `'CarHab_88%'` → 0 ; **126** polygones de l'emprise ont `layer` = `habitats_carhab` (93) ou vide (33) : département non dit. |
+| Cartes d'habitats des DOCOB Natura 2000 « Hautes-Vosges » (secteurs Tanet-Deux Lacs, Hohneck, etc.) | **piste** (titres de PDF par la recherche ; PDF refusés, 403) | PNR des Ballons des Vosges, 2005-2008 (ex. « Réalisation : PNRBV / FD - Fonds de carte IGN - Janvier 2007 », extrait de recherche) | **PDF seulement** ; aucune couche SIG publiée trouvée (data.gouv.fr, DataGrandEst non trouvés) | non dite | non dite | Habitats d'intérêt communautaire (codes Natura 2000) | **Non mesurée** : aucun secteur n'a pu être situé par rapport à l'emprise (le secteur Tanet-Deux Lacs est probablement à l'ouest, hors emprise : déduction, non vérifiée). |
+| BDGveg_FR (carte de la végétation du CNRS numérisée) | **piste** (résumés : Leguédois et al., *Cybergeo* 2011, `https://hal.archives-ouvertes.fr/hal-01018998/file/LeguedoisCybergeo2011.pdf`, non lu) | CNRS, feuilles de 1947-1991 | scan géoréférencé 1/200 000 ; vecteur harmonisé de végétation potentielle 1/1 000 000 ; diffusion actuelle non vérifiée | non vérifiée | 1/200 000 et 1/1 000 000 | Séries de végétation | Toute l'emprise, mais trop grossière pour une grille de 25 m. |
+| Carte prédictive AgroParisTech (Gégout et al. 2008) | **non diffusée** (§ 21) | AgroParisTech | — | — | 50 m | 59 types | Le massif vosgien ; référence du brief (§ 9), non ouverte. |
+
+**Rien trouvé** : aucune carte de stations forestières levée sur le terrain (ONF, CNPF) publiée au
+format SIG sur l'emprise ; les recherches web ne renvoient que des documents d'aménagement en PDF.
+
+### 26.2 CarHab sur l'emprise : décomptes (WFS, 2026-11-18, entre 11:10 et 11:13 UTC)
+
+Polygones **qui recoupent** le carré (non découpés : un polygone à cheval compte en entier). Ce
+sont des **nombres de polygones, pas des surfaces** : les surfaces exigent le téléchargement.
+
+| Requête (`WFS&REQUEST=GetFeature&TYPENAMES=Carhab_habitat:habitats_carhab&RESULTTYPE=hits&…`) | `numberMatched` |
+|---|---|
+| `BBOX=1007000,6790000,1022000,6805000,EPSG:2154` | 6 378 |
+| `EMPRISE` | **6 376** |
+| `EMPRISE AND layer LIKE 'CarHab_68%'` | 6 250 (reste 126, voir § 26.1) |
+| `EMPRISE AND occupation='foret'` | **3 103** |
+
+Forêt (`occupation='foret'`, 3 103 polygones), par modalité (sommes vérifiées : 3 103 chacune) :
+
+| Paramètre | Modalités (nombre de polygones) |
+|---|---|
+| `acidite_edaphique` | `très acide` 1 166 ; `légèrement acide` 1 375 ; `neutre` 495 ; `basique` 67 |
+| `humidite_edaphique` | `assez sec` 786 ; `mésique` 1 416 ; `humide à nappe circulante` 761 ; `légèrement humide` 127 ; `détrempé à nappe stagnante` 13 (ces deux derniers comptés par le résumeur sur 140 entités renvoyées) |
+| `etage_de_vegetation` | `collinéen` 1 970 ; `montagnard` 1 130 (= 3 103 − 1 970 − 3) ; `subalpin` 3 (biotope `132022`, très acide, mésique) |
+
+**Schéma** (`DescribeFeatureType`, 36 éléments) : `id_polygone_carhab`, `code_hab_carhab`,
+`nom_complet_hab`, `nom_simplifie_hab`, `code_biotope`, `littoralite`, `etage_de_vegetation`,
+`ombroclimat`, `continentalite`, `variante_bioclimatique`, `acidite_edaphique`,
+`humidite_edaphique`, `enneigement`, `code_physio`, `nom_physio`, `physio_source`,
+`physio_info_comp`, `physio_majoritaire`, `pourc_physio_maj`, `occupation`, `milieu`,
+`biotope_minoritaire`, `pourc_biot_min`, `cd_biot_mod`, `surface` (double), `commentaire`,
+`cd_hab`, `id_sinp_evenement`, `id_sinp_habitat`, `layer`, `path`, `geom`
+(`gml:MultiSurfacePropertyType`), `conformite_physio_departementale`,
+`conformite_biotope_departementale`, `commentaire_conformite_physio_departementale`,
+`commentaire_conformite_biotope_departementale`. Tous texte sauf `surface` et `geom`. Les quatre
+champs de conformité sont `null` sur les 20 entités lues (`BBOX=1013000,6797000,1014000,6798000`) ;
+leur décompte sur l'emprise a échoué (le serveur a renvoyé une page de métriques Prometheus) :
+**non vérifié**.
+
+**Méthode CarHab** (webinaire du ministère, `https://www.ecologie.gouv.fr/sites/default/files/documents/Me%CC%81thodologie_CarHab.pdf`, 20 avril 2023, diapositives 6, 8, 14, 21, 22 ; dictionnaire de l'Aisne,
+`https://digitale.cbnhdf.fr/aide/CarHab_02_Aisne_LISEZ_MOI_metadonnees_dictionnaire.pdf`, juin 2024, p. 4-9) :
+biotopes prédits par forêt aléatoire supervisée sur des polygones d'entraînement des CBN, à partir
+de **RGE ALTI 5 m, BD TOPAGE, AURELHY 1971-2000, géologie BRGM 1/50 000 harmonisée, SoilGrids
+250 m** ; physionomies par Sentinel-2, BD Ortho IRC, BD Forêt V2, BD TOPO, RPG. Le ministère écrit :
+« Cartes des Biotopes et Physionomies de végétation = Cartes prédictives », à utiliser « comme une
+information de potentialité », « pas adapté » « pour des analyses fines au niveau communal ».
+**Notice du Haut-Rhin** (`https://inpn.mnhn.fr/viewer-carto/CarHab/geoserver/www/CarHab_68_Haut-Rhin_Notice.pdf`) :
+**inaccessible** à l'agent ; d'après les extraits du moteur de recherche seulement (non lus) :
+juin 2024, « 34 biotopes » traités sur « 54 présents », les 20 autres aquatiques et amphibies.
+
+### 26.3 Guides du GeoPackage de Pascal qui recoupent l'emprise
+
+| id | Titre (consigne) | Statut (consigne) | Lien | État du lien | Contenu |
+|---|---|---|---|---|---|
+| 94 | Le choix des essences forestières dans les Vosges alsaciennes (1993) | actif | `https://cloud.cnpf.fr/index.php/s/d4y6bMj9r5TeZei` | **répond** ; partage Nextcloud d'un fichier nommé **`ClimVosges.pdf`** (taille et date non affichées) : le nom ne correspond pas au titre, **à vérifier** | non lu |
+| 95 | même titre | obsolète | `https://inventaire-forestier.ign.fr/typologie_stations/typo/consultation/GS_vosges-alsaciennes.pdf` | **répond**, fichier de plus de 10 Mo (limite de l'outil), non lu | non lu |
+| 97 | Le choix des essences forestières dans les Vosges cristallines lorraines (1995) | obsolète | `https://inventaire-forestier.ign.fr/typologie_stations/typo/consultation/GS_vosges-cristallines-lorraines.pdf` | **vérifié** : PDF scanné, 52 pages, lu en image p. 1-14 | Guide du CRPF de Lorraine-Alsace. **Clé de détermination et fiches, pas de carte des stations** (« la clé de détermination des stations forestières, la carte d'identité de ces stations », p. 3 ; la seule carte, p. 5, est la zone d'utilisation et trois ensembles de roches). Zone : « Hautes-Vosges lorraines cristallines », limitée à l'est « par la ligne de crêtes séparant les départements du Haut-Rhin et des Vosges » (p. 4) : dans l'emprise, au plus la partie vosgienne (1,768 km², § 5). Groupes indicateurs (p. 11) : « station très acide », « acide », « peu acide », « assez riche », « riche » ; eau : « sol gorgé d'eau en permanence », « sol temporairement inondé ». |
+| 83 | Ried de l'Ill et Nonnenbruch (1996) | actif (`est_actif` = 1, `a_stations` = 1, gpkg) | `https://inventaire-forestier.ign.fr/typologie_stations/typo/consultation/GS_ried-ill-nonnenbruch.pdf` ; `https://grandest.cnpf.fr/sites/grandest/files/2022-02/guide_nonnenbruch.pdf` | IGN : HTTP 200, PDF (relevé par l'orchestrateur) ; pour l'agent, fichier de plus de 10 Mo, **non lu**. CNPF : refusé à l'orchestrateur, et `ECONNREFUSED` pour l'agent le 2026-11-18 : **à revérifier** | **Carte jointe : non vérifié** (PDF non lu). Guide de plaine ; dans l'emprise, au plus la part hors massif (C41 : 0,879 km², L2 : 2,437 km², § 1). |
+
+Les codes de stations des guides (couche `stations`) n'ont pas été lus : ils ne servent pas à la
+comparaison cartographique (aucun guide n'a de carte), seulement à l'étape 6 du brief (lecture
+forestière).
+
+### 26.4 Correspondance avec nos gradients (proposée, à valider)
+
+| Notre gradient | Champ CarHab | Ordre proposé (1 = bas) | Ce qui permet | Ce qui empêche |
+|---|---|---|---|---|
+| Trophique | `acidite_edaphique` | `très acide` 1, `légèrement acide` 2, `neutre` 3, `basique` 4, `hyperbasique` 5 (absent de l'emprise) ; modalités lues sur la diapositive 6 du webinaire (lecture d'image : liste exhaustive **à vérifier** dans la notice nationale). **Décision provisoire de l'orchestrateur (2026-11-18) :** `neutre` est une classe à part entière, **jamais fusionnée avec `basique`** sur roche cristalline (même si la légende simplifiée les regroupe) | Échelle ordinale, même sens que notre gradient | Acidité seule (pas l'azote) ; SoilGrids 250 m et géologie 1/50 000 entrent dans les deux modèles |
+| Hydrique | `humidite_edaphique` | `assez sec` 1, `mésique` 2, `légèrement humide` 3, `humide à nappe circulante` 4, `détrempé à nappe stagnante` 5. **Décision provisoire de l'orchestrateur (2026-11-18) :** ordre gardé, **provisoire, il mêle réserve en eau et engorgement** | Ordinal pour la part « sec → humide » | Mélange réserve en eau et engorgement (« nappe circulante / stagnante ») ; RGE ALTI et BD TOPAGE entrent dans les deux modèles |
+| Bioclimat | `etage_de_vegetation` (et `ombroclimat`) | `collinéen` 1, `montagnard` 2, `subalpin` 3 | Trois classes présentes | Classes larges ; AURELHY 1971-2000 contre SAFRAN 1996-2025 |
+
+### 26.5 Recommandation et protocole (proposés)
+
+**Référence ouverte retenue : CarHab 68**, polygones `occupation='foret'`. C'est la seule carte
+SIG ouverte qui couvre toute l'emprise et porte nos trois axes. Ce n'est **pas** une carte de
+stations, et elle n'est **pas indépendante** de la nôtre (écart 27) : on s'en sert pour une
+**comparaison par gradient**. Une matrice de confusion sur nos types serait trompeuse, parce que
+les nomenclatures diffèrent et que nos seuils sont provisoires (`R/typologie.R`). La carte
+AgroParisTech reste la référence du brief (§ 9), et les relevés GNSS restent l'arbitre.
+
+1. **Acquisition** (mission `dev`) : le GeoPackage départemental (`CarHab_68_Haut-Rhin.zip`) ou le
+   WFS paginé (`EMPRISE AND occupation='foret'`, 3 103 entités), mis en cache hors dépôt
+   (`data/cache/`), **jamais dans `inst/extdata`** sans décision. La licence le permettrait
+   (Licence Ouverte), mais le volume ne s'y prête pas.
+2. **Grille** : rasteriser à la résolution de `config.yml` (`resolution_m`, 20 m depuis la
+   décision de Pascal du 2026-11-18), au centre de cellule, en ne gardant que les cellules forestières
+   des deux côtés (notre masque MHC et CarHab `foret`) ; noter la part de l'emprise retenue.
+3. **Par gradient** : codage ordinal du § 26.4, puis corrélation de rang de Spearman entre notre
+   gradient continu et la classe CarHab, avec boîtes à moustaches de notre gradient par classe.
+   Ensuite, discrétiser notre gradient en autant de classes que CarHab, aux **mêmes proportions
+   de surface**, pour ne pas dépendre de nos seuils, et calculer le kappa pondéré et l'accord à
+   une classe près.
+4. **Types regroupés** (contrôle seulement) : nos types sont projetés sur la légende simplifiée
+   CarHab (acide ou basique × sec, mésique ou humide × étage). On en tire une matrice de
+   confusion **en surface**, sans conclusion sur la justesse.
+5. **Désaccords** : les ventiler par formation BD Charm-50 (§ 5), tranche d'altitude et position
+   topographique, puis placer une part des relevés GNSS dans ces zones (brief § 9, étape 5).
+
+**Trois points au sol** (Pascal) :
+
+1. Polygone forestier **`habitats_carhab.3446233`** (plantation forestière, 30,0 ha ;
+   **x 1 013 345–1 014 021, y 6 797 836–6 798 796**, lu le 2026-11-18 par `FEATUREID`) : CarHab y
+   donne « neutre », montagnard, hyperhumide, mésique (biotope `338802`, « substrat basique » en
+   légende simplifiée), sur un massif cristallin. (Le point x 1 013 500, y 6 797 500 proposé
+   d'abord tombe dans `habitats_carhab.3533621`, milieu ouvert, d'après le relecteur.)
+   Regarder les espèces indicatrices de richesse (Aspérule, Mercuriale contre Luzule blanchâtre,
+   Myrtille, guide 97 p. 11) et la roche.
+2. **x 1 008 095–1 008 755, y 6 795 550–6 796 490** : les 3 seuls polygones forestiers
+   « subalpin » de l'emprise (biotope `132022`, très acide, mésique ; le plus grand fait
+   15,4 ha). Regarder si c'est une hêtraie-sapinière d'altitude (montagnard) ou une forêt de crête
+   subalpine : c'est la limite du gradient bioclimatique.
+3. **Coin nord-ouest, x 1 006 363–1 007 932, y 6 803 760–6 804 940** (emprise des polygones
+   relevée par le relecteur, **en partie hors de l'emprise test**) : 5 polygones de
+   résineux « détrempé à nappe stagnante », très acides, montagnards (biotope `324966`, de 1,8 à
+   4,0 ha). Leurs identifiants (`habitats_carhab.126025xx`) ne sont pas de la série des polygones
+   du 68 lus ici (`344xxxx` à `353xxxx`), d'où un département **à vérifier** (écart 25). Regarder s'il y a de
+   la tourbe ou un gley près de la surface, là où notre gradient hydrique (réserve utile, TWI) peut
+   dire autre chose.
+
+---
+
 ## Écarts relevés entre sources
 
 1. Le brief cite la couche `IGNF_LIDAR-HD_METADONNEE:metadata` : elle existe, l'écart est
@@ -834,6 +989,25 @@ carte modulée et les placettes ne sont donc pas sur la même échelle : l'écar
 24. Rayonnement : la couche `rayonnement` de sylvostation est hors atmosphère, sans ombres
     ni diffus ; Piedallu et Gégout (2008, notice) trouvent le rayonnement avec nébulosité bien
     meilleur que le ciel clair (R² 0,78 contre 0,46).
+25. CarHab, emprise : le WFS compte 6 378 polygones par `BBOX` et 6 376 par `INTERSECTS` ; seuls
+    6 250 portent `layer` = `CarHab_68_…` ; les 126 autres (`habitats_carhab` ou vide) ne disent
+    pas leur département, et aucun ne porte `CarHab_67` ni `CarHab_88` alors que l'emprise touche
+    ces deux départements (§ 26.2).
+26. CarHab, acidité : 495 polygones forestiers « neutre » et 67 « basique » sur un massif dont les
+    plus grandes formations sont des gneiss et granites (§ 5). Pas forcément faux (champ de
+    fractures de Ribeauvillé, colluvions), mais la légende simplifiée range « neutre » avec
+    « basique » (« Habitat forestier sur substrat basique et mésique », biotope `338802`,
+    montagnard, hyperhumide ; polygone forestier `habitats_carhab.3446233`, 30 ha,
+    x 1 013 345–1 014 021, y 6 797 836–6 798 796 ; le point x 1 013 500, y 6 797 500 d'abord proposé
+    tombe en milieu ouvert) : à confronter à la géologie.
+27. CarHab, indépendance : les biotopes sont prédits avec RGE ALTI, BD TOPAGE, géologie BRGM et
+    SoilGrids, sources proches des nôtres (§ 5, § 16, § 18). Une concordance avec CarHab ne prouve
+    pas que nos gradients sont justes ; seuls les relevés des CBN qui l'entraînent sont une
+    source distincte.
+28. Guide 94 (consigne : actif, 1993) : le lien CNPF partage un fichier nommé `ClimVosges.pdf`,
+    nom sans rapport apparent avec le titre (§ 26.3).
+29. Notice CarHab du Haut-Rhin : le moteur de recherche cite une mention de la Moselle dans son
+    texte (copie possible d'une autre notice) ; notice non lue, inaccessible à l'agent.
 
 ## Dépendances et statut du jour (2026-11-17)
 
@@ -854,6 +1028,11 @@ carte modulée et les placettes ne sont donc pas sur la même échelle : l'écar
 - Vérifié le 2026-11-18 (mission 021, exécuté en R) : § 25.8 (unité de `SSI` dans le document
   de Météo-France, options de `r.sun` de GRASS 8.4.2, source de `penman_pet()`, coût de
   `r.sun`, écart table / calcul direct).
+- Vérifié le 2026-11-18 (passe 6, mission 024, WebFetch seul, rien exécuté ni téléchargé) :
+  § 26 (WFS CarHab `Carhab_habitat:habitats_carhab`, schéma, décomptes de l'emprise, licence
+  par la métadonnée CSW ; guide 97 lu en image p. 1-14). **Non lus** : notice CarHab du Haut-Rhin
+  (INPN muet), notice nationale (HAL refusé), guides 94 et 95, contenu des zip CarHab, PDF des
+  DOCOB (403). **Pistes** : DOCOB Natura 2000 Hautes-Vosges, BDGveg_FR.
 - **Pistes, à ne pas coder** : Baseflor (§ 14), EcoPlant (§ 14), contenu du zip TAXREF v18
   (§ 15), GlobalSoilMap France pH, texture et réserve utile 90 m (§ 18), fiches de la
   référence AgroParisTech voisines (§ 21).

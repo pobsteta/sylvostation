@@ -573,19 +573,19 @@ if (!isTRUE(cfg$demo)) {
   )
 }
 
-# Rapport Quarto : seulement si le CLI Quarto est disponible.
+# Rapport Quarto : seulement si le CLI Quarto est disponible. HTML toujours ; PDF (mission
+# 022) en plus si un moteur LaTeX est disponible, sinon HTML seul avec un avertissement.
 if (requireNamespace("quarto", quietly = TRUE) && !is.null(quarto::quarto_path())) {
   pipeline <- c(pipeline, list(
     tar_target(rapport, {
       outputs  # dependance : les fichiers doivent exister
-      dossier <- file.path(cfg$out_dir, cfg$ser_code)
-      qmd <- file.path(dossier, "rapport.qmd")
-      file.copy(rapport_modele(), qmd, overwrite = TRUE)
-      quarto::quarto_render(qmd, execute_params = list(
-        dossier = normalizePath(dossier), prefixe = if (isTRUE(cfg$demo)) "synth_" else "",
-        ser_code = cfg$ser_code, hors_ligne = isTRUE(cfg$offline)),
-        quiet = TRUE)
-      file.path(dossier, "rapport.html")
+      rendu <- new.env()
+      sys.source(system.file("rapport", "rendre_rapport.R", package = "sylvostation"), rendu)
+      rendu$rendre_rapport(
+        dossier = file.path(cfg$out_dir, cfg$ser_code),
+        prefixe = if (isTRUE(cfg$demo)) "synth_" else "",
+        ser_code = cfg$ser_code, hors_ligne = isTRUE(cfg$offline),
+        modele = rapport_modele())
     }, format = "file")
   ))
 }
