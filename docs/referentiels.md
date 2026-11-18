@@ -581,6 +581,173 @@ write.table(out, "ifn_texture_dictionnaire.csv", sep = ";", quote = TRUE, row.na
 
 ---
 
+# Passe 5 (mission 020, 2026-11-18) : descente d'échelle hydrique
+
+## 25. Descente d'échelle hydrique : moduler BILJOU par la topographie
+
+- **Décision éclairée :** quelle grandeur la mission 021 module par la topographie (RU, ETP,
+  rayonnement, apports latéraux) pour la carte de l'indice `Istress` à 25 m, par quelle
+  équation, sans coefficient inventé.
+- **Propriétaire :** Pascal (délégué à l'orchestrateur). Rédigé par l'agent `acquereur`,
+  mission 020, consultation le **2026-11-18**.
+- **Outils et limites :** `WebFetch` (pages résumées par un petit modèle : le code de
+  `biljouR` n'a pas été recopié mot à mot, les signatures et constantes ci-dessous sont
+  celles rendues par ce résumeur, à relire dans le source) et `WebSearch` ; un PDF lu **en
+  images** (Dyer 2009, pages 391-400 sur 391-403) ; métadonnées des DOI par l'API Crossref
+  (`https://api.crossref.org/works/<DOI>`). **Pas de R, rien d'exécuté.** **Refusés :**
+  `hal.science` et `hal.archives-ouvertes.fr` (page anti-robot « Anubis », à chaque requête :
+  les articles de Piedallu et Gégout n'ont pas été lus en texte intégral) ; `link.springer.com`
+  (redirection vers authentification).
+
+### 25.1 Ce que `biljouR` sait faire (commit `b0dade79d229817072d047724a47b2d6a8fa5970`)
+
+Arbre lu par `https://api.github.com/repos/pobsteta/biljouR/git/trees/HEAD?recursive=1` :
+61 entrées, 11 fichiers `R/`, 25 fichiers `man/`. Sources lues par
+`https://raw.githubusercontent.com/pobsteta/biljouR/b0dade7…/R/<fichier>` : `simulate.R`,
+`soil.R`, `fluxes.R`, `penman.R`, `io.R`, `safran.R`, `grid.R` (7 sur 11 ; non lus :
+`biljouR-package.R`, `indices.R`, `plots.R`, `stats.R` ; aucun des 25 `.Rd` ne porte un nom
+topographique).
+
+| Point | État | Résultat |
+|---|---|---|
+| Terme topographique | **vérifié : absent** | Aucun argument ni calcul de pente, d'exposition, d'ombre, de ruissellement ou d'apport latéral dans `biljou_run()`, `biljou_soil()`, `safran_to_meteo()`, `penman_pet()`, `biljou_run_grid()`. Le drainage est l'excès au-dessus de la capacité au champ (`.infiltrate()`, corps non lu) ; il sort du profil. |
+| ETP | **vérifié** | `biljou_run()` prend `meteo$pet` tel quel (colonnes requises `pet`, `rain`, et `date` ou `doy`) : **toute modulation de l'ETP se fait en amont, dans la table `meteo`.** |
+| Point d'entrée du rayonnement | **vérifié** | `safran_to_meteo(df, cols = list(date = "DATE", rain_liq = "PRELIQ_Q", rain_sol = "PRENEI_Q", pet = "ETP_Q", tmean = "T_Q", rg = "SSI_Q", wind = "FF_Q", rh = "HU_Q"), compute_pet = FALSE, latitude = NULL, altitude = 0, keep_raw = FALSE)`. Avec `compute_pet = TRUE` (exige `latitude`), l'ETP est recalculée par `penman_pet()` avec le vent ramené à 2 m par `wind_to_2m(wind, 10)`. |
+| `penman_pet()` | **vérifié** (résumé) | `penman_pet(tmean, rg, wind, rh = NULL, ea = NULL, vpd = NULL, doy = NULL, latitude = NULL, altitude = 0, albedo = 0.2)` ; `rg` en **MJ m⁻² j⁻¹** (la doc dit : valeurs Météo-France en J cm⁻² × 0,01) ; fonction du vent `6.43 * (1 + 0.536 * wind)` ; références Penman 1948, Shuttleworth 1993, FAO-56 (Allen et al. 1998) pour le rayonnement net. Rayonnement extraterrestre calculé sur **surface horizontale** (latitude, jour) ; `altitude` ne sert qu'à la pression et au ciel clair. Sans `doy` ou `latitude` : grandes ondes nulles, avertissement. |
+| Grille | **vérifié** | `biljou_run_grid(points, meteo, soil, lai_max, forest_type, budburst = NULL, leaf_fall = NULL, indicators = c("NJstress", "Istress", "DEBstress", "min_rew", "drainage"), years = NULL, id_col = "id", lon_col = "lon", lat_col = "lat", verbose = TRUE, ...)` ; `meteo`, `soil`, `lai_max`… acceptent une valeur, une fonction par point ou une liste nommée par identifiant. `biljou_grid_to_raster(grid, indicator = NULL, year = NULL, crs = "EPSG:4326")` suppose une grille régulière. **Coordonnées en lon/lat par défaut, non contrôlées** : en Lambert-93, passer `crs = "EPSG:2154"`. |
+| SAFRAN | **vérifié** | Les colonnes `T`, `FF`, `HU`, `SSI` existent dans les CSV SIM2 (§ 23), sans suffixe `_Q` (écart 19). Unité de `SSI` : J cm⁻² selon la doc de `penman_pet()` et selon un tiers (`https://geop4th-d6fd42.gitlab.io/4_workflows/dataset_workflows/sim2.html`) ; **le document de Météo-France (`sim-quotidienne-parametres-20260331.pdf`) n'a pas été relu : à vérifier.** |
+
+### 25.2 Méthodes publiées, comparées (CQQCOQP)
+
+| | **A. Rayonnement topographique → ETP** (retenue) | **B. Rayonnement horizontal mesuré → pente** (outil de A) | **C. Apports latéraux par l'indice topographique (TOPMODEL)** | **D. Hauteur au-dessus du drainage (HAND)** |
+|---|---|---|---|---|
+| **Pourquoi** | Demande en eau selon l'exposition | Passer du `SSI` SAFRAN (horizontal, nuageux) à la pente | Eau reçue de l'amont | Proximité de la nappe |
+| **Qui, quoi** | Dyer J. M. (2009), « Assessing topographic patterns in moisture use and stress using a water balance approach », *Landscape Ecology* 24 : 391-403, DOI `10.1007/s10980-008-9316-6`, PDF de l'auteur `https://people.ohio.edu/dyer/WB/Dyer_2009_LandEcol.pdf` (lu, p. 391-400) | Allen R. G., Trezza R., Tasumi M. (2006), « Analytical integrated functions for daily solar radiation on slopes », *Agricultural and Forest Meteorology* 139 : 55-73, DOI `10.1016/j.agrformet.2006.05.012` (**résumé seulement**, relayé par recherche) ; GRASS `r.sun` : Šúri M., Hofierka J. (2004), « A New GIS-based Solar Radiation Model and Its Application to Photovoltaic Assessments », *Transactions in GIS* 8(2) : 175-190, DOI `10.1111/j.1467-9671.2004.00174.x` (Crossref) | Beven K. J., Kirkby M. J. (1979), *Hydrological Sciences Bulletin* 24(1) : 43-69, DOI `10.1080/02626667909491834` (Crossref, non lu) ; relu dans Beven, Kirkby, Freer, Lamb (2021), « A history of TOPMODEL », *HESS* 25 : 527-549, DOI `10.5194/hess-25-527-2021`, CC BY 4.0 (100 000 premiers caractères sur 149 060) | Nobre A. D. et al. (2011), « Height Above the Nearest Drainage – a hydrologically relevant new terrain model », *Journal of Hydrology* 404(1-2) : 13-29, DOI `10.1016/j.jhydrol.2011.03.051` (Crossref, non lu) |
+| **Grandeur modulée** | ETP (via le rayonnement global reçu par la pente) | Rayonnement global journalier | Déficit de stockage local (apport) | Aucune dans BILJOU ; classe d'engorgement |
+| **Variable topo** | Pente, exposition, ombres portées | Pente, exposition, latitude, ombres (`r.sun`), part diffuse | ln(a / tan β) (TWI) | HAND |
+| **Équation** | Dyer, éq. (1) p. 396 (Turc 1961) : PET = 0,013 [T / (T + 15)] (R_s + 50), PET mensuelle (mm), T (°C), **R_s rayonnement global reçu par la cellule (cal cm⁻²)**, calculé par l'outil « Solar Radiation » d'ArcGIS (pente, exposition, ombres), paramètres de part diffuse D et transmissivité T calés sur une mesure (pas 0,1 ; D 0,2-0,7 ; T 0,3-0,7) | `r.sun` (manuel GRASS 8.5, `https://grass.osgeo.org/grass-stable/manuals/r.sun.html`) : `glob_rad` (Wh m⁻² j⁻¹) = direct + diffus + réfléchi, entrées `elevation`, `slope`, `aspect` (convention : **270 = sud**), `linke` (défaut 3,0), `albedo` (défaut 0,2), `day`, `step` (défaut 0,5 h) ; ombres par défaut (`-p` les retire) ; ciel réel par `coeff_bh`, `coeff_dh` (0-1, « fraction of the respective clear-sky radiations reduced by atmospheric factors »), formule renvoyée à Šúri et Hofierka 2004, § 3.2 (non lu). Allen et al. 2006 : conversion du rayonnement horizontal mesuré vers la pente, **équations non lues** | Flux q = T₀ tan β exp(−D / m) (éq. 6) ; saturation si ln(a / tan β) > D̄ / m + λ (éq. 7, signe à relire sur le PDF) ; d'où D_i = D̄ − m [ln(a / tan β) − λ] (**dérivé, pas écrit dans l'article**). `m` (profondeur) et T₀ **à caler par bassin** | Classes calées en Amazonie (seuils non lus) |
+| **Où, résolution** | Ohio (MNT 0,7 m) et Caroline du Nord, Coweeta (3,5 m), forêts feuillues tempérées | Ponctuel à MNT | Petits bassins versants à sol mince | Amazonie centrale |
+| **Validation** | Humidité du sol mesurée, mensuelle : r = 0,92 à 0,97 (9 sondes, Caroline du Nord) ; 0,75 à 0,98, moyenne 0,90, 17 sur 19 significatives après décalage d'un mois (Ohio) (p. 398-399). Contraste mesuré par le modèle : PET 926 mm (versant SE 30°) contre 656 mm (N 34°), −29 % ; 865 contre 692 mm (−20 %) (p. 398-399) | Allen : deux sites américains (résumé) | Beven et al. 2021 : hypothèses valides pour **un sous-ensemble** de bassins ; inadaptées aux sols profonds et zones plates ; en période sèche, c'est l'évapotranspiration qui commande l'humidité de surface | — |
+| **Ce qu'en dit le terrain** | Dyer p. 399-400 : **aucune relation** entre la position topographique et l'écart modèle-mesure ; « the inclusion of topographic augmentation of available water into the model via upslope drainage is not warranted, at least if a goal is to model soil moisture patterns during the growing season » (p. 400), en citant Western et al. 2002 (non lu) | — | Voir A : apports non décelés en saison de croissance, période qui fait `Istress` | — |
+| **Code R** | Aucun paquet : à écrire (Turc) ou **remplacer Turc par `biljouR::penman_pet()`** | GRASS `r.sun` (GRASS déjà utilisé pour le MRVBF, `R/terrain.R`) ; pas de paquet R vérifié | `topmodel` (CRAN) **archivé le 2024-11-11** ; TWI déjà calculé (`twi`) | HAND déjà calculé (`hauteur_reseau`) |
+| **Licence du code** | — | GRASS : licence **à vérifier** (non relue ce jour) | — | — |
+
+**Contexte français, lu en notice seulement.** Piedallu C., Gégout J.-C. (2008), « Efficient
+assessment of topographic solar radiation to improve plant distribution models »,
+*Agricultural and Forest Meteorology* 148(11) : 1696-1706, DOI
+`10.1016/j.agrformet.2008.06.001` (Crossref) : sur la France entière avec un MNT de 50 m, le
+rayonnement **avec nébulosité** s'ajuste mieux au rayonnement annuel mesuré que le ciel clair
+(R² 0,78 contre 0,46 ; 88 stations), et le sinus ou cosinus de l'exposition fait mal sur de
+grandes surfaces (chiffres relayés par la recherche web depuis la notice HAL `hal-00835905`,
+**article non lu**). Piedallu C., Gégout J.-C., Perez V., Lebourgeois F. (2013), « Soil water
+balance performs better than climatic water variables in tree species distribution
+modelling », *Global Ecology and Biogeography* 22(4) : 470-482, DOI `10.1111/geb.12012`
+(résumé Crossref lu) : bilan hydrique du sol à **1 km** sur la France, meilleur que les
+proxys climatiques pour 82 % des modèles d'espèces ; **ce n'est pas une descente à 25 m.**
+Piedallu C., Gégout J.-C., Bruand A., Seynave I. (2011), *Geoderma* 160(3-4) : 355-366, DOI
+`10.1016/j.geoderma.2010.10.004` (carte de réserve utile ; titre seul lu). Piedallu C.,
+Gégout J.-C. (2007), « Multiscale computation of solar radiation for predictive vegetation
+modelling », *Annals of Forest Science* 64(8) : 899-909, DOI `10.1051/forest:2007072`
+(Crossref ; article non lu : HAL refusé, Springer derrière authentification).
+
+**RU modulée par la topographie : aucune méthode publiée simple trouvée.** Aucune source
+lue ne donne un coefficient reliant la réserve utile à la pente, à la position ou au TWI en
+forêt tempérée française. Un tel lien ne peut pas être appris sur les placettes IFN avec des
+variables extraites du MNT (règle des 700 m). Seule piste qui respecte la règle : les
+observations **notées sur place** par l'IFN (`PENT2`, `TOPO`, référentiels § 7,
+`obs_pente`, `obs_topo` de `R/pipeline_reel.R`) ; mais la correspondance entre les codes
+`TOPO` et une position calculée sur le MNT n'est publiée nulle part : **piste, ne pas coder.**
+
+### 25.3 Variables de sylvostation : entrées présentes et manquantes
+
+`derive_terrain()` (`R/terrain.R`, l. 112-162) rend 14 couches par défaut : `pente`,
+`exposition_cos`, `exposition_sin`, `courbure`, `courbure_plan`, `courbure_profil`, `tpi_100`,
+`tpi_300`, `tpi_1000`, `twi`, `surface_drainee`, `mrvbf`, `hauteur_reseau`, `rayonnement`.
+
+| Entrée de la méthode A | Dans sylvostation | Manque |
+|---|---|---|
+| Pente, exposition | `pente` (degrés), `exposition_cos/sin` (azimut depuis le nord, horaire) | Conversion vers `r.sun` (270 = sud ; azimut GRASS déduit = (450 − azimut horaire depuis le nord) mod 360 : **à vérifier**) |
+| Rayonnement par jour ou par mois sur la pente | `rayonnement` : **somme annuelle**, direct seul, **hors atmosphère, sans ombres ni diffus** (l. 89-92) | Rayonnement global (direct + diffus) **par jour type ou par mois**, avec ombres portées : `r.sun` |
+| Rayonnement horizontal de référence | — | Même calcul, pente nulle (`slope_value = 0`) |
+| `SSI`, `T`, `FF`, `HU` SAFRAN | lus seulement `PRELIQ`, `PRENEI`, `ETP` (`hydric_stress()`, `R/hydrique.R` l. 451) | Lire `SSI`, `T`, `FF`, `HU` des CSV SIM2 (§ 23) |
+| RU sur la grille de 25 m | **aucune source** : `ru_from_texture()` ne vaut qu'aux placettes ; § 18 : BDGSF 1/1 000 000 trop grossière, GlobalSoilMap 90 m non lu | **Entrée manquante, sans source à 25 m** |
+| TWI, HAND, MRVBF (méthodes C, D) | `twi`, `hauteur_reseau`, `mrvbf` | Rien pour BILJOU : non retenues |
+
+### 25.4 Recommandation : méthode A, rayonnement par `r.sun`, ETP par `biljouR`
+
+**Adaptation non validée de Dyer 2009** : **moduler l'ETP par le rayonnement global reçu par
+la pente**, sans apport latéral (Dyer 2009, p. 400). Dyer valide une ETP de Turc mensuelle
+(éq. 1, p. 396) avec un rayonnement **en ciel réel**, dont la part diffuse D et la
+transmissivité T sont calées sur des mesures (p. 396). Ici, k est calculé en ciel clair, puis
+l'ETP par le Penman de `biljouR` : rien de ce passage n'est validé (§ 25.5). Dans ce Penman,
+seul le terme radiatif suit `rg` ; le terme aérodynamique n'est pas modulé. Selon la
+relecture du 2026-11-18 (non relu par l'acquéreur dans le source), le rapport `rg/rso` des
+grandes ondes y utilise un rayonnement extraterrestre horizontal, plafonné à 1 : modifier
+`rg` modifie donc aussi les grandes ondes. Le seul changement dans BILJOU est la colonne
+`pet` de `meteo`.
+
+1. Facteur topographique mensuel, par cellule `x` de la grille de 25 m et par mois `j` (jour
+   type) : k(x, j) = G_r.sun(x ; pente, exposition, ombres) / G_r.sun(x ; pente 0), avec
+   `r.sun` en ciel clair (`coeff_bh`, `coeff_dh` absents).
+2. Rayonnement du jour d sur la cellule : rg(x, d) = SSI(maille, d) × 0,01 × k(x, mois de d)
+   (SSI en J cm⁻² → MJ m⁻², unité à vérifier, § 25.1).
+3. ETP du jour : `biljouR::penman_pet(tmean = T, rg = rg(x, d), wind = wind_to_2m(FF, 10),
+   rh = HU, doy, latitude, altitude)`, c'est-à-dire `safran_to_meteo(..., compute_pet = TRUE)`
+   sur une colonne `SSI` remplacée. Pour que la seule différence entre cellules soit
+   topographique, le plat de référence est calculé **par la même formule** (k = 1), pas pris
+   dans l'`ETP` SAFRAN (Penman-Monteith, § 23).
+4. `Istress(x)` = BILJOU(ETP(x), P(maille), RU(x)). Calcul : table par maille SAFRAN sur une
+   suite de RU **et** une suite de k (extension de l'interpolation de `hydric_stress()`).
+
+**Ce que la méthode ne capte pas (limites).** (a) Les apports latéraux et l'engorgement des
+fonds de vallon : un vallon frais n'y est plus humide que par l'ombre ; l'engorgement reste
+à porter par `hauteur_reseau`, `twi` ou `mrvbf` hors de BILJOU. (b) Le ratio de ciel clair
+appliqué au rayonnement nuageux surestime le contraste d'exposition (la part diffuse, moins
+sensible à l'exposition, croît avec la nébulosité) : c'est ce que corrigent Allen et al. 2006
+et les `coeff_bh`, `coeff_dh` de `r.sun`, non lus. Dyer (2009, p. 400) en fait la mise en
+garde : les estimations fondées sur la pente, l'exposition et la latitude « often represent
+"clear sky" estimates. Especially in humid environments, the diffuse proportion and
+transmittivity parameters can be significantly different than clear sky conditions. » (c) La température et le vent SAFRAN sont
+ceux de la maille de 8 km (pas de correction d'altitude ni de vent local). (d) Dyer valide
+sur deux sites américains, Turc mensuel, une année chacun ; **aucune validation française à
+25 m n'a été lue.** (e) La RU à 25 m n'a pas de source (§ 25.3).
+
+### 25.5 Valeurs provisoires (à nommer « provisoire » dans le code)
+
+| Valeur | Proposée | Pourquoi provisoire |
+|---|---|---|
+| Ciel clair pour k (`coeff_bh`, `coeff_dh` absents) | oui | Ciel réel non lu (Šúri et Hofierka 2004, § 3.2 ; Allen et al. 2006) ; Dyer calcule en ciel réel (D, T calés, p. 396) et met en garde contre le ciel clair en milieu humide (p. 400) |
+| Passage de Turc (Dyer, éq. 1) au Penman de `biljouR` | oui | Non validé : Dyer ne valide que Turc mensuel ; dans Penman, le terme aérodynamique n'est pas modulé et `rg` touche aussi les grandes ondes (§ 25.4) |
+| Trouble de Linke | 3,0 (défaut du manuel `r.sun`) | Valeur par défaut, pas une mesure vosgienne |
+| Albédo | 0,2 (défaut de `r.sun` et de `penman_pet()`) | Surface de référence, pas la forêt |
+| Jour type par mois | jours de Klein 1977 (`.JOURS_TYPES`, `R/terrain.R` l. 315) | Choix d'échantillonnage, k constant dans le mois |
+| Unité `SSI` | J cm⁻² (× 0,01) | Document de Météo-France non relu |
+| RU de la grille | aucune proposée par cette mission | **à trancher** : pas de source à 25 m |
+| Pas des suites de RU et de k | — | Réglage de calcul, à mesurer (écart à un calcul cellule par cellule) |
+
+### 25.6 Règle bloquante
+
+`k(x, j)`, `pente`, `exposition` et tout `r.sun` sont des **variables fines** : elles ne
+s'appliquent qu'à la grille de 25 m et aux points de `loc_precision_m` ≤ 25 m, **jamais aux
+placettes IFN** (`assert_no_fine_extract_on_ifn()`). Aux placettes IFN, `Istress` reste
+calculé sur la maille SAFRAN et la RU de la placette, sans k (`hydric_stress()` actuel). La
+carte modulée et les placettes ne sont donc pas sur la même échelle : l'écart attendu doit
+être dit dans l'état de preuve.
+
+### 25.7 Trois points au sol (à choisir par Pascal dans la SER D11)
+
+1. **Deux versants opposés de même sol**, raides (plus de 30°), sud et nord : la modulation y
+   est la plus forte. Aucun écart chiffré n'est attendu : les contrastes de Dyer ne se
+   transposent pas (son −20 % de l'Ohio compare une crête exposée à l'est, pente 2°, à un
+   vallon exposé au nord, pente 24° ; p. 398-399). Juger si l'écart de flore suit.
+2. **Un fond de vallon étroit** (TWI fort, `hauteur_reseau` faible) : la méthode A ne lui
+   donne aucun apport ; si la flore y est hygrophile alors que la carte le dit sec, c'est la
+   limite (a).
+3. **Une crête ou un col dégagé face à un versant encaissé au nord** : c'est là que `r.sun`
+   (avec ombres) et la couche `rayonnement` actuelle (sans ombres) divergent le plus.
+
+---
+
 ## Écarts relevés entre sources
 
 1. Le brief cite la couche `IGNF_LIDAR-HD_METADONNEE:metadata` : elle existe, l'écart est
@@ -645,6 +812,18 @@ write.table(out, "ifn_texture_dictionnaire.csv", sep = ";", quote = TRUE, row.na
 20. Réserve utile : sur les 97 placettes calculables, `euptf2` (FC_2 - WP) donne en moyenne
     **plus** que Bruand et al. 2004 (colonne défaut) ; les deux sont très corrélées (chiffres au
     rendu de la mission 019).
+21. Descente d'échelle (§ 25) : le choix (c) de Pascal dit « RU modulée par la topographie » ;
+    **aucune source lue** ne publie une telle modulation simple, et les méthodes publiées et
+    validées en forêt tempérée modulent l'**ETP par le rayonnement** (Dyer 2009).
+22. Apports latéraux : TOPMODEL (Beven et Kirkby 1979) les fonde sur le TWI ; Dyer (2009,
+    p. 399-400) ne les retrouve pas dans l'humidité mesurée en saison de croissance, et
+    Beven et al. (2021) bornent TOPMODEL aux sols minces et pentus.
+23. ETP : SAFRAN publie une ETP Penman-Monteith (§ 23) ; `biljouR::penman_pet()` calcule une
+    ETP de Penman (1948). Même sur le plat, les deux diffèrent : la référence plate de la
+    modulation doit venir de la même formule que la cellule modulée (§ 25.4).
+24. Rayonnement : la couche `rayonnement` de sylvostation est hors atmosphère, sans ombres
+    ni diffus ; Piedallu et Gégout (2008, notice) trouvent le rayonnement avec nébulosité bien
+    meilleur que le ciel clair (R² 0,78 contre 0,46).
 
 ## Dépendances et statut du jour (2026-11-17)
 
@@ -656,6 +835,12 @@ write.table(out, "ifn_texture_dictionnaire.csv", sep = ";", quote = TRUE, row.na
 - Vérifié le 2026-11-17 (passe 4, mission 019, exécuté en R) : § 22 (dictionnaire IFN des
   textures ; triangle de l'Aisne **déduit** des abréviations, `Als` hors triangle), § 23
   (SAFRAN SIM2), § 24 (`soiltexture`, `euptf2`, `biljouR`).
+- Vérifié le 2026-11-18 (passe 5, mission 020, lecture seule, rien exécuté) : § 25 (code de
+  `biljouR` au commit `b0dade7` par résumeur ; Dyer 2009 lu en images ; DOI par Crossref ;
+  manuel `r.sun` de GRASS 8.5). **Lu en résumé seulement** : Piedallu et al. 2013 (Crossref).
+  **Non lus** : Piedallu et Gégout 2007 (§ 25.2), Piedallu et Gégout 2008, Piedallu et al.
+  2011 (HAL refusé), Allen et al. 2006 (résumé seul), Šúri et Hofierka 2004 § 3.2, Nobre et al. 2011,
+  document des paramètres SIM2 (unité de `SSI`).
 - **Pistes, à ne pas coder** : Baseflor (§ 14), EcoPlant (§ 14), contenu du zip TAXREF v18
   (§ 15), GlobalSoilMap France pH, texture et réserve utile 90 m (§ 18), fiches de la
   référence AgroParisTech voisines (§ 21).
