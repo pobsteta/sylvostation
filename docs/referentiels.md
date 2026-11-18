@@ -1064,3 +1064,86 @@ https://sentiwiki.copernicus.eu/web/s2-mission (aucun téléchargement de donné
   (ADR 0007). Fuseau UTM de la SER D11 (Vosges, environ 7 degrés est, donc 32N) : **à vérifier**.
 - **Non vérifié** : nom des produits Sentinel-2 L2A servis par le fournisseur retenu, URL et
   licence d'accès (mission 023), méthode de rééchantillonnage conseillée (bilinéaire ou moyenne).
+
+## 27. SOPHY (banque de données phytosociologiques) : accès fermé, localisation grossière (mission 030)
+
+- **Décision éclairée :** intégrer ou non SOPHY à la composante régionale (maille large) de la
+  typologie, GRECO D et SER D11.
+- **Propriétaire :** Pascal (délégué à l'orchestrateur). **Rédigé par :** agent `acquereur`,
+  mission 030, le 2026-11-18. **Outils :** `WebFetch` (pages résumées par un petit modèle ;
+  les deux PDF ont été enregistrés par l'outil et **lus en image page par page**) et
+  `WebSearch`. Rien téléchargé dans le dépôt, rien exécuté en R.
+- **URL consultées le 2026-11-18 :**
+  [A] Garbolino E., De Ruffray P., Brisse H., Grandjouan G. (2012). *The phytosociological
+  database SOPHY as the basis of plant socio-ecology and phytoclimatology in France.*
+  Biodiversity & Ecology 4 : 177-184, DOI 10.7809/b-e.00074,
+  https://www.biodiversity-plants.de/biodivers_ecol/publishing/b-e.00074.pdf (fiche GIVD p. 178,
+  « Information as of 2012-09-23 ») ;
+  [B] fiche GIVD en ligne https://www.givd.info/ID/EU-FR-003 (« Last update 2024-02-19 ») ;
+  [C] site SOPHY https://sophy.tela-botanica.org/ et ses pages `locrel.htm`, `bilan.htm`,
+  `historique01.htm`, `tabphyto.htm`, `nblocal.htm` (« Mise à jour du 10 janvier 1999 ») ;
+  [D] EVA, accueil https://euroveg.org/eva-database/ , liste des bases
+  https://euroveg.org/eva-database/databases, procédure
+  https://euroveg.org/eva-database/obtaining-data, règles
+  https://euroveg.org/download/eva-rules.pdf (« approved … Vienna on 26 May 2012 », PDF du
+  2022-11-08, 4 p.) ;
+  [E] GBIF : https://api.gbif.org/v1/dataset/search?q=SOPHY ,
+  https://api.gbif.org/v1/dataset/f823053d-0d53-4b3b-b52e-fb85fe847dd0 , recherche
+  d'occurrences du même jeu (facette `coordinateUncertaintyInMeters`, et rectangle
+  lon 5,5-8,5, lat 47,3-49,2) ;
+  [F] fiche GIVD de VegFrance https://www.givd.info/ID/EU-FR-004.
+  **Refusée :** https://www.idiv.de/en/sdiv/working-groups/wg-pool/splot/consortium-and-contributing-databases.html
+  (404) ; le chiffre sPlot 209 864 n'est connu que par l'extrait du moteur de recherche (non vérifié).
+
+| Point | État | Source | Résultat |
+|---|---|---|---|
+| Producteur | **vérifié** | [A] p. 177-178 ; [B] | Créée par H. Brisse et P. de Ruffray (Strasbourg, puis Univ. Paul Cézanne, Marseille), démarrée en 1978 ([C] `historique01.htm`). Propriétaires : « Henry Brisse, Patrice de Ruffray, Emmanuel Garbolino et TELA-BOTANICA (private) » ([A] p. 178) ; même liste sans « (private) » en [B]. Gardien EVA : E. Garbolino ([D]). |
+| Code GIVD | **vérifié** | [A] p. 177 ; [B] ; [D] | `EU-FR-003`. |
+| Accès | **vérifié** | [A] p. 178 ; [C] ; [D] | « Availability: according to a specific agreement », « Online upload: no », « Online search: no » ([A] p. 178). Le site [C] n'offre **aucun téléchargement de relevés** ni de conditions d'usage (seule une liste de référence `impaldoc.exe`). Dans EVA : « SOPHY (209 900 plots, semi-restricted access) » ([D] liste). Régime 2 semi-restreint : réservé aux « data contributors only (i.e. custodians of databases included in EVA or persons approved by one of the custodians) » ([D] règles, art. 4, p. 2) ; délai d'au moins trois semaines ([D] procédure). |
+| Licence | **vérifié : aucune licence ouverte** | [A] ; [B] ; [C] ; [D] art. 5 p. 3 | Aucune licence publiée pour la base. Par EVA : « The applicants are not allowed to pass any data obtained from EVA … to third parties », « non-commercial purposes only », mandat de trois ans après livraison ([D] art. 5, p. 3). **Incompatible avec un dépôt public** et avec le test du successeur. Les relevés sont des transcriptions de tableaux publiés ([A] p. 177 ; [C] `tabphyto.htm`) : les droits des publications d'origine restent à considérer (non vérifié). |
+| Citation | **vérifié** | [A] p. 177 | Garbolino et al. 2012, Biodiversity & Ecology 4 : 177-184, DOI 10.7809/b-e.00074. EVA impose en plus la citation de Chytrý et al. 2016, Applied Vegetation Science 19 : 173-180 ([D], page d'accueil EVA, lue en résumé seulement). |
+| Version, volume national | **vérifié (chiffres discordants, voir écarts)** | [A] p. 178 ; [B] ; [C] `bilan.htm` ; [D] | 212 244 relevés, 4 500 sources, 4 598 taxons valides, plots de 1 à 400 m², pays BE 14,0 %, CH 1,0 %, ES 5,0 %, FR 79,0 %, IT 1,0 % ([A] p. 178). Statut « ongoing capture ». [B] : 212 244 (mise à jour 2024-02-19). [D] : 209 900. [C] : 192 352 relevés en janvier 2009 (dernière ligne du bilan). Part forestière : 52 731 relevés « Shadow — Forests of temperate Europe with sciaphilous plants » sur l'ensemble de la base ([A] tableau 1, p. 183 ; classes hiérarchiques, non additives). |
+| Dates des relevés | **vérifié** | [A] p. 178 | Période 1915-2010. < 1919 : 0,1 % ; 1920-29 : 0,7 ; 1930-39 : 2,2 ; 1940-49 : 1,0 ; 1950-59 : 6,0 ; 1960-69 : 12,0 ; 1970-79 : 19,0 ; 1980-89 : 23,0 ; 1990-99 : 25,0 ; 2000-09 : 10,5 ; inconnu : 0,5 (total 100,0). **64,0 % des relevés sont antérieurs à 1990** (somme calculée par l'agent). |
+| Précision de localisation | **vérifié (documentation)** ; **non vérifié sur des relevés de D11** (inaccessibles) | [C] `locrel.htm` ; [A] p. 178 ; [E] | Trois niveaux : « 1. 100 à 500m ; 2, 0,5 à 5 km ; 3, plus de 5 km » ; niveau 1 = coordonnées fournies ou relevé situé sur une carte ; 2 = lieu-dit (« centre de gravité visuel du lieu ») ; 3 = « coordonnées du chef-lieu de la commune » ([C] `locrel.htm`). Coordonnées en « grades et milligrades » ; légende du tableau : « Latitude en grades et milligrades (Paris) » (méridien de Paris indiqué par la source ; datum, NTF probable, **à vérifier**). GIVD 2012 : « point coordinates less precise than GPS, up to 1 km: 70% ; small grid (not coarser than 10 km): 20% ; political units or only on a coarser scale (>10 km): 10% » ([A] p. 178). Contrôle interne : erreur signalée si l'écart entre centroïde de commune et coordonnées dépasse 10 km ([A] p. 178). **Aucun relevé n'atteint 25 m.** |
+| Deuxième source de précision | **vérifié** | [E] | Seul jeu trouvé sur GBIF : jeu GBIF « ACQUISITION_CBNMC - SOPHY » (PatriNat, DOI 10.15468/ky7a8n, CC BY 4.0, créé 2022-10-18, « Données communiquées par H. BRISSE »), 93 019 occurrences. `coordinateUncertaintyInMeters`, décompte complet (14 valeurs, somme 93 019) : 2 821 m : 90 007 ; 61 556 : 1 553 ; 57 689 : 532 ; 51 572 : 440 ; 62 239 : 288 ; 47 236 : 138 ; 6 674 : 30 ; 5 000 : 17 ; 3 949 : 4 ; 6 250 : 3 ; 3 467 : 2 ; 3 775 : 2 ; 4 277 : 2 ; 5 226 : 1. **Aucune occurrence sous 2 821 m.** Emprise : lat 44,26-46,77, lon 2,06-5,16 (Massif central) ; **0 occurrence** dans le rectangle lon 5,5-8,5, lat 47,3-49,2 (Vosges). |
+| Volume GRECO D, SER D11 | **inaccessible** | [A] fig. 1 p. 179 ; [C] | Aucun décompte régional publié. La carte nationale ([A] fig. 1) montre des relevés dans le Nord-Est ; le site cite une classification des relevés des « Hautes-Vosges » ([C] `historique01.htm`). Le décompte exige une demande au gardien. À comparer : IFN, GRECO D 9 392 lignes `PLACETTE`, D11 6 475 (§ 7). |
+| Référentiel taxonomique | **vérifié (documentation)** ; correspondance TAXREF **non vérifiée** | [A] p. 177 ; [B] ; [C] `tabphyto.htm` | Codes CFVVF (Brisse et Grandjouan 1971), puis Flora Europaea, puis Index de Kerguélen (Brisse et Kerguélen 1994), puis BDNFF (Bock 2004) ([A] p. 177). [B] annonce encore Fournier 1961. Pseudo-taxons par classe d'abondance ([A] p. 178). Passage BDNFF → TAXREF `CD_NOM` : **à vérifier** (pas de table de correspondance trouvée). |
+| Format | **vérifié** | [A] p. 177-178 ; [C] `tabphyto.htm` | Tableaux texte au format de la publication source, en-tête `NREF`, `TA`, `NB`, titre ; lignes : code CFVVF et coefficients d'abondance-dominance ; fin de tableau `9999`. Base MySQL, export « plain text file ». Identifiant de relevé à 8 chiffres RéféTbRl. |
+
+**Règle des 700 m (CLAUDE.md).** SOPHY ne peut jamais servir à une extraction fine (précision
+toujours > 25 m). À maille large, seuls les relevés de niveau 1 (100 à 500 m) sont au moins
+aussi bien placés que les placettes IFN (700 m) ; les niveaux 2 et 3, et les 30 % de la base
+localisés au-delà de 1 km, dont 20 % sur une grille de 10 km au plus et 10 % au-delà de 10 km
+([A] p. 178), dépassent le rayon de 700 m de la géologie dominante.
+**Décision de l'orchestrateur (relecture 030, 2026-11-18) :** niveaux 2 et 3 refusés (plus de
+700 m) ; seul le niveau 1 serait convertible (`loc_precision_m` = 500, tiré du champ de
+précision par relevé), comme le code le fait déjà pour GBIF.
+
+**Recommandation : écarter pour la calibration ; piste éventuelle : nommer les types, sous
+convention avec le gardien, sans dépôt.**
+
+**Ce que SOPHY ajouterait aux placettes IFN.** Des relevés phytosociologiques complets (toutes
+strates, coefficients d'abondance-dominance) et nommés par leurs auteurs (syntaxons), utiles
+pour **nommer** les types ; mais protocole et surface hétérogènes (1-400 m²), relevés anciens
+(64 % avant 1990), part non forestière, et localisation le plus souvent moins bonne que l'IFN.
+Pour **calibrer** la composante régionale, l'IFN (protocole fixe, 2005-2025, Licence Ouverte)
+reste supérieur.
+
+**Bases comparables.** EcoPlant `EU-FR-005` : 5 030 relevés,
+« restricted access » ([D] ; déjà écarté au § 14). VegFrance `EU-FR-004` : 3 058 relevés,
+« semi-restricted access » ([D]) ; 25 341 selon [F] (mise à jour 2025-11-25) ; couverture
+régionale et part forestière non publiées. EVA : mêmes règles que ci-dessus (pas de
+transmission à des tiers, usage non commercial). Toutes fermées à un dépôt public.
+
+**Écarts relevés entre sources (§ 27).**
+1. Volume : 212 244 ([A] 2012, [B] 2024) ; 209 900 ([D]) ; 209 864 (sPlot, extrait de moteur
+   de recherche, page 404) ; 192 352 en janvier 2009 ([C]). Cause probable : dates différentes
+   et doublons retirés à l'entrée dans EVA (non vérifié).
+2. Précision : [C] annonce un niveau 1 « 100 à 500 m », [A] « up to 1 km » pour 70 % ; le seul
+   jeu trouvé sur GBIF ([E]) n'a **aucune** occurrence sous 2 821 m. Cause probable : PatriNat a
+   attribué une incertitude par défaut (communale ?) au lieu du niveau SOPHY (non vérifié).
+3. Nomenclature : BDNFF (Bock 2004) dans [A], Fournier 1961 dans [B] (fiche GIVD jamais
+   mise à jour sur ce champ ?).
+4. VegFrance : 3 058 relevés ([D]) contre 25 341 ([F]) : EVA n'a sans doute reçu qu'une partie.
+5. Numérotation de ce document : deux sections portent le n° 26 (cartes de comparaison,
+   Sentinel-2).
