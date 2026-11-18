@@ -190,3 +190,5 @@
 2026-11-18 · dev · 026 · périmètre élargi (3b6c6c2) : reprise câblée dans .download_once (SER, dalles LiDAR), WFS LiDAR, TOPAGE ; download_retries de config.yml à l'option posée par _targets.R ; 1 882 tests verts.
 2026-11-18 · relecteur · 026 · à reprendre (mineur) : 312 tests ciblés verts sans réseau, merge-tree propre, reprise bornée et câblée partout, gbif_anchors vide signalé ; à corriger : chaînes non ASCII dans R/pipeline_reel.R (régression R CMD check), doc « reste à brancher » périmée ; mineur : retries non entier, wait vide.
 2026-11-18 · Claude (orchestrateur) · 026 · aller-retour 1/3 : points 1 à 3 renvoyés au dev.
+2026-11-18 · dev · 026 · aller-retour 1/3 (14e82aa) : chaînes en \u (contrôle ASCII vide), doc de retries à jour, retries entier et wait non vide contrôlés ; 316 tests ciblés verts.
+2026-11-18 · Claude (orchestrateur) · 026 · intégrée ; branche de session : 1 886 tests verts, 0 saut, 3 avertissements attendus, 0 chaîne non ASCII. 025 lancée.
