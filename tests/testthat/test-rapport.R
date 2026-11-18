@@ -54,10 +54,11 @@ test_that("le modèle de rapport a les trois parties demandées et les deux form
   expect_match(q, "EPSG:2154", fixed = TRUE)
 })
 
-test_that("latex_disponible() rend un logique et le repli est annoncé sans LaTeX", {
+test_that("latex_disponible() rend un logique unique (TRUE ou FALSE, jamais NA)", {
   e <- rendre_src()
   expect_type(e$latex_disponible(), "logical")
   expect_length(e$latex_disponible(), 1L)
+  expect_false(is.na(e$latex_disponible()))
 })
 
 test_that("fixture : un point connu tombe dans la bonne cellule de la grille (EPSG:2154)", {
@@ -86,6 +87,10 @@ test_that("mode démo : le PDF est rendu à côté du HTML, avec la mention synt
   html <- paste(readLines(file.path(d, "rapport.html"), warn = FALSE), collapse = "\n")
   expect_match(html, "DONNÉES SYNTHÉTIQUES", fixed = TRUE)
   expect_match(html, "Calculs réalisés", fixed = TRUE)
+  # valeurs conditionnées au mode : démo = 200 arbres, essence fictive
+  expect_match(html, "200 arbres", fixed = TRUE)
+  expect_match(html, "essence fictive", fixed = TRUE)
+  expect_false(grepl("500 arbres", html, fixed = TRUE))
   skip_if(!nzchar(Sys.which("pdftotext")) || !nzchar(Sys.which("pdfinfo")),
           "pdftotext/pdfinfo absents : contenu du PDF non contrôlé")
   info <- system2("pdfinfo", pdf, stdout = TRUE)
@@ -130,5 +135,7 @@ test_that("sans LaTeX : HTML seul, avertissement, aucun PDF ; mode réel avec la
   expect_false(grepl("DONNÉES SYNTHÉTIQUES", html, fixed = TRUE))
   expect_match(html, "Carte du gradient hydrique", fixed = TRUE)
   expect_match(html, "Gradient hydrique de 25 m", fixed = TRUE)
+  expect_match(html, "500 arbres", fixed = TRUE)
+  expect_false(grepl("essence fictive", html, fixed = TRUE))
   expect_match(html, "Données d.entrée")
 })

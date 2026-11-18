@@ -8,6 +8,7 @@ format:
     code-fold: true
   pdf:
     pdf-engine: xelatex
+    latex-auto-install: false
     documentclass: article
     papersize: a4
     geometry:
@@ -138,6 +139,16 @@ l'ont pas été).
 
 ```{r}
 #| label: sources
+# ORIGINE DES VALEURS RECOPIÉES (le gabarit ne lit que des fichiers ; ces valeurs ne sont
+# dans aucune table de sortie). Le test de concordance de tests/testthat/test-rapport.R
+# échoue si la source ne les contient plus :
+#  - volumes des extraits (661 polygones, 94 formations, 189 taxons, 80 m x 80 m, 0,3 million
+#    de points, 12 mailles) : inst/extdata/SOURCES.md ;
+#  - versions, dates, URL, DOI, licences des fiches : inst/extdata/SOURCES.md, complété par
+#    docs/referentiels.md (§ 11 licences, § 23 SAFRAN, § 15 TAXREF) ;
+#  - valeurs provisoires du tableau des calculs (bloc 3 x 3, tampon 20 m, seuil 5 m,
+#    Linke 3,0, albédo 0,2, pas 0,5 h, pas de k 0,02, 30 cellules, 1996-2025) : config.yml ;
+#  - arbres 200 (démo) / 500 (réel), 99 permutations, 5 plis : _targets.R.
 # Cherche la ligne de l'état de preuve dont l'étape correspond au motif.
 ligne_ep <- function(motif) {
   if (!lignes(ep)) return(NULL)
@@ -174,7 +185,7 @@ if (synth) {
     S("Sols (GlobalSoilMap)", "absent", "non utilisé en démo"))
 } else {
   off <- hors_ligne
-  mail <- if (lignes(mailles)) paste0(nrow(mailles), " maille(s) SAFRAN dans l'emprise") else "n/d"
+  mail <- if (lignes(mailles)) paste0(nrow(mailles), " maille(s) couverte(s) par la carte") else "n/d"
   src <- rbind(
     S("Contour SER (IGN)", if (off) "réel réduit" else "réel",
       if (off) "contour simplifié (extrait), SER D11 et D12" else "contour de la SER, tampon de 5 km"),
@@ -187,8 +198,8 @@ if (synth) {
       if (off) "extrait de l'emprise test (661 polygones, 94 formations)" else
         "départements 67, 68 et 88 (config.yml)"),
     S("Climat SAFRAN (Météo-France)", etat_ep("^6\\."),
-      paste0(mail, " ; années ", nombre("années ([0-9-]+)", det("^6\\.")),
-             if (off) " (extrait de 12 mailles)" else "")),
+      paste0(mail, if (off) " ; extrait de 12 mailles sur l'emprise test" else "",
+             " ; années ", nombre("années ([0-9-]+)", det("^6\\.")))),
     S("BD TOPAGE (Sandre/OFB)", etat_ep("^3\\."),
       paste0(nombre("([0-9]+) tronçon", det("^3\\.")), " tronçon(s) hydrographique(s)")),
     S("TAXREF (MNHN)", etat_ep("^6\\."),
@@ -211,14 +222,15 @@ tab(src, larg = c(4.6, 2.6, 9.6))
 fiches_src <- c(
 "- **SER** : IGN, sylvoécorégions, `ser_l93.zip`, mise à jour 03/2011, échelle 1/200 000 ; <https://inventaire-forestier.ign.fr/IMG/zip/ser_l93.zip> ; réutilisation libre « sans licence et sans versement de redevance » (IGN).",
 "- **LiDAR HD** : IGN, nuages de points classés (`IGN_AUTO_V5`), dalles publiées par la Géoplateforme ; la dalle de l'extrait est la `1015-6794` (mission `22LHDVosgesRF`, vol du 2022-01-13, édition du 2024-12-20) ; <https://data.geopf.fr/telechargement/download/LiDARHD-NUALID/NUALHD_1-0__LAZ_LAMB93_RF_2024-12-20/LHD_FXX_1015_6794_PTS_LAMB93_IGN69.copc.laz> ; Licence Ouverte 2.0 (Etalab).",
-"- **Placettes IFN** : IGN, Inventaire forestier national, données brutes des campagnes annuelles 2005 et suivantes (archive mise à jour le 2026-10-07, consultée le 2026-11-16) ; <https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip> ; Licence Ouverte Etalab 2.0, citation imposée ; ces données ne doivent pas servir à produire des statistiques d'inventaire. Coordonnées à 700 m près (`loc_precision_m = 700`).",
+"- **Placettes IFN** : IGN, Inventaire forestier national, données brutes des campagnes annuelles 2005 et suivantes (archive mise à jour le 07/10/2026, consultée le 16/11/2026) ; <https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip> ; Licence Ouverte Etalab 2.0, citation imposée ; ces données ne doivent pas servir à produire des statistiques d'inventaire. Coordonnées à 700 m près (`loc_precision_m = 700`).",
 "- **BD Charm-50** : BRGM, cartes géologiques à 1/50 000 harmonisées, départements 67, 68 et 88 (archives du 2019-11-22) ; <https://infoterre.brgm.fr/telechargements/BDCharm50/GEO050K_HARM_088.zip> (et `_067`, `_068`) ; aucune licence nommée : métadonnées du BRGM « Aucune condition ne s'applique », « Données ouvertes ».",
 "- **BD TOPAGE** : Sandre/OFB, tronçons hydrographiques, millésime 2025, service WFS <https://services.sandre.eaufrance.fr/geo/topage2025> ; Licence Ouverte Etalab (fiches 2022 à 2024 lues) ; **la licence du millésime 2025 est à vérifier** avant toute republication.",
 "- **TAXREF** : MNHN/PatriNat, version 18 (2025), <https://assets.patrinat.fr/files/referentiel/TAXREF_v18_2025.zip> ; licence Ouverte 2.0 ou `fr-lo` selon la fiche data.gouv.fr, aucune licence sur la page PatriNat (écart signalé). Jointures sur `CD_NOM` puis `CD_REF`.",
 "- **Valeurs indicatrices** : Tichý L., Axmanová I., Dengler J. et al. (2023), *Journal of Vegetation Science* 34, e13168 ; jeu Zenodo version 2.0 (2022-11-07), DOI `10.5281/zenodo.7427088` ; CC BY 4.0 ; réserve : les valeurs de Julve (2015) pour la France seraient en CC BY-SA 2.0 (point non tranché).",
 "- **Climat SAFRAN (SIM2 quotidien)** : Météo-France, fichiers annuels `QUOT_SIM2_AAAA.csv.gz`, <https://meteofrance.s3.sbg.io.cloud.ovh.net/data/REF_CC/SIM/> ; Licence Ouverte 2.0, mention « Source : Météo-France » ; maille de 8 km ; période de calcul 1996-2025 (provisoire).",
 "- **GBIF** (en ligne seulement) : occurrences de plantes vasculaires ; licence propre à chaque jeu (CC BY 4.0, ou CC BY-NC 4.0 pour quatre jeux de l'emprise test, non redistribuables) ; un téléchargement `occ_download` porte un DOI, une recherche `occ_search` n'en a pas.",
-"- **Carte de référence** (Gégout J.-C., Piedallu C., Cornu J.-F., Cluzeau C., 2008) et **relevés GNSS** : non fournis ; ces données ne sont pas sous licence ouverte et n'entrent pas dans le dépôt.")
+"- **Carte de référence** (Gégout J.-C., Piedallu C., Cornu J.-F., Cluzeau C., 2008) : non fournie ; les données d'AgroParisTech ne sont pas sous licence ouverte et n'entrent pas dans le dépôt.",
+"- **Relevés GNSS** : aucun fichier fourni (`gnss_path`).")
 cat("Fiches des sources (version, date, licence, adresse ou DOI) :\n\n", paste(fiches_src, collapse = "\n"), "\n", sep = "")
 ```
 
@@ -294,7 +306,7 @@ etapes_tab <- data.frame(
     "bloc de 3 x 3 dalles, tampon de 20 m",
     "maille de 25 m ; seuil de 5 m ; BD Forêt non branchée",
     "saison avril-septembre ; axe bioclimatique ; paramètres de végétation ; réserve utile (à vérifier)",
-    "500 arbres, 5 plis, graine 1",
+    paste0(if (synth) "200" else "500", " arbres, 5 plis, graine 1"),
     "trouble de Linke 3,0 ; albédo 0,2 ; pas de 0,5 h ; pas de k 0,02 ; 30 cellules de contrôle par maille ; réserve utile par maille",
     "seuils par quantiles ; fusion sous 1 % de la surface ou 15 placettes",
     "âge de référence ; essence",
@@ -457,7 +469,7 @@ régional hydrique ne la décrit pas.
 
 ### Gradients prédits
 
-Gradients prédits (unités arbitraires des jeux synthétiques en démonstration).
+Gradients prédits`r if (synth) " (unités arbitraires des jeux synthétiques)" else ""`.
 
 ```{r}
 #| label: carte-gradients
@@ -497,7 +509,7 @@ tab(lire("geologie_dominante"))
 ## Fiches par type
 
 Espèces indicatrices (IndVal) et fertilité (hauteur dominante ramenée à l'âge de
-référence ; essence fictive en démo) par type.
+référence`r if (synth) " ; essence fictive en démonstration" else ""`) par type.
 
 ```{r}
 #| results: asis
