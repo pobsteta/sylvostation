@@ -14,15 +14,17 @@
 
 ## Validé
 
+- [021-descente-echelle-hydrique](missions/021-descente-echelle-hydrique.md) · depuis le cycle 5 · dev (plan d'abord)
+
 
 ## Planifié
 
-- [020-sources-descente-echelle-hydrique](missions/020-sources-descente-echelle-hydrique.md) · depuis le cycle 5 · acquereur
-- [021-descente-echelle-hydrique](missions/021-descente-echelle-hydrique.md) · après 020 · depuis le cycle 5 · dev
 
 - [018-execution-ser-pilote](missions/018-execution-ser-pilote.md) · après 016, 017 · dev
 
 ## Terminé
+
+- [020-sources-descente-echelle-hydrique](missions/020-sources-descente-echelle-hydrique.md) · cycle 5 · acquereur
 
 - [016-mode-reel](missions/016-mode-reel.md) · cycle 5 · dev (opus) · mode réel branché, hors ligne sans réseau
 - [019-gradient-hydrique-biljour](missions/019-gradient-hydrique-biljour.md) · cycle 5 · dev · RU par texture, Is biljouR

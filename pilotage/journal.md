@@ -151,3 +151,4 @@
 2026-11-18 · Claude (orchestrateur) · 020 · aller-retour 1/3 : points 1, 2, 3 et 7 renvoyés à l'acquereur. Question « ETP plutôt que RU » posée à Pascal.
 2026-11-18 · acquereur · 020 · aller-retour 1/3 : § 25.4 dit « adaptation non validée de Dyer 2009 » (Turc en ciel réel → ciel clair et Penman, en valeurs provisoires) ; mise en garde de Dyer p. 400 citée ; attente chiffrée retirée du point au sol 1 ; Piedallu 2007 référencé (DOI 10.1051/forest:2007072) ; licence GRASS à vérifier.
 2026-11-18 · Claude (orchestrateur) · 020 · corrections contrôlées (grep) ; intégrée ; 021 attend la réponse de Pascal (ETP plutôt que RU).
+2026-11-18 · Pascal · 021 · cap · « RU modulée par la topographie » → ETP modulée par le rayonnement de la pente dans l'Is, TWI, MRVBF et HAND gardés à part comme prédicteurs, RU uniforme par maille · pourquoi : aucune méthode publiée pour la RU modulée (020, écart 21) ; réponse « Oui » · fait : fiche 021 complétée, dev lancé, plan d'abord.
