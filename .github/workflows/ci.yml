@@ -41,6 +41,9 @@ jobs:
           # lasR n'est pas sur le CRAN : dépôt r-universe de r-lidar.
           extra-repositories: https://r-lidar.r-universe.dev
 
+      - name: Installer Rdpack (euptf2 en a besoin à la construction sans le déclarer)
+        run: Rscript -e 'install.packages("Rdpack", repos = "https://cloud.r-project.org")'
+
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rcmdcheck, any::devtools
@@ -73,6 +76,9 @@ jobs:
         with:
           use-public-rspm: true
           extra-repositories: https://r-lidar.r-universe.dev
+
+      - name: Installer Rdpack (euptf2 en a besoin à la construction sans le déclarer)
+        run: Rscript -e 'install.packages("Rdpack", repos = "https://cloud.r-project.org")'
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
