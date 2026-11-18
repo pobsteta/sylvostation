@@ -18,6 +18,8 @@
 
 ## Planifié
 
+- [025-grille-20m](missions/025-grille-20m.md) · après 022 · depuis le cycle 5 · dev
+
 
 - [023-page-pkgdown-vosges](missions/023-page-pkgdown-vosges.md) · après 018, 022 · depuis le cycle 5 · dev
 
