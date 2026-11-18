@@ -15,7 +15,9 @@
 #'   `taxref_version` (`"18"`, figée), `indicator_source` (`"tichy"`), `ru_source`
 #'   (`"euptf2"`), `safran_annees` (1996-2025), `saison_vegetation` (mois 4 à 9),
 #'   `bdcharm_departements`, `gbif_method` (`"search"`), `forest_mask` (`TRUE`),
-#'   `forest_height_m` (5), `cache_dir`, `ifn_archive_url` et `taxref_url` (sans valeur
+#'   `forest_height_m` (5), `cache_dir`, la carte hydrique de 25 m (mission 021,
+#'   provisoires) : `solar_linke` (3), `solar_albedo` (0,2), `solar_step_h` (0,5),
+#'   `hydric_pas_k` (0,02), `hydric_n_controle` (30), `ifn_archive_url` et `taxref_url` (sans valeur
 #'   par défaut : seule source, config.yml ; exigées en ligne), et les
 #'   entrées optionnelles `gnss_path`, `reference_path`, `soil_paths`, `tichy_path`
 #'   (`NULL` si absentes : jamais remplacées).
@@ -95,7 +97,10 @@ read_config <- function(path = "config.yml") {
   lidar_ncores = 3, taxref_version = "18", indicator_source = "tichy",
   ru_source = "euptf2", safran_annees = c(1996L, 2025L), saison_vegetation = c(4L, 9L),
   bdcharm_departements = c("067", "068", "088"), gbif_method = "search",
-  forest_mask = TRUE, forest_height_m = 5, cache_dir = "data/cache"
+  forest_mask = TRUE, forest_height_m = 5, cache_dir = "data/cache",
+  # carte hydrique de 25 m (mission 021), valeurs provisoires (referentiels § 25.5)
+  solar_linke = 3, solar_albedo = 0.2, solar_step_h = 0.5, hydric_pas_k = 0.02,
+  hydric_n_controle = 30L
 )
 
 .config_reel <- function(cfg) {
@@ -122,6 +127,17 @@ read_config <- function(path = "config.yml") {
   if (!is.numeric(cfg$forest_height_m) || length(cfg$forest_height_m) != 1L ||
       cfg$forest_height_m <= 0) {
     stop("`forest_height_m` doit \u00eatre un nombre > 0.", call. = FALSE)
+  }
+  for (k in c("solar_linke", "solar_albedo", "solar_step_h", "hydric_pas_k")) {
+    x <- cfg[[k]]
+    if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0) {
+      stop("`", k, "` doit \u00eatre un nombre > 0.", call. = FALSE)
+    }
+  }
+  if (cfg$solar_albedo >= 1) stop("`solar_albedo` doit \u00eatre < 1.", call. = FALSE)
+  x <- cfg$hydric_n_controle
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0 || x != round(x)) {
+    stop("`hydric_n_controle` doit \u00eatre un entier >= 0.", call. = FALSE)
   }
   if (!cfg$emprise %in% c("test", "ser")) {
     stop("`emprise` doit valoir test ou ser.", call. = FALSE)

@@ -615,7 +615,7 @@ topographique).
 | Point d'entrée du rayonnement | **vérifié** | `safran_to_meteo(df, cols = list(date = "DATE", rain_liq = "PRELIQ_Q", rain_sol = "PRENEI_Q", pet = "ETP_Q", tmean = "T_Q", rg = "SSI_Q", wind = "FF_Q", rh = "HU_Q"), compute_pet = FALSE, latitude = NULL, altitude = 0, keep_raw = FALSE)`. Avec `compute_pet = TRUE` (exige `latitude`), l'ETP est recalculée par `penman_pet()` avec le vent ramené à 2 m par `wind_to_2m(wind, 10)`. |
 | `penman_pet()` | **vérifié** (résumé) | `penman_pet(tmean, rg, wind, rh = NULL, ea = NULL, vpd = NULL, doy = NULL, latitude = NULL, altitude = 0, albedo = 0.2)` ; `rg` en **MJ m⁻² j⁻¹** (la doc dit : valeurs Météo-France en J cm⁻² × 0,01) ; fonction du vent `6.43 * (1 + 0.536 * wind)` ; références Penman 1948, Shuttleworth 1993, FAO-56 (Allen et al. 1998) pour le rayonnement net. Rayonnement extraterrestre calculé sur **surface horizontale** (latitude, jour) ; `altitude` ne sert qu'à la pression et au ciel clair. Sans `doy` ou `latitude` : grandes ondes nulles, avertissement. |
 | Grille | **vérifié** | `biljou_run_grid(points, meteo, soil, lai_max, forest_type, budburst = NULL, leaf_fall = NULL, indicators = c("NJstress", "Istress", "DEBstress", "min_rew", "drainage"), years = NULL, id_col = "id", lon_col = "lon", lat_col = "lat", verbose = TRUE, ...)` ; `meteo`, `soil`, `lai_max`… acceptent une valeur, une fonction par point ou une liste nommée par identifiant. `biljou_grid_to_raster(grid, indicator = NULL, year = NULL, crs = "EPSG:4326")` suppose une grille régulière. **Coordonnées en lon/lat par défaut, non contrôlées** : en Lambert-93, passer `crs = "EPSG:2154"`. |
-| SAFRAN | **vérifié** | Les colonnes `T`, `FF`, `HU`, `SSI` existent dans les CSV SIM2 (§ 23), sans suffixe `_Q` (écart 19). Unité de `SSI` : J cm⁻² selon la doc de `penman_pet()` et selon un tiers (`https://geop4th-d6fd42.gitlab.io/4_workflows/dataset_workflows/sim2.html`) ; **le document de Météo-France (`sim-quotidienne-parametres-20260331.pdf`) n'a pas été relu : à vérifier.** |
+| SAFRAN | **vérifié** | Les colonnes `T`, `FF`, `HU`, `SSI` existent dans les CSV SIM2 (§ 23), sans suffixe `_Q` (écart 19). Unité de `SSI` : J cm⁻² selon la doc de `penman_pet()` et selon un tiers (`https://geop4th-d6fd42.gitlab.io/4_workflows/dataset_workflows/sim2.html`) ; **le document de Météo-France (`sim-quotidienne-parametres-20260331.pdf`) n'a pas été relu : à vérifier.** Relu le 2026-11-18 (mission 021) : J/cm2 confirmé, voir § 25.8. |
 
 ### 25.2 Méthodes publiées, comparées (CQQCOQP)
 
@@ -721,7 +721,7 @@ sur deux sites américains, Turc mensuel, une année chacun ; **aucune validatio
 | Trouble de Linke | 3,0 (défaut du manuel `r.sun`) | Valeur par défaut, pas une mesure vosgienne |
 | Albédo | 0,2 (défaut de `r.sun` et de `penman_pet()`) | Surface de référence, pas la forêt |
 | Jour type par mois | jours de Klein 1977 (`.JOURS_TYPES`, `R/terrain.R` l. 315) | Choix d'échantillonnage, k constant dans le mois |
-| Unité `SSI` | J cm⁻² (× 0,01) | Document de Météo-France non relu |
+| Unité `SSI` | J cm⁻² (× 0,01) | Document de Météo-France non relu ; **vérifié le 2026-11-18** (§ 25.8), la valeur n'est plus provisoire |
 | RU de la grille | aucune proposée par cette mission | **à trancher** : pas de source à 25 m |
 | Pas des suites de RU et de k | — | Réglage de calcul, à mesurer (écart à un calcul cellule par cellule) |
 
@@ -745,6 +745,16 @@ carte modulée et les placettes ne sont donc pas sur la même échelle : l'écar
    limite (a).
 3. **Une crête ou un col dégagé face à un versant encaissé au nord** : c'est là que `r.sun`
    (avec ombres) et la couche `rayonnement` actuelle (sans ombres) divergent le plus.
+
+### 25.8 Vérifié en mission 021 (2026-11-18, exécuté en R)
+
+| Point | État | Résultat |
+|---|---|---|
+| Unité de `SSI` | **vérifié** | Document Météo-France « Données quotidiennes SIM » (PDF de 2 pages, auteur Marie PRALAT, créé le 2026-03-31, `data/cache/safran/params.pdf`, adresse de téléchargement non relevée) : `SSI` « Rayonnement visible », **J/cm2**, cumul quotidien ]00UTC-00UTC] ; `DLI` « Rayonnement atmosphérique », J/cm2 ; `FF` vent, **m/s**, moyenne quotidienne ; `HU` humidité relative, **%** ; `T` °C ; `ETP` « formule de Penman-Monteith FAO-56 », mm. Conversion : × 0,01 vers MJ m⁻². Hauteur du vent `FF` non donnée par le document (biljouR suppose 10 m) : **à vérifier**. Le libellé « visible » est lu comme le rayonnement global de courte longueur d'onde : **à vérifier**. Sur l'extrait de 12 mailles (2003-2004), `SSI` va de 64,8 à 3 225,4 J/cm2 et ne dépasse jamais le rayonnement extraterrestre du jour (FAO-56). |
+| `r.sun` (GRASS 8.4.2) | **vérifié** (`r.sun --help`) | `aspect_value` « 270 is south » ; `-p` retire les ombres ; `linke_value` 3,0 et `albedo_value` 0,2 par défaut ; `nprocs`. Latitude calculée par `r.sun` depuis la projection du projet (EPSG:2154) : rayonnement du plat de 6,3 MJ m⁻² environ à 48° N à la mi-janvier, plausible. Conversion d'exposition (450 − azimut) mod 360 **vérifiée par test** : sur un relief synthétique à 30°, k de janvier = 2,2 au versant sud, 0,24 au versant nord, environ 1 au plat ; juin : 0,99 et 0,80. |
+| Coût de `r.sun` | **mesuré** | 3 fils : 4,1 s par jour type avec ombres et 0,9 s pour le plat sur 360 000 cellules de 25 m (225 dalles), soit environ une minute pour 12 mois ; à 5 m (9 M cellules), plus de 10 min 47 s pour un seul jour (arrêté) : calcul à 25 m retenu. |
+| `biljouR::penman_pet()` (0.1.0) | **vérifié** (source affichée en R) | `rg` en MJ m⁻² j⁻¹ ; `safran_to_meteo(compute_pet = TRUE)` passe `rg` tel quel (aucune conversion d'unité) et ramène le vent à 2 m par `wind_to_2m(FF, 10)` ; `ratio = pmin(rg / rso, 1)` avec `rso = (0,75 + 2e-5 altitude) Ra` : au-delà de `rso`, les grandes ondes ne suivent plus `rg`. |
+| Écart table / calcul direct | **mesuré** | Run hors ligne (une dalle réduite, maille `9640_23610`, 2003-2004, 4 cellules de contrôle) : écart moyen 0,06, maximal 0,16 pour un Istress de 77,6 (0,08 %). Relief synthétique à 30° (6 084 cellules, 30 cellules de contrôle) : écart moyen 0,004, maximal 0,015 pour 24,1. Aucun seuil bloquant. |
 
 ---
 
@@ -841,6 +851,9 @@ carte modulée et les placettes ne sont donc pas sur la même échelle : l'écar
   **Non lus** : Piedallu et Gégout 2007 (§ 25.2), Piedallu et Gégout 2008, Piedallu et al.
   2011 (HAL refusé), Allen et al. 2006 (résumé seul), Šúri et Hofierka 2004 § 3.2, Nobre et al. 2011,
   document des paramètres SIM2 (unité de `SSI`).
+- Vérifié le 2026-11-18 (mission 021, exécuté en R) : § 25.8 (unité de `SSI` dans le document
+  de Météo-France, options de `r.sun` de GRASS 8.4.2, source de `penman_pet()`, coût de
+  `r.sun`, écart table / calcul direct).
 - **Pistes, à ne pas coder** : Baseflor (§ 14), EcoPlant (§ 14), contenu du zip TAXREF v18
   (§ 15), GlobalSoilMap France pH, texture et réserve utile 90 m (§ 18), fiches de la
   référence AgroParisTech voisines (§ 21).

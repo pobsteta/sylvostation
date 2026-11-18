@@ -562,6 +562,41 @@ test_that("evidence_table_real : libellés exacts des entrées absentes, jamais 
   expect_identical(en_ligne$etat[grepl("GBIF", en_ligne$etape)], "réel")
 })
 
+test_that("evidence_table_real : ligne 6 bis de la carte hydrique de 25 m (mission 021)", {
+  e <- evidence_table_real(list(offline = TRUE, ser_code = "D11"))
+  l <- e[grepl("6 bis", e$etape), ]
+  expect_equal(nrow(l), 1)
+  expect_identical(l$etat, "non exécuté")
+  expect_identical(l$dans_ce_run, "non")
+  f <- list(offline = TRUE, ser_code = "D11", methode_hydrique_carte = "biljou_topo",
+            k_methode = "r.sun", ru_origine = "9640_23610 : 68 mm, placettes de la maille",
+            n_controle = 4, ecart_moyen_abs = 0.06, ecart_max_abs = 0.16)
+  e <- evidence_table_real(f)
+  l <- e[grepl("6 bis", e$etape), ]
+  expect_identical(l$etat, "réel réduit")
+  for (motif in c("RU uniforme par maille SAFRAN, provisoire", "jamais modulée",
+                  "0.06", "0.16", "Placettes IFN : Istress sans k", "même échelle",
+                  "TWI, MRVBF et hauteur_reseau", "Istress seul", "ciel clair",
+                  "hors de l'emprise", "rg/rso", "aucune validation française")) {
+    expect_true(grepl(motif, l$detail, fixed = TRUE), info = motif)
+  }
+  expect_true(any(grepl("Composante régionale seulement", e$detail)))
+  expect_true(any(grepl("validation croisée", e$detail[grepl("^10", e$etape)])))
+  expect_true(all(e$etat[e$dans_ce_run == "oui"] == "réel réduit"))
+  f$methode_hydrique_carte <- "biljou_climatique"
+  expect_match(evidence_table_real(f)$detail[grepl("6 bis", e$etape)], "GRASS absent")
+})
+
+test_that("read_safran : garde T, FF, HU et SSI quand ils existent (mission 021)", {
+  s <- read_safran(ex("safran_sim2_12mailles_extrait.csv"))
+  expect_true(all(c("T", "FF", "HU", "SSI") %in% names(s)))
+  expect_true(is.numeric(s$SSI))
+  expect_equal(s$SSI[s$LAMBX == 9560 & s$LAMBY == 23530 & s$DATE == "20030101"], 136.3)
+  expect_equal(nrow(s), 8772)
+  s1 <- read_safran(ex("safran_sim2_extrait.csv"))
+  expect_false(any(c("FF", "HU", "SSI") %in% names(s1)))
+})
+
 test_that("write_types_gpkg_real : table jointe aux polygones, aucune couche sans CRS", {
   f <- tempfile(fileext = ".gpkg")
   p <- sf::st_sf(type_id = 1:2, type = c("T1", "T2"),

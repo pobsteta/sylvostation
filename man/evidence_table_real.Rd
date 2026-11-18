@@ -11,7 +11,10 @@ evidence_table_real(f)
 \code{greco}, \code{mrvbf} (couche calculée ?), \code{empty_layers}, \code{hydro_n}, \code{methode_hydrique}, \code{n_gbif}
 (\code{NA} hors ligne), \code{soils} (logique), \code{forest_mask} (logique), \code{n_cells},
 \code{n_types}, \code{key} (logique), \code{gnss} (logique), \code{reference} (logique),
-\code{taxref_version}, \code{safran_annees}.}
+\code{taxref_version}, \code{safran_annees}, et pour la carte hydrique de 25 m (mission 021)
+\code{methode_hydrique_carte}, \code{k_methode}, \code{ru_origine} (texte), \code{ecart_moyen_abs},
+\code{ecart_max_abs}, \code{n_controle}. Sans \code{methode_hydrique_carte}, la ligne « 6 bis » dit
+que la carte n'a pas été calculée.}
 }
 \value{
 Un \code{data.frame} : \code{etape}, \code{etat}, \code{dans_ce_run}, \code{detail}.

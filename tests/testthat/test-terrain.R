@@ -255,3 +255,69 @@ test_that("MRVBF GRASS : fond de vallee plat >> versant, grille identique (lent,
   expect_gt(m[sol][[1]], 1)
   expect_lt(m[vers][[1]], 0.1)
 })
+
+# ---- solar_factor (mission 021) -----------------------------------------------------
+
+test_that(".aspect_to_rsun : azimut depuis le nord (horaire) vers r.sun (270 = sud)", {
+  # nord, est, sud, ouest (convention de terra) -> 90, 0, 270, 180 (convention r.sun)
+  expect_equal(sylvostation:::.aspect_to_rsun(c(0, 90, 180, 270)), c(90, 0, 270, 180))
+  expect_equal(sylvostation:::.aspect_to_rsun(360), 90)
+  expect_equal(sylvostation:::.aspect_to_rsun(135), 315)   # sud-est
+  expect_true(is.na(sylvostation:::.aspect_to_rsun(NA_real_)))
+})
+
+test_that("solar_factor : sans GRASS, repli k = 1 signale (methode climatique)", {
+  d <- make_synth_dtm(nc = 6)
+  expect_warning(k <- solar_factor(d, grass = ""), "climatique",
+                 class = "sylvostation_non_calcule")
+  expect_identical(names(k), sprintf("k_%02d", 1:12))
+  expect_true(all(terra::values(k) == 1))
+  expect_identical(attr(k, "methode"), "climatique")
+  expect_match(attr(k, "repli"), "GRASS")
+  expect_match(attr(k, "parametres")$statut, "provisoire")
+  expect_error(solar_factor(d, days = 1:3, grass = ""), "12 jours")
+  expect_error(solar_factor(terra::project(d, "EPSG:4326"), grass = ""), "2154")
+  # un executable qui n'ecrit rien : echec detecte, repli sans erreur
+  faux <- Sys.which("true")
+  skip_if(!nzchar(faux))
+  expect_warning(k2 <- solar_factor(d, grass = faux), "r.sun", class = "sylvostation_non_calcule")
+  expect_identical(attr(k2, "methode"), "climatique")
+})
+
+test_that("solar_factor (GRASS r.sun) : en hiver, versant sud > plat > versant nord", {
+  skip_if(!nzchar(Sys.which("grass")), "GRASS absent")
+  skip_if(nzchar(Sys.getenv("SYLVOSTATION_SKIP_GRASS")), "SYLVOSTATION_SKIP_GRASS defini")
+  # crete est-ouest a y0 ; au sud, l'altitude croit vers le nord (versant expose au sud,
+  # 30 degres), au nord elle decroit (versant expose au nord) ; un plateau plat a l'est.
+  xmin <- 1010000
+  ymin <- 6795000
+  y0 <- ymin + 500
+  d <- make_synth_dtm(nc = 40, res = 25, xmin = xmin, ymin = ymin, fun = function(x, y) {
+    ifelse(x > xmin + 700, 800, 800 - tan(30 * pi / 180) * abs(y - y0))
+  })
+  k <- solar_factor(d, nprocs = 1)
+  expect_identical(attr(k, "methode"), "r.sun")
+  expect_identical(names(k), sprintf("k_%02d", 1:12))
+  # points connus, x = est, y = nord (Lambert-93) : centres de cellules de 25 m
+  sud <- c(xmin + 312.5, y0 - 237.5)
+  nord <- c(xmin + 312.5, y0 + 237.5)
+  plat <- c(xmin + 912.5, y0 + 12.5)
+  cel <- terra::cellFromXY(k, rbind(sud, nord, plat))
+  expect_equal(unname(terra::xyFromCell(k, cel[1])[1, ]), sud)
+  expect_equal(unname(terra::rowColFromCell(k, cel[1])[1, ]), c(30, 13))   # ligne 1 = nord
+  v <- unname(terra::values(k)[cel, ])
+  # janvier (k_01) : versant sud > plat (environ 1) > versant nord
+  expect_gt(v[1, 1], 1.5)
+  expect_equal(v[3, 1], 1, tolerance = 0.02)
+  expect_lt(v[2, 1], 0.6)
+  # en juin, le contraste est bien plus faible qu'en janvier
+  expect_lt(abs(v[1, 6] - v[2, 6]), abs(v[1, 1] - v[2, 1]))
+  # pourtour (pente inconnue) : NA
+  expect_true(all(is.na(terra::values(k)[terra::cellFromRowCol(k, 1, 1:40), 1])))
+})
+
+test_that("solar_factor : k est une variable fine, refusee aux placettes IFN", {
+  ifn <- mark_ifn(data.frame(x = 1015500, y = 6793500))
+  expect_error(assert_no_fine_extract_on_ifn(ifn, sprintf("k_%02d", 1:12)), "IFN")
+  expect_error(assert_no_fine_extract_on_ifn(ifn, "k_sv"), "IFN")
+})
