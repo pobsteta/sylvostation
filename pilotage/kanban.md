@@ -14,7 +14,6 @@
 
 ## Validé
 
-- [025-grille-20m](missions/025-grille-20m.md) · depuis le cycle 5 · dev
 
 
 
@@ -26,6 +25,8 @@
 - [023-page-pkgdown-vosges](missions/023-page-pkgdown-vosges.md) · après 018, 022 · depuis le cycle 5 · dev
 
 ## Terminé
+
+- [025-grille-20m](missions/025-grille-20m.md) · cycle 5 · dev
 
 - [026-robustesse-run-reel](missions/026-robustesse-run-reel.md) · cycle 5 · dev
 
