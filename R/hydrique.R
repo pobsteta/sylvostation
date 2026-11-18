@@ -336,30 +336,11 @@ ru_from_texture <- function(pl, ru_source = c("euptf2", "bruand2004"),
   .maille_proche_vec(x, y, mailles, dmax)   # vectorise (mission 028) : meme resultat
 }
 
-# Reference lente de `.maille_proche()` (une boucle sur les points), pour le test d'egalite.
-.maille_proche_ref <- function(x, y, mailles, dmax = 8000 * sqrt(2) / 2 + 1) {
-  vapply(seq_along(x), function(i) {
-    d <- sqrt((mailles$x - x[i])^2 + (mailles$y - y[i])^2)
-    j <- which.min(d)
-    if (!length(j) || d[j] > dmax) NA_character_ else mailles$maille[j]
-  }, character(1))
-}
-
-# Indices BILJOU moyens (sur les annees) pour une meteo et des reserves utiles.
-# Reference lente (mission 028) : une passe `biljouR::biljou_run()` par reserve utile.
-# Gardee pour verifier que `.biljou_ru()` (vectorise) rend les memes resultats.
-.biljou_ru_ref <- function(meteo, ru, param) {
-  t(vapply(ru, function(r) {
-    if (is.na(r) || r <= 0) return(c(is = NA_real_, nj = NA_real_, n = NA_real_))
-    soil <- biljouR::biljou_soil(ewm = r)
-    run <- biljouR::biljou_run(meteo, soil, lai_max = param$lai_max,
-                               forest_type = param$forest_type,
-                               budburst = param$budburst, leaf_fall = param$leaf_fall)
-    idx <- biljouR::biljou_indices(run)
-    c(is = mean(idx$Istress), nj = mean(idx$NJstress), n = nrow(idx))
-  }, numeric(3)))
-}
-
+# ATTENTION : cette fonction REECRIT les internes de biljouR 0.1.0 (boucle d'etat de
+# `biljou_run()`). Elle n'est valable que pour `biljou_soil(ewm = r)`, un sol a UNE couche
+# sans macroporosite. Garde-fou : les tests la comparent a `biljou_run()` (sautes si biljouR
+# est absent) et un test echoue si biljouR n'est plus en version 0.1.0 : il faut alors
+# reverifier la boucle contre la nouvelle version avant de changer ce test.
 # Coeur BILJOU vectorise (mission 028). Meme bilan que `biljouR::biljou_run()` pour un sol
 # a UNE couche (`biljou_soil(ewm = r)`, sans macroporosite), mais toutes les colonnes
 # (couples profil de PET x reserve utile) avancent ensemble, jour par jour, au lieu d'une
@@ -381,7 +362,7 @@ ru_from_texture <- function(pl, ru_source = c("euptf2", "bruand2004"),
   if (is.null(PET)) PET <- matrix(meteo$pet, ncol = 1L)
   if (is.null(prof_idx)) prof_idx <- rep(1L, np)
   if (anyNA(meteo$rain) || anyNA(PET) || any(!is.finite(ewm)) || any(ewm <= 0)) {
-    stop("BILJOU : pluie, ETP ou réserve utile manquante ou non positive.", call. = FALSE)
+    stop("BILJOU : pluie, ETP ou r\u00e9serve utile manquante ou non positive.", call. = FALSE)
   }
   ft <- match.arg(param$forest_type, c("broadleaved", "coniferous"))
   doy <- if ("doy" %in% names(meteo)) meteo$doy else as.integer(format(as.Date(meteo$date), "%j"))
@@ -839,8 +820,6 @@ ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm") 
 #' @param n_controle Cellules de contrôle par maille (calcul direct).
 #' @param seed Graine du tirage des cellules de contrôle.
 #' @param k_methode Méthode de `k` (`attr(k, "methode")` par défaut).
-#' @param ncores Nombre de coeurs (une maille SAFRAN par processus, `parallel::mclapply()`,
-#'   Unix seulement) ; 1 par défaut. Le résultat ne dépend pas de ce nombre.
 #' @return Grille : `SpatRaster` `is_topo`, `nj_topo`, `is_plat`, `k_sv`, `ru_maille`,
 #'   `grad_hydrique_carte` (= `-is_topo`, plus haut = plus humide). Points : `points` avec ces
 #'   colonnes et `maille_safran`. Attributs `methode`, `k_methode`, `ecart`, `mailles`,
@@ -861,8 +840,7 @@ ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm") 
 hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = NULL,
                                annees = NULL, lai_max = 6, forest_type = "broadleaved",
                                budburst = 110, leaf_fall = 300, pas_k = 0.02, pas_ru = 10,
-                               n_controle = 30, seed = 1, k_methode = attr(k, "methode"),
-                               ncores = 1L) {
+                               n_controle = 30, seed = 1, k_methode = attr(k, "methode")) {
   if (!inherits(k, "SpatRaster") || terra::nlyr(k) != 12L) {
     stop("`k` doit \u00eatre un SpatRaster \u00e0 12 couches (solar_factor()).", call. = FALSE)
   }
@@ -1108,15 +1086,12 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
                          n_noeuds_k = length(knodes), n_noeuds_ru = length(U))
     o
   }
-  ncores <- max(1L, as.integer(ncores))
-  sorties <- if (ncores > 1L && length(mm) > 1L && .Platform$OS.type == "unix") {
-    parallel::mclapply(mm, calcul_maille, mc.cores = min(ncores, length(mm)), mc.preschedule = FALSE)
-  } else lapply(mm, calcul_maille)
+  sorties <- lapply(mm, calcul_maille)
   names(sorties) <- mm
   for (m in mm) {
     o <- sorties[[m]]
     if (inherits(o, "try-error") || is.null(o)) {
-      stop("Carte hydrique : échec du calcul de la maille ", m, ".", call. = FALSE)
+      stop("Carte hydrique : \u00e9chec du calcul de la maille ", m, ".", call. = FALSE)
     }
     res[o$i, "k_sv"] <- o$k_sv
     res[o$i, "is_plat"] <- o$is_plat

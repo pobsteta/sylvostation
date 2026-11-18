@@ -7,7 +7,7 @@
 changer les résultats, pour que le run des 225 dalles (≈ 56 fois plus de cellules) ne
 dure pas des heures de plus.
 
-**Redite par l'agent :** _à compléter par l'agent._
+**Redite par l'agent :** Réduire le temps de la carte hydrique et des gradients IFN en refaisant la boucle BILJOU en vecteurs, sans changer un résultat, pour que le run des 225 dalles ne coûte pas des heures de plus ; chiffres dans `docs/pipeline.md`.
 
 ## Les trois questions
 

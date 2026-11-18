@@ -522,7 +522,7 @@ test_that(".biljou_ru : memes indices que biljou_run (feuillus et resineux, RU n
   ru <- c(5, 20, 50.5, 100, 180, 400, NA, 0, -3)
   for (p in list(list(lai_max = 6, forest_type = "broadleaved", budburst = 110, leaf_fall = 300),
                  list(lai_max = 5, forest_type = "coniferous", budburst = NULL, leaf_fall = NULL))) {
-    ref <- sylvostation:::.biljou_ru_ref(met, ru, p)
+    ref <- .biljou_ru_ref(met, ru, p)
     nv <- sylvostation:::.biljou_ru(met, ru, p)
     expect_identical(dim(nv), dim(ref))
     expect_identical(colnames(nv), colnames(ref))
@@ -539,6 +539,12 @@ test_that(".biljou_ru : memes indices que biljou_run (feuillus et resineux, RU n
   expect_error(sylvostation:::.biljou_cols(met, NULL, NULL, c(60, NA), p), "BILJOU")
 })
 
+test_that(".biljou_cols : r\u00e9\u00e9criture valable pour biljouR 0.1.0 seulement", {
+  skip_if_not_installed("biljouR")
+  expect_identical(as.character(utils::packageVersion("biljouR")), "0.1.0",
+                   info = "biljouR a change : reverifier .biljou_cols() contre biljou_run() avant de mettre ce test a jour")
+})
+
 test_that(".biljou_cols : une colonne par couple (profil d'ETP, RU), comme une passe par couple", {
   skip_if_not_installed("biljouR")
   s <- safran12()
@@ -550,8 +556,8 @@ test_that(".biljou_cols : une colonne par couple (profil d'ETP, RU), comme une p
   expect_false(isTRUE(all.equal(m1$pet, m2$pet)))
   PET <- cbind(m1$pet, m2$pet)
   r <- sylvostation:::.biljou_cols(m1, PET, c(1L, 2L, 2L, 1L), c(60, 60, 120, 120), p)
-  att <- rbind(sylvostation:::.biljou_ru_ref(m1, 60, p), sylvostation:::.biljou_ru_ref(m2, 60, p),
-               sylvostation:::.biljou_ru_ref(m2, 120, p), sylvostation:::.biljou_ru_ref(m1, 120, p))
+  att <- rbind(.biljou_ru_ref(m1, 60, p), .biljou_ru_ref(m2, 60, p),
+               .biljou_ru_ref(m2, 120, p), .biljou_ru_ref(m1, 120, p))
   expect_equal(r, att, tolerance = 1e-12)
 })
 
@@ -562,13 +568,13 @@ test_that(".maille_proche : memes mailles que la boucle de reference, hors grill
   x <- c(runif(200, min(m$x) - 12000, max(m$x) + 12000), m$x)   # x = est (Lambert-93)
   y <- c(runif(200, min(m$y) - 12000, max(m$y) + 12000), m$y)   # y = nord
   v <- sylvostation:::.maille_proche(x, y, m)
-  expect_identical(v, sylvostation:::.maille_proche_ref(x, y, m))
+  expect_identical(v, .maille_proche_ref(x, y, m))
   expect_true(anyNA(v[1:200]))                                   # des points hors grille
   expect_identical(tail(v, 12), m$maille)                        # un centre tombe dans sa maille
   expect_identical(sylvostation:::.maille_proche(numeric(0), numeric(0), m), character(0))
 })
 
-test_that("hydric_stress_grid : points directs = biljou_run ; nombre de coeurs sans effet", {
+test_that("hydric_stress_grid : points directs = biljou_run", {
   skip_if_not_installed("biljouR")
   s <- safran12()
   m <- sylvostation:::.mailles_safran(s)
@@ -582,11 +588,7 @@ test_that("hydric_stress_grid : points directs = biljou_run ; nombre de coeurs s
   terra::values(k) <- vapply(1:12, function(j) base * (1 + 0.1 * cos(j)), numeric(terra::ncell(k)))
   names(k) <- sprintf("k_%02d", 1:12)
   ru <- data.frame(maille = c(a$maille, b$maille), ru_mm = c(70, 130))
-  h1 <- hydric_stress_grid(k, ru, s, n_controle = 3, ncores = 1)
-  h2 <- hydric_stress_grid(k, ru, s, n_controle = 3, ncores = 2)
-  expect_identical(terra::values(h1), terra::values(h2))
-  expect_identical(attr(h1, "ecart"), attr(h2, "ecart"))
-  expect_identical(attr(h1, "mailles"), attr(h2, "mailles"))
+  h1 <- hydric_stress_grid(k, ru, s, n_controle = 3)
   expect_identical(sort(attr(h1, "ecart")$maille), sort(c(a$maille, b$maille)))
   # points precis : l'indice direct est celui de biljou_run (reference lente), a 1e-12 pres
   xy <- rbind(c(a$x + 300, a$y - 200), c(b$x - 900, b$y + 400))
@@ -602,11 +604,11 @@ test_that("hydric_stress_grid : points directs = biljou_run ; nombre de coeurs s
     lat <- sf::st_coordinates(sf::st_transform(
       sf::st_as_sf(mm, coords = c("x", "y"), crs = 2154), 4326))[, 2]
     p <- list(lai_max = 6, forest_type = "broadleaved", budburst = 110, leaf_fall = 300)
-    ref <- sylvostation:::.biljou_ru_ref(sylvostation:::.meteo_topo(sm, as.numeric(Kp[i, ]), lat, 0),
+    ref <- .biljou_ru_ref(sylvostation:::.meteo_topo(sm, as.numeric(Kp[i, ]), lat, 0),
                                          ru$ru_mm[i], p)
     expect_equal(pr$is_topo[i], unname(ref[1, "is"]), tolerance = 1e-12)
     expect_equal(pr$nj_topo[i], unname(ref[1, "nj"]), tolerance = 1e-12)
-    ref1 <- sylvostation:::.biljou_ru_ref(sylvostation:::.meteo_topo(sm, rep(1, 12), lat, 0),
+    ref1 <- .biljou_ru_ref(sylvostation:::.meteo_topo(sm, rep(1, 12), lat, 0),
                                           ru$ru_mm[i], p)
     expect_equal(pr$is_plat[i], unname(ref1[1, "is"]), tolerance = 1e-12)
   }

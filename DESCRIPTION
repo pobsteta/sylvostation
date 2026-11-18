@@ -17,7 +17,6 @@ RoxygenNote: 7.3.1
 SystemRequirements: GRASS GIS (>= 8) avec l'extension r.valley.bottom
     (g.extension extension=r.valley.bottom), pour le MRVBF ; facultatif
 Imports:
-    parallel,
     sf,
     stats,
     terra,
