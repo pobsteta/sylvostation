@@ -88,19 +88,21 @@ test_that("clean_occ reprojette en 2154, exclut l'IFN et trie la precision", {
   expect_equal(unname(n["entree"]), 21L)
   expect_equal(unname(n["coordonnees_presentes"]), 20L)
   expect_equal(unname(n["hors_jeux_exclus"]), 18L)   # 2 releves IFN ecartes
-  expect_equal(unname(n["precision_retenue"]), 15L)  # > 25 m, NA, generalise ecartes
-  expect_equal(nrow(p), 15L)
+  expect_equal(unname(n["hors_licence_nc"]), 17L)    # 1 CC BY-NC ecarte (mission 037)
+  expect_equal(unname(n["precision_retenue"]), 14L)  # > 25 m, NA, generalise ecartes
+  expect_equal(nrow(p), 14L)
   expect_false(any(p$dataset_key %in% IFN_GBIF_DATASET_KEYS))
   expect_true(all(p$loc_precision_m <= 25 & !is.na(p$loc_precision_m)))
   expect_true("license" %in% names(p))
-  expect_true("CC_BY_NC_4_0" %in% p$license)  # licence conservee
+  expect_false("CC_BY_NC_4_0" %in% p$license)  # licence non commerciale ecartee
+  expect_true(all(p$license == "CC_BY_4_0"))
   # un point connu : G (S001) = (1010011, 6795011) en Lambert-93 a moins de 0,5 m
   xy <- sf::st_coordinates(p[p$gbif_id == "S001", ])
   expect_lt(max(abs(unname(xy[1, ]) - c(1010011, 6795011))), 0.1)  # x = est, y = nord
 })
 
 test_that("clean_occ : points a precision inconnue gardes sur demande, puis refuses en extraction fine", {
-  p <- clean_occ(synth_occ(), keep_unknown = TRUE)
+  p <- clean_occ(synth_occ(), keep_unknown = TRUE, exclude_noncommercial = FALSE)
   expect_equal(nrow(p), 17L)  # 15 + incertitude absente + generalise
   expect_equal(sum(is.na(p$loc_precision_m)), 2L)
   expect_error(assert_no_fine_extract_on_ifn(p, "pente"), "précision")
@@ -108,7 +110,7 @@ test_that("clean_occ : points a precision inconnue gardes sur demande, puis refu
 })
 
 test_that("clean_occ : IFN gardee = marquee 700 m et refusee par le filtre de precision", {
-  p <- clean_occ(synth_occ(), exclude_datasets = character(0))
+  p <- clean_occ(synth_occ(), exclude_datasets = character(0), exclude_noncommercial = FALSE)
   expect_equal(nrow(p), 15L)  # IFN a 700 m > 25 m : ecartee quand meme
   p2 <- clean_occ(synth_occ(), exclude_datasets = character(0), max_uncertainty = 1000)
   ifn <- p2[p2$source == "ifn", ]
@@ -124,7 +126,7 @@ test_that("clean_occ : filtre foret BD Foret (code_tfv)", {
                                  x0, 6795050, x0, 6795000), ncol = 2, byrow = TRUE))),
     crs = 2154))
   forest <- rbind(mk(1010000, "FF2G61-61"), mk(1010050, "FF0"), mk(1010100, "LA4"))
-  p <- clean_occ(synth_occ(), forest = forest)
+  p <- clean_occ(synth_occ(), forest = forest, exclude_noncommercial = FALSE)
   expect_equal(nrow(p), 7L)  # maille A seulement
   expect_equal(tail(attr(p, "clean_log")$etape, 1), "en_foret_bdforet")
   expect_true(all(sf::st_coordinates(p)[, 1] < 1010050))
@@ -154,7 +156,7 @@ test_that("clean_occ valide ses entrees", {
 })
 
 test_that("grid_bioindication : points connus dans la bonne maille de 50 m", {
-  p <- clean_occ(synth_occ())
+  p <- clean_occ(synth_occ(), exclude_noncommercial = FALSE)
   g <- grid_bioindication(p, synth_ind(), cell = 50, min_species = 5)
   expect_s3_class(g, "sf")
   expect_equal(sf::st_crs(g), sf::st_crs(2154))
@@ -190,7 +192,7 @@ test_that("grid_bioindication : seules les especes indicatrices comptent", {
 })
 
 test_that("grid_bioindication refuse les precisions absentes ou trop grossieres", {
-  p <- clean_occ(synth_occ(), keep_unknown = TRUE)
+  p <- clean_occ(synth_occ(), keep_unknown = TRUE, exclude_noncommercial = FALSE)
   expect_error(grid_bioindication(p, synth_ind()), "précision|Précision")
   p0 <- clean_occ(synth_occ())
   p0$loc_precision_m <- NULL
@@ -245,7 +247,7 @@ test_that("clean_occ accepte la colonne `key` de occ_search a la place de gbifID
   o <- synth_occ()
   names(o)[names(o) == "gbifID"] <- "key"
   p <- clean_occ(o)
-  expect_equal(nrow(p), 15L)
+  expect_equal(nrow(p), 14L)  # S007 (CC BY-NC) ecarte
   expect_true("S001" %in% p$gbif_id)
 })
 
@@ -258,7 +260,7 @@ test_that("la licence GBIF est normalisee en code de type", {
   expect_equal(l, c("CC_BY_NC_4_0", "CC_BY_4_0", "CC0_1_0", "CC_BY_4_0", NA))
   o <- synth_occ()
   o$license[1:2] <- c("http://creativecommons.org/licenses/by-nc/4.0/legalcode", "x")
-  p <- clean_occ(o)
+  p <- clean_occ(o, exclude_noncommercial = FALSE)
   expect_equal(p$license[p$gbif_id == "S001"], "CC_BY_NC_4_0")
 })
 
@@ -324,4 +326,40 @@ test_that("grid_bioindication : cd_ref prime sur le nom, repli par nom marque", 
   g3 <- grid_bioindication(p3, ind, min_species = 5)
   expect_equal(nrow(g3), 0L)
   expect_equal(nrow(attr(g3, "especes_non_appariees")), 7L)
+})
+
+test_that("clean_occ : licences NC, Pl@ntNet et licences inconnues ecartees, motifs comptes", {
+  o <- synth_occ()[1:9, ]
+  o$license <- c("http://creativecommons.org/licenses/by/4.0/legalcode",  # 1 CC BY, URL : gardee
+                 "CC_BY_NC_4_0", "CC_BY_NC_SA_4_0",                       # 2-3 NC : ecartees
+                 "http://creativecommons.org/publicdomain/zero/1.0/legalcode",  # 4 CC0 : gardee
+                 "CC_BY_4_0",                                             # 5 Pl@ntNet : ecartee
+                 NA,                                                      # 6 vide : inconnue
+                 "UNSPECIFIED",                                           # 7 inconnue
+                 "CC BY-NC 4.0",                                          # 8 NC en toutes lettres
+                 "UNSUPPORTED")                                           # 9 inconnue
+  o$datasetKey <- "synth-dataset-1"
+  o$datasetKey[5] <- PLANTNET_GBIF_DATASET_KEYS[2]
+  o$synthetic <- TRUE
+  expect_message(p <- clean_occ(o), "3 occurrence\\(s\\) ecartee\\(s\\) pour licence non")
+  expect_setequal(p$gbif_id, c("S001", "S004"))
+  e <- attr(p, "ecartees")
+  expect_equal(stats::setNames(e$n, e$motif),
+               c(licence_non_commerciale = 3L, plantnet = 1L, licence_inconnue = 3L))
+  n <- attr(p, "clean_log")
+  n <- stats::setNames(n$n, n$etape)
+  expect_equal(unname(n[c("hors_jeux_exclus", "hors_licence_nc", "hors_plantnet",
+                          "hors_licence_inconnue")]), c(9L, 6L, 5L, 2L))
+  # chaque occurrence n'est comptee que par le premier motif : une NC dans Pl@ntNet = licence
+  o2 <- o; o2$datasetKey[2] <- PLANTNET_GBIF_DATASET_KEYS[1]
+  e2 <- attr(suppressMessages(clean_occ(o2)), "ecartees")
+  expect_equal(e2$n, c(3L, 1L, 3L))
+  # options : garder les inconnues, puis tout garder
+  p2 <- suppressMessages(clean_occ(o, exclude_unknown_licence = FALSE))
+  expect_setequal(p2$gbif_id, c("S001", "S004", "S006", "S007", "S009"))
+  p3 <- suppressMessages(clean_occ(o, exclude_noncommercial = FALSE, exclude_plantnet = character(0),
+                                   exclude_unknown_licence = FALSE))
+  expect_equal(nrow(p3), 9L)
+  # l'ecriture en toutes lettres est normalisee comme les autres formes
+  expect_equal(p3$license[p3$gbif_id == "S008"], "CC_BY_NC_4_0")
 })

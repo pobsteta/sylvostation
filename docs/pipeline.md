@@ -75,7 +75,7 @@ hydrique ».
 | `solar_k` | `solar_factor()` : k mensuel de GRASS `r.sun` (ciel clair) sur l'altitude de la grille ; repli k = 1 sans GRASS | | |
 | `ru_mailles` | `ru_by_safran_cell()` : RU uniforme par maille SAFRAN (médiane euptf2 des placettes IFN ; médiane de l'emprise sous `ru_min_placettes` = 5 placettes, provisoire) | | |
 | `hydric_grid` | `hydric_stress_grid()` : Istress à `resolution_m` (BILJOU, ETP Penman biljouR sur SSI × k), plat de référence, écart table / calcul direct ; météo interpolée sur un réseau de `hydric_node_res_m` = 1 000 m (mission 033) | | |
-| `anchors`, `local_trophic` | `get_gbif()`, `clean_occ()`, `grid_bioindication()`, `gbif_anchors()` | `occ_search` ou `occ_download` | **absent** |
+| `anchors`, `local_trophic` | `get_gbif()`, `clean_occ()` (écarte les licences CC BY-NC, les jeux Pl@ntNet et les licences inconnues, effectifs par motif dans l'attribut `ecartees`, mission 037), `grid_bioindication()`, `gbif_anchors()` | `occ_search` ou `occ_download` | **absent** |
 | `models`, `cvs`, `maps` | `fit_gradient()`, `spatial_cv()`, `predict_raster()` (trophique, hydrique) ; bioclimat = `apply_bioclim()` ; couche `hydric` de `gradient_map` = `-is_topo` de `hydric_grid` (le modèle régional hydrique ne sert qu'à la validation croisée) ; `incertitude.tif` : trophique seul | | régional seul |
 | typologie | `default_thresholds()`, `discretise()`, `merge_rare(plots = types des placettes)`, `type_raster()`, `real_type_legend()` (`azonal = FALSE`) | | |
 | fiches, clé | `indicator_species()`, `real_fertility()`, `build_key()` sur `obs_pente`, `obs_topo`, `obs_humus` (notés par l'IFN) | | |

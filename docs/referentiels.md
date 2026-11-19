@@ -1474,6 +1474,21 @@ nécessaire : lire `Location_uncertainty`, `Country` et les coordonnées dans l'
    un DOI par jeu CardObs) ; **ne pas recopier `recordedBy`** (noms d'observateurs dans CardObs,
    données personnelles). Dietz : Etalab 2.0, compatible, DOI 10.15454/AZNS3A.
 
+### 33.5 bis Mise en œuvre dans `clean_occ()` (mission 037, 2026-11-19)
+
+`clean_occ()` écarte par défaut, dans cet ordre (chaque occurrence n'est comptée que par le premier motif
+qui l'écarte) : (1) les licences non commerciales (code normalisé `CC_BY_NC*`, y compris « CC BY-NC 4.0 »
+écrit en toutes lettres) ; (2) les jeux Pl@ntNet `14d5676a-2c54-4f94-9023-1e8dcd822aa0` (« automatically
+identified ») et `7a3679ef-5582-4aaa-81f0-8c2545cafc81` (« observations »), clés lues au § 8 ;
+(3) les licences absentes, `UNSPECIFIED`, `UNSUPPORTED` ou hors famille CC BY et CC0 (la fiche 037 veut du CC
+BY seulement ; paramètre `exclude_unknown_licence`).
+
+**Écart avec le § 33.5 :** le § 33.5 n'écarte que le jeu Pl@ntNet identifié par algorithme (`14d5676a-…`) et
+classe le jeu d'observations `7a3679ef-…` comme « non retenu comme relevé ». L'exclusion de `7a3679ef-…`
+vient de la **fiche 037** et va au-delà du § 33.5 ; les deux jeux restent écartés.
+`PLANTNET_GBIF_DATASET_KEYS` est une liste **non exhaustive hors emprise (à vérifier)**. Les effectifs par
+motif sont rendus (message et attribut `ecartees`).
+
 ### 33.6 Écarts relevés entre sources (§ 33)
 
 1. IFN : 41,7 % des occurrences à ≤ 25 m ici (rectangle, toutes années) contre 40,5 % au § 8
