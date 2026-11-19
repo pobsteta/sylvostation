@@ -293,10 +293,11 @@ homogeneous_cells <- function(layers, forest, sd_ratio = .SD_RATIO_PROVISOIRE) {
 #' @examples
 #' r <- terra::rast(nrows = 10, ncols = 10, xmin = 1010000, xmax = 1010200,
 #'                  ymin = 6795000, ymax = 6795200, crs = "EPSG:2154", vals = 1:100)
-#' names(r) <- "altitude"
+#' r <- c(r, r * 0.5)  # au moins deux couches sont nécessaires
+#' names(r) <- c("altitude", "pente")
 #' l <- sf::st_sf(geometry = sf::st_sfc(sf::st_linestring(
 #'   rbind(c(1010000, 6795010), c(1010200, 6795010))), crs = 2154))
-#' table(sampling_frame(r, r * 0 + 1, l)$candidat)
+#' table(sampling_frame(r, r[[1]] * 0 + 1, l)$candidat)
 #' @export
 sampling_frame <- function(layers, forest, access, cost_max_m = 300,
                            sd_ratio = .SD_RATIO_PROVISOIRE) {
