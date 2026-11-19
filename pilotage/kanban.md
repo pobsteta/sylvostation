@@ -19,7 +19,6 @@
 - [032-cache-lidar](missions/032-cache-lidar.md) · depuis le cycle 5 · dev
 
 - [023-page-pkgdown-vosges](missions/023-page-pkgdown-vosges.md) · depuis le cycle 5 · dev
-- [031-comparaison-carhab](missions/031-comparaison-carhab.md) · depuis le cycle 5 · dev
 
 
 
@@ -35,6 +34,8 @@
 
 
 ## Terminé
+
+- [031-comparaison-carhab](missions/031-comparaison-carhab.md) · cycle 5 · dev · aucune concordance avec CarHab 68
 
 - [029-plan-echantillonnage-gnss](missions/029-plan-echantillonnage-gnss.md) · cycle 5 · dev · plan GNSS prêt, tirage réel après relecture de Pascal
 
