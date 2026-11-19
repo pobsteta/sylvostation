@@ -374,16 +374,23 @@ tile_blocks <- function(tiles, size = 3) {
   unname(split(d, d$block))
 }
 
-#' Traiter un bloc de dalles LiDAR (reprise après interruption)
+#' Traiter un bloc de dalles LiDAR (cache par dalle, reprise après interruption)
 #'
-#' Appelle `runner` ([run_lasr()] par défaut) sur les dalles du bloc dont les rasters
-#' `mnt_<dalle>.tif` et `mhc_<dalle>.tif` n'existent pas encore dans `out_dir` : une
-#' dalle déjà calculée n'est ni retéléchargée ni recalculée. Les LAZ téléchargés sont
-#' effacés après le bloc (`keep_laz = FALSE`).
+#' Appelle `runner` ([run_lasr()] par défaut) sur les dalles du bloc qui ne sont pas
+#' déjà calculées. Une dalle est **réutilisée** (ni retéléchargée ni recalculée) seulement
+#' si ses deux sorties `mnt_<dalle>.tif` et `mhc_<dalle>.tif` existent, se lisent avec
+#' `terra`, sont en EPSG:2154 et ont la résolution `res` demandée, et si les paramètres
+#' consignés à leur calcul (fichier `params_<dalle>.txt`) sont ceux demandés (`res`,
+#' `buffer`, `engine`). Une dalle sans fichier de paramètres (calculée avant la mission
+#' 032) est acceptée sur les seuls contrôles du raster. Sinon elle est recalculée.
+#' `force = TRUE` recalcule toutes les dalles du bloc. Les LAZ téléchargés sont effacés
+#' après le bloc (`keep_laz = FALSE`). Le nombre de coeurs (`ncores`) ne change pas le
+#' résultat et n'est pas consigné.
 #'
 #' @param block Un élément de [tile_blocks()].
 #' @param out_dir Dossier des rasters LiDAR (hors dépôt).
 #' @param res,buffer,ncores,engine Transmis à `runner`.
+#' @param force Si `TRUE`, recalcule toutes les dalles du bloc (défaut `FALSE`).
 #' @param runner Fonction de traitement (signature de [run_lasr()]).
 #' @return Les chemins des rasters du bloc (`mnt_*` puis `mhc_*`), pour une cible
 #'   `format = "file"`.
@@ -394,17 +401,28 @@ tile_blocks <- function(tiles, size = 3) {
 #' }
 #' @export
 run_tile_block <- function(block, out_dir, res = 1, buffer = 20, ncores = 3,
-                           engine = "auto", runner = run_lasr) {
+                           engine = "auto", force = FALSE, runner = run_lasr) {
   if (!is.data.frame(block) || !all(c("tile_id", "url") %in% names(block))) {
     stop("`block` doit venir de tile_blocks().", call. = FALSE)
+  }
+  if (!is.logical(force) || length(force) != 1L || is.na(force)) {
+    stop("`force` doit être TRUE ou FALSE.", call. = FALSE)
   }
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   mnt <- file.path(out_dir, paste0("mnt_", block$tile_id, ".tif"))
   mhc <- file.path(out_dir, paste0("mhc_", block$tile_id, ".tif"))
-  a_faire <- !(file.exists(mnt) & file.exists(mhc))
+  par <- file.path(out_dir, paste0("params_", block$tile_id, ".txt"))
+  params <- .tile_params(res, buffer, engine)
+  a_faire <- if (force) rep(TRUE, nrow(block)) else
+    !vapply(seq_len(nrow(block)), function(i) {
+      .tile_cached(mnt[i], mhc[i], par[i], res, params)
+    }, logical(1))
   if (any(a_faire)) {
     runner(block$url[a_faire], out_dir, res = res, ncores = ncores, buffer = buffer,
            keep_laz = FALSE, engine = engine)
+    for (i in which(a_faire)) {
+      if (file.exists(mnt[i]) && file.exists(mhc[i])) writeLines(params, par[i])
+    }
   }
   manque <- c(mnt, mhc)[!file.exists(c(mnt, mhc))]
   if (length(manque)) {
@@ -412,6 +430,25 @@ run_tile_block <- function(block, out_dir, res = 1, buffer = 20, ncores = 3,
          call. = FALSE)
   }
   c(mnt, mhc)
+}
+
+# Parametres qui changent le calcul d'une dalle, en une ligne de texte stable.
+.tile_params <- function(res, buffer, engine) {
+  sprintf("res=%s;buffer=%s;engine=%s", format(res), format(buffer), engine)
+}
+
+# Une dalle est-elle reutilisable ? (existence, lecture terra, EPSG:2154, resolution,
+# parametres consignes). Toute anomalie rend FALSE : la dalle est recalculee.
+.tile_cached <- function(mnt, mhc, par, res, params) {
+  if (!(file.exists(mnt) && file.exists(mhc))) return(FALSE)
+  if (file.exists(par) && !identical(readLines(par, warn = FALSE), params)) return(FALSE)
+  all(vapply(c(mnt, mhc), function(f) {
+    tryCatch({
+      r <- terra::rast(f)
+      identical(terra::crs(r, describe = TRUE)$code, "2154") &&
+        isTRUE(all.equal(unname(terra::res(r)), c(res, res)))
+    }, error = function(e) FALSE)
+  }, logical(1)))
 }
 
 #' Mosaïque des rasters LiDAR, agrégée

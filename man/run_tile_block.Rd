@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline_reel.R
 \name{run_tile_block}
 \alias{run_tile_block}
-\title{Traiter un bloc de dalles LiDAR (reprise après interruption)}
+\title{Traiter un bloc de dalles LiDAR (cache par dalle, reprise après interruption)}
 \usage{
 run_tile_block(
   block,
@@ -11,6 +11,7 @@ run_tile_block(
   buffer = 20,
   ncores = 3,
   engine = "auto",
+  force = FALSE,
   runner = run_lasr
 )
 }
@@ -21,6 +22,8 @@ run_tile_block(
 
 \item{res, buffer, ncores, engine}{Transmis à \code{runner}.}
 
+\item{force}{Si \code{TRUE}, recalcule toutes les dalles du bloc (défaut \code{FALSE}).}
+
 \item{runner}{Fonction de traitement (signature de \code{\link[=run_lasr]{run_lasr()}}).}
 }
 \value{
@@ -28,10 +31,16 @@ Les chemins des rasters du bloc (\verb{mnt_*} puis \verb{mhc_*}), pour une cible
 \code{format = "file"}.
 }
 \description{
-Appelle \code{runner} (\code{\link[=run_lasr]{run_lasr()}} par défaut) sur les dalles du bloc dont les rasters
-\verb{mnt_<dalle>.tif} et \verb{mhc_<dalle>.tif} n'existent pas encore dans \code{out_dir} : une
-dalle déjà calculée n'est ni retéléchargée ni recalculée. Les LAZ téléchargés sont
-effacés après le bloc (\code{keep_laz = FALSE}).
+Appelle \code{runner} (\code{\link[=run_lasr]{run_lasr()}} par défaut) sur les dalles du bloc qui ne sont pas
+déjà calculées. Une dalle est \strong{réutilisée} (ni retéléchargée ni recalculée) seulement
+si ses deux sorties \verb{mnt_<dalle>.tif} et \verb{mhc_<dalle>.tif} existent, se lisent avec
+\code{terra}, sont en EPSG:2154 et ont la résolution \code{res} demandée, et si les paramètres
+consignés à leur calcul (fichier \verb{params_<dalle>.txt}) sont ceux demandés (\code{res},
+\code{buffer}, \code{engine}). Une dalle sans fichier de paramètres (calculée avant la mission
+032) est acceptée sur les seuls contrôles du raster. Sinon elle est recalculée.
+\code{force = TRUE} recalcule toutes les dalles du bloc. Les LAZ téléchargés sont effacés
+après le bloc (\code{keep_laz = FALSE}). Le nombre de coeurs (\code{ncores}) ne change pas le
+résultat et n'est pas consigné.
 }
 \examples{
 f <- system.file("extdata", "LHD_FXX_1015_6794_extrait.laz", package = "sylvostation")

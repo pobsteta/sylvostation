@@ -182,8 +182,25 @@ topographie module l'**ETP** par le rayonnement reçu par la pente, jamais la r�
 
 Les dalles sont groupées en blocs contigus de `lidar_block_size` x `lidar_block_size`
 (3 x 3, 225 dalles = 25 blocs). Une branche `targets` par bloc : une branche terminée
-n'est pas relancée ; dans un bloc interrompu, `run_tile_block()` saute les dalles dont
-`mnt_<dalle>.tif` et `mhc_<dalle>.tif` existent. Les LAZ sont effacés après chaque bloc.
+n'est pas relancée. Les LAZ sont effacés après chaque bloc.
+
+**Cache par dalle (mission 032).** `run_tile_block()` réutilise une dalle seulement si
+`mnt_<dalle>.tif` et `mhc_<dalle>.tif` existent, se lisent avec `terra`, sont en EPSG:2154 à la
+maille demandée (1 m) et si le fichier `params_<dalle>.txt` (écrit à leur calcul : maille,
+tampon, moteur) correspond aux paramètres demandés ; sinon la dalle est recalculée. Une dalle
+sans `params_*.txt` (calculée avant la mission 032) est acceptée sur les contrôles du raster.
+Le nombre de coeurs (`lidar_ncores`) ne change pas le résultat et n'est pas consigné.
+Recalcul forcé de toutes les dalles : `SYLVOSTATION_LIDAR_FORCE=1` dans l'environnement, puis
+`targets::tar_invalidate(lidar_files)` et `tar_make()` ; ou `run_tile_block(force = TRUE)`.
+
+**Dépendances de `_targets.R` à `config.yml`.** `targets` suit chaque objet global lu par une
+cible : lire `cfg` en entier rendait toutes les cibles périmées à l'ajout d'une clé (écart du
+2026-11-19, 10 à 16 h de LiDAR). Les cibles `ser`, `emprise`, `tiles`, `tile_blocks` et
+`lidar_files` ne lisent donc que des scalaires extraits au début du mode réel (`p_ser_code`,
+`p_ser_buffer_m`, `p_max_tiles`, `p_block_size`, `p_lidar_buffer_m`, `p_lidar_ncores`,
+`p_lidar_res_m`, `p_lidar_engine`, `cfg_emprise`, `src_ser`, `src_laz`) : seul le changement
+d'une de ces valeurs les périme (test dans `tests/testthat/test-pipeline-reel.R`). Toute
+nouvelle cible d'emprise ou de LiDAR suit la même règle : jamais `cfg` ni `src` en entier.
 Le tampon de 20 m ne lit que les dalles du bloc : effets de bord entre blocs acceptés,
 mesurés en mission 018. `error = "stop"` : jamais de mosaïque partielle silencieuse
 (`mosaic_tiles()` vérifie que toutes les dalles attendues sont présentes).

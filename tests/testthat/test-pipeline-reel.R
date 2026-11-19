@@ -276,29 +276,82 @@ test_that("tile_blocks : blocs contigus de 3 x 3 dalles (225 dalles -> 25 blocs)
   expect_error(tile_blocks(fausses_dalles(2), 0), "size")
 })
 
-test_that("run_tile_block : reprise, une dalle déjà calculée n'est pas refaite", {
-  d <- tempfile("lidar")
-  appels <- list()
-  faux_runner <- function(laz_files, out_dir, ...) {
-    appels[[length(appels) + 1L]] <<- laz_files
+# faux moteur LiDAR : écrit de vrais petits rasters (EPSG:2154, maille `res`) et compte les appels
+faux_runner_lidar <- function(journal, crs = "EPSG:2154") {
+  function(laz_files, out_dir, res = 1, ...) {
+    journal$appels[[length(journal$appels) + 1L]] <- laz_files
     ids <- sub("^.*/", "", sub("\\.laz$", "", laz_files))
-    for (id in ids) for (k in c("mnt", "mhc")) file.create(file.path(out_dir, paste0(k, "_", id, ".tif")))
+    for (id in ids) for (k in c("mnt", "mhc")) {
+      r <- terra::rast(xmin = 1015000, xmax = 1015000 + 10 * res, ymin = 6794000,
+                       ymax = 6794000 + 10 * res, resolution = res, crs = crs)
+      terra::values(r) <- 1
+      terra::writeRaster(r, file.path(out_dir, paste0(k, "_", id, ".tif")), overwrite = TRUE)
+    }
     invisible(NULL)
   }
+}
+
+test_that("run_tile_block : cache par dalle, une dalle déjà calculée n'est pas refaite (032)", {
+  d <- tempfile("lidar")
+  j <- new.env()
+  j$appels <- list()
+  faux_runner <- faux_runner_lidar(j)
   blk <- tile_blocks(fausses_dalles(3), 3)[[1]]
   out <- run_tile_block(blk, d, runner = faux_runner)
   expect_length(out, 18)
-  expect_length(appels[[1]], 9)
-  # interruption simulée : deux dalles perdues, seules elles sont recalculées
+  expect_length(j$appels[[1]], 9)
+  # rien à refaire : aucun appel
+  run_tile_block(blk, d, runner = faux_runner)
+  expect_length(j$appels, 1)
+  # interruption simulée : un fichier absent (mnt, mhc), seules ces dalles sont recalculées
   unlink(file.path(d, c("mnt_1007-6805.tif", "mhc_1008-6804.tif")))
   run_tile_block(blk, d, runner = faux_runner)
-  expect_length(appels, 2)
-  expect_setequal(basename(appels[[2]]), c("1007-6805.laz", "1008-6804.laz"))
+  expect_length(j$appels, 2)
+  expect_setequal(basename(j$appels[[2]]), c("1007-6805.laz", "1008-6804.laz"))
+  # fichier illisible : recalculé
+  writeLines("pas un raster", file.path(d, "mnt_1009-6803.tif"))
   run_tile_block(blk, d, runner = faux_runner)
-  expect_length(appels, 2)  # rien à refaire
+  expect_length(j$appels, 3)
+  expect_identical(basename(j$appels[[3]]), "1009-6803.laz")
+  # option de recalcul forcé : tout est refait
+  run_tile_block(blk, d, runner = faux_runner, force = TRUE)
+  expect_length(j$appels, 4)
+  expect_length(j$appels[[4]], 9)
+  expect_error(run_tile_block(blk, d, runner = faux_runner, force = NA), "force")
   rien <- function(...) NULL
   unlink(file.path(d, "mnt_1007-6805.tif"))
   expect_error(run_tile_block(blk, d, runner = rien), "absents")
+})
+
+test_that("run_tile_block : mauvais système de coordonnées, mauvaise maille ou paramètres changés -> recalcul (032)", {
+  blk <- tile_blocks(fausses_dalles(1), 3)[[1]]
+  # CRS différent (WGS84) : refait
+  d <- tempfile("lidar")
+  j <- new.env(); j$appels <- list()
+  run_tile_block(blk, d, runner = faux_runner_lidar(j, crs = "EPSG:4326"))
+  run_tile_block(blk, d, runner = faux_runner_lidar(j))
+  expect_length(j$appels, 2)
+  # maille différente : refait
+  d <- tempfile("lidar")
+  j <- new.env(); j$appels <- list()
+  run_tile_block(blk, d, res = 2, runner = faux_runner_lidar(j))
+  run_tile_block(blk, d, res = 1, runner = faux_runner_lidar(j))
+  expect_length(j$appels, 2)
+  # tampon ou moteur changé : refait ; identique : réutilisé
+  d <- tempfile("lidar")
+  j <- new.env(); j$appels <- list()
+  fr <- faux_runner_lidar(j)
+  run_tile_block(blk, d, buffer = 20, runner = fr)
+  run_tile_block(blk, d, buffer = 20, ncores = 8, runner = fr)  # ncores : sans effet
+  expect_length(j$appels, 1)
+  run_tile_block(blk, d, buffer = 50, runner = fr)
+  expect_length(j$appels, 2)
+  run_tile_block(blk, d, buffer = 50, engine = "lidr", runner = fr)
+  expect_length(j$appels, 3)
+  # dalle calculée avant 032 (sans params_*.txt) : acceptée si le raster est bon
+  unlink(list.files(d, "^params_", full.names = TRUE))
+  run_tile_block(blk, d, buffer = 50, engine = "lidr", runner = fr)
+  expect_length(j$appels, 3)
 })
 
 test_that("run_tile_block et mosaic_tiles sur la dalle LiDAR réelle", {
@@ -825,6 +878,42 @@ test_that("mode réel hors ligne : 0 appel réseau, reprise après interruption,
   ep <- utils::read.delim(file.path(out, "etat_de_preuve.csv"), sep = ";", encoding = "UTF-8")
   expect_true(any(grepl("Composante régionale seulement", ep$detail)))
   expect_true(any(grepl("non atteint (entrée absente)", ep$etat, fixed = TRUE)))
+})
+
+test_that("_targets.R : une clé sans rapport ne périme pas lidar_files, lidar_buffer_m la périme (032)", {
+  skip_on_cran()
+  skip_if_not_installed("targets")
+  skip_if_not_installed("withr")
+  skip_if_not_installed("lasR")
+  racine <- testthat::test_path("..", "..")
+  skip_if_not(file.exists(file.path(racine, "_targets.R")) &&
+                file.exists(file.path(racine, "config.yml")),
+              "_targets.R et config.yml absents (paquet installé)")
+  racine <- normalizePath(racine)
+  d <- withr::local_tempdir("cache032_")
+  file.copy(file.path(racine, c("_targets.R", "config.yml")), d)
+  ecrire_config <- function(retirer = character(), ajouter = character()) {
+    txt <- readLines(file.path(racine, "config.yml"), encoding = "UTF-8")
+    txt <- txt[!grepl(paste0("^(demo|offline|max_tiles|", paste(c("zz", retirer), collapse = "|"), "):"), txt)]
+    writeLines(c(txt, "demo: false", "offline: true", "max_tiles: 1", ajouter),
+               file.path(d, "config.yml"), useBytes = TRUE)
+  }
+  ecrire_config()
+  withr::local_dir(d)
+  perimee <- function() {
+    "lidar_files" %in% targets::tar_outdated(names = "lidar_files", callr_function = NULL,
+                                              reporter = "silent")
+  }
+  targets::tar_make(names = "lidar_files", callr_function = NULL, reporter = "silent")
+  expect_false(perimee())
+  # une clé ajoutée sans rapport avec le LiDAR, et une clé d'un autre calcul modifiée
+  ecrire_config(ajouter = "cle_sans_rapport_032: 42")
+  expect_false(perimee())
+  ecrire_config(retirer = "mrvbf_res_m", ajouter = c("cle_sans_rapport_032: 42", "mrvbf_res_m: 10"))
+  expect_false(perimee())
+  # le tampon LiDAR change le calcul : périmée
+  ecrire_config(retirer = "lidar_buffer_m", ajouter = "lidar_buffer_m: 30")
+  expect_true(perimee())
 })
 
 test_that("fetch_cached : retries entier >= 1 et wait non vide (026)", {

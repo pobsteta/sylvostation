@@ -282,23 +282,43 @@ if (!isTRUE(cfg$demo)) {
   mois_sv <- seq(cfg$saison_vegetation[1], cfg$saison_vegetation[2])
   greco <- substr(cfg$ser_code, 1, 1)
   grad_reg <- c("trophic", "hydric")  # modeles regionaux ; bioclim est calcule
+  # Mission 032 : targets suit les objets globaux lus par une cible. Lire `cfg` ou `src`
+  # en entier rendrait ser, emprise, tiles et lidar_files perimes a chaque cle ajoutee
+  # a config.yml (10 a 16 h de LiDAR). Ces cibles ne lisent donc que les scalaires
+  # ci-dessous : seule la modification d'une de ces valeurs les periment.
+  p_ser_code <- cfg$ser_code
+  p_ser_buffer_m <- cfg$buffer_m
+  p_max_tiles <- cfg$max_tiles
+  p_block_size <- cfg$lidar_block_size
+  p_lidar_buffer_m <- cfg$lidar_buffer_m   # change le calcul des dalles
+  p_lidar_ncores <- cfg$lidar_ncores       # ne change pas le resultat (voir run_tile_block)
+  p_lidar_res_m <- 1                         # maille LiDAR (m) = defaut de run_tile_block
+  p_lidar_engine <- "auto"                   # moteur = defaut de run_tile_block
+  cfg_emprise <- cfg[intersect(c("emprise", "emprise_test", "ser_code"), names(cfg))]
+  src_ser <- src$ser
+  src_laz <- src$laz
   gbif_ok <- function() all(nzchar(Sys.getenv(c("GBIF_USER", "GBIF_PWD", "GBIF_EMAIL"))))
 
   pipeline <- list(
     # --- emprise, dalles LiDAR (branchement dynamique par blocs), terrain --------------
-    tar_target(ser, sylvostation::get_ser(cfg$ser_code, buffer_m = cfg$buffer_m,
-                                          source = src$ser$source, path = src$ser$path,
+    tar_target(ser, sylvostation::get_ser(p_ser_code, buffer_m = p_ser_buffer_m,
+                                          source = src_ser$source, path = src_ser$path,
                                           data_dir = cache)),
-    tar_target(emprise, sylvostation::real_extent(ser, cfg)),
+    tar_target(emprise, sylvostation::real_extent(ser, cfg_emprise)),
     tar_target(tiles, {
-      t <- if (hors_ligne) sylvostation::local_tiles(src$laz) else sylvostation::list_tiles(emprise)
-      sylvostation::select_tiles(t, cfg$max_tiles)
+      t <- if (hors_ligne) sylvostation::local_tiles(src_laz) else sylvostation::list_tiles(emprise)
+      sylvostation::select_tiles(t, p_max_tiles)
     }),
-    tar_target(tile_blocks, sylvostation::tile_blocks(tiles, cfg$lidar_block_size),
+    tar_target(tile_blocks, sylvostation::tile_blocks(tiles, p_block_size),
                iteration = "list"),
-    # une branche par bloc de 3 x 3 dalles ; une dalle deja calculee n'est pas refaite
+    # une branche par bloc de 3 x 3 dalles. Cache par dalle (mission 032) : run_tile_block()
+    # reutilise une dalle dont mnt_/mhc_ existent, se lisent, sont en EPSG:2154 a la maille
+    # voulue et ont ete calcules avec les memes parametres ; sinon il la recalcule.
+    # Recalcul force : SYLVOSTATION_LIDAR_FORCE=1 puis tar_invalidate(lidar_files) (docs/pipeline.md).
     tar_target(lidar_files, sylvostation::run_tile_block(
-      tile_blocks, lidar_dir, buffer = cfg$lidar_buffer_m, ncores = cfg$lidar_ncores),
+      tile_blocks, lidar_dir, res = p_lidar_res_m, buffer = p_lidar_buffer_m,
+      ncores = p_lidar_ncores, engine = p_lidar_engine,
+      force = nzchar(Sys.getenv("SYLVOSTATION_LIDAR_FORCE"))),
       pattern = map(tile_blocks), format = "file"),
     tar_target(dtm, sylvostation::mosaic_tiles(lidar_files, "mnt", fact = 5,
                                                tile_ids = tiles$tile_id)),
