@@ -17,7 +17,7 @@ carhab_compare(gradient, carhab, aoa = NULL, ...)
 }
 \value{
 Une liste : \code{comptes} (cellules), \code{spearman}, \code{kappa} (linéaire), \code{kappa_quad},
-\code{classes} (\code{rangs}, \code{parts}, \code{coupes}), \code{par_modalite} (\code{data.frame}), \code{domaine}
+\code{classes} (\code{rangs}, \code{parts}, \code{parts_obtenues}, \code{coupes}), \code{par_modalite} (\code{data.frame}), \code{domaine}
 (\code{data.frame} \code{cx}, \code{cy}, \code{x}, \code{ref}, \code{classe}).
 }
 \description{

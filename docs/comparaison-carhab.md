@@ -57,8 +57,9 @@ premier :
    remise (500 tirages, graine 1), Spearman recalculé sur les cellules des blocs tirés,
    intervalle = quantiles 2,5 % et 97,5 %. Le côté du bloc (1 km) est un choix **non étalonné** à
    la portée d'autocorrélation réelle ; un bloc plus grand élargirait l'intervalle.
-2. **Sous-échantillon espacé** : une cellule tous les 500 m (en x et en y), soit environ 720 à
-   840 cellules, intervalle de Bonett-Wright (`se = sqrt((1 + rho²/2)/(n - 3))` sur la
+2. **Sous-échantillon espacé** : réseau fixe, les cellules dont le centre tombe sur une maille
+   régulière de 500 m à partir de l'origine de la grille (une cellule sur 25 en x et en y, écartement
+   d'au moins 500 m garanti), soit 461 à 632 cellules, intervalle de Bonett-Wright (`se = sqrt((1 + rho²/2)/(n - 3))` sur la
    transformée de Fisher). Valable si 500 m suffit à rendre les cellules quasi indépendantes
    (non vérifié).
 
@@ -75,9 +76,9 @@ de 20 m.
 
 | Gradient | Cellules | Spearman | IC blocs 95 % | Spearman espacé [IC 95 %] (n) | Kappa linéaire | Kappa quadratique | Accord exact | À une classe |
 |---|---|---|---|---|---|---|---|---|
-| Trophique (zone d'applicabilité) | 282 150 | **0,04** | -0,04 ; 0,13 | 0,01 [-0,07 ; 0,08] (719) | **-0,04** | 0,03 | 26,7 % | 80,9 % |
-| Trophique (sans exclusion) | 383 417 | 0,02 | -0,06 ; 0,10 | 0,00 [-0,07 ; 0,07] (838) | -0,04 | 0,00 | 29,4 % | 80,6 % |
-| Hydrique | 381 662 | **-0,02** | -0,11 ; 0,08 | 0,08 [0,02 ; 0,15] (837) | **-0,11** | -0,14 | 33,5 % | 50,8 % |
+| Trophique (zone d'applicabilité) | 282 150 | **0,04** | -0,04 ; 0,13 | 0,01 [-0,09 ; 0,10] (461) | **-0,04** | 0,03 | 26,7 % | 80,9 % |
+| Trophique (sans exclusion) | 383 417 | 0,02 | -0,06 ; 0,10 | -0,01 [-0,08 ; 0,07] (632) | -0,04 | 0,00 | 29,4 % | 80,6 % |
+| Hydrique | 381 662 | **-0,02** | -0,11 ; 0,08 | 0,05 [-0,03 ; 0,13] (592) | **-0,11** | -0,14 | 33,5 % | 50,8 % |
 
 **Lecture, sans l'arranger.** Sur le trophique, la concordance est nulle : le Spearman est
 indiscernable de zéro avec les deux méthodes, le kappa est à l'aléa. C'est ce que le run annonçait
@@ -85,9 +86,19 @@ indiscernable de zéro avec les deux méthodes, le kappa est à l'aléa. C'est c
 Sur l'hydrique, avec l'ordre provisoire conservé, la concordance est aussi nulle, et le kappa est
 **négatif** (moins bon que le hasard) : notre classe la plus sèche tombe aussi souvent sur
 « humide à nappe circulante » (38 727 cellules) que sur « assez sec » (37 559), et notre quatrième
-classe (sur cinq) tombe surtout sur « mésique » (79 745). Le Spearman espacé (0,08, intervalle au-dessus
-de zéro) ne tient pas contre les blocs (intervalle à cheval sur zéro) : à ne pas lire comme un
-signal.
+classe (sur cinq) tombe surtout sur « mésique » (79 745). Le Spearman espacé (0,05, intervalle à cheval sur zéro) va dans le même sens que les blocs : pas
+de signal.
+
+### Parts de surface : obtenues / cibles (%)
+
+Parts de nos classes obtenues par le découpage, contre les parts cibles (modalités CarHab du
+domaine), classes dans l'ordre croissant.
+
+| Gradient | Obtenues / cibles |
+|---|---|
+| Trophique (zone d'applicabilité) | 56,6 / 34,3 ; 21,1 / 41,4 ; 22,3 / 22,7 ; 0 / 1,7 |
+| Trophique (sans exclusion) | 49,5 / 34,8 ; 27,7 / 41,7 ; 22,7 / 21,5 ; 0 / 2,0 |
+| Hydrique | 24,4 / 24,4 ; 47,8 / 47,8 ; 1,0 / 1,0 ; 26,7 / 26,7 ; 0,1 / 0,1 |
 
 ### Matrices de confusion (cellules de 20 m ; zone d'applicabilité pour le trophique)
 
@@ -130,8 +141,8 @@ coup (sans bootstrap, intervalle du sous-échantillon espacé seulement) :
 
 | Lecture | Cellules | Spearman | Spearman espacé [IC 95 %] |
 |---|---|---|---|
-| Sec → humide seul : `assez sec`, `mésique`, `légèrement humide` (modalités 1 à 3) | 279 523 | **0,43** | 0,40 [0,34 ; 0,46] |
-| Engorgement : `humide à nappe circulante` et `détrempé` contre les autres | 381 662 | **-0,28** | -0,22 [-0,28 ; -0,15] |
+| Sec → humide seul : `assez sec`, `mésique`, `légèrement humide` (modalités 1 à 3) | 279 523 | **0,43** | 0,44 [0,35 ; 0,51] |
+| Engorgement : `humide à nappe circulante` et `détrempé` contre les autres | 381 662 | **-0,28** | -0,20 [-0,28 ; -0,12] |
 
 Notre gradient hydrique suit donc un peu la réserve en eau (0,43 quand l'engorgement est écarté)
 et **va dans le sens opposé** de l'engorgement de CarHab (-0,28) : les cellules « à nappe » de
@@ -163,10 +174,13 @@ l'ordre, pas un résultat. L'ordre reste provisoire (décision de Pascal).
   engorgement ; les modalités extrêmes sont rares (`basique` 1,7 % du domaine, `détrempé` 0,07 %,
   250 cellules : le kappa à 5 classes repose sur très peu de cellules).
 - **Notre gradient trophique a des égalités massives** : 55 valeurs distinctes, 18,2 % des
-  cellules à la valeur maximale (5,178). Les quantiles ne peuvent pas séparer ces cellules : la
-  quatrième classe (celle de CarHab « basique », 1,7 %) est **vide**, et les cellules au maximum
-  sont toutes en classe 3. Le kappa trophique porte donc, en pratique, sur trois classes. Le
-  gradient hydrique n'a pas ce défaut.
+  cellules à la valeur maximale (5,178), et une autre masse à 4,6116. Règle des égalités (non
+  modifiée) : une cellule égale à une coupe va dans la classe **basse**, les égalités ne sont
+  jamais séparées. Les parts obtenues s'écartent donc des parts cibles (tableau « parts » du
+  § 4) : la classe 1 est **surgonflée** (56,6 % contre 34,3 %) et la classe 4 (CarHab « basique »,
+  1,7 %) est **vide**. Le kappa et l'accord à une classe du trophique se lisent **avec ce biais** ;
+  le Spearman n'est pas touché (il n'utilise pas les classes). Le gradient hydrique n'a pas ce
+  défaut (parts obtenues = parts cibles).
 - **Notre carte hydrique est en blocs** : sur la carte d'accord, de grands aplats rectilignes
   (par exemple une limite verticale vers x 1 010 600) suivent des mailles, pas la topographie.
   Les entrées hydriques venues d'une maille à grande échelle (réserve utile en `ru_maille`, climat

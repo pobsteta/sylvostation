@@ -12,7 +12,8 @@ carhab_spearman(
   bloc_m = 1000,
   pas_m = 500,
   nboot = 300L,
-  seed = 1L
+  seed = 1L,
+  origine = c(min(cx), min(cy))
 )
 }
 \arguments{
@@ -22,11 +23,14 @@ carhab_spearman(
 
 \item{bloc_m}{Côté des blocs (m).}
 
-\item{pas_m}{Pas du sous-échantillon espacé (m).}
+\item{pas_m}{Pas du sous-échantillon espacé (m), arrondi à un multiple de la résolution.}
 
 \item{nboot}{Nombre de tirages.}
 
-\item{seed}{Graine.}
+\item{seed}{Graine (l'état du générateur aléatoire de l'appelant est restitué).}
+
+\item{origine}{Centre \code{c(x, y)} d'une cellule de la grille (défaut : minimum de \code{cx}, \code{cy}) ;
+pour la grille d'un \code{SpatRaster}, \code{c(xmin + res / 2, ymin + res / 2)}.}
 }
 \value{
 Une liste : \code{rho}, \code{bloc} (\code{ic_bas}, \code{ic_haut}, \code{n_blocs}), \code{espace} (\code{rho},
@@ -38,7 +42,10 @@ Deux estimations, méthode écrite :
 \item \strong{bootstrap par blocs} : la zone est découpée en blocs carrés de \code{bloc_m} mètres
 (Lambert-93), les blocs sont tirés avec remise, le Spearman est recalculé sur les cellules
 des blocs tirés ; intervalle = quantiles 2,5 \% et 97,5 \% ;
-\item \strong{sous-échantillon espacé} : une cellule tous les \code{pas_m} mètres (en x et en y), Spearman
+\item \strong{sous-échantillon espacé} : réseau fixe, les cellules dont le centre tombe sur une
+maille régulière de \code{pas_m} mètres à partir de \code{origine} (une cellule sur
+\code{pas_m / résolution} en x et en y), ce qui garantit un écartement d'au moins \code{pas_m} ;
+Spearman
 et intervalle de Bonett-Wright (\code{se = sqrt((1 + rho^2 / 2) / (n - 3))} sur la
 transformée de Fisher), valable si les cellules gardées sont quasi indépendantes
 (\code{pas_m} à comparer à la portée de l'autocorrélation, à justifier à l'appel).

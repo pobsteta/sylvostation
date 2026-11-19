@@ -81,7 +81,8 @@ for (g in names(res)) {
   dimnames(m) <- list(nous = paste0("classe_", seq_len(nrow(m))), carhab = modal)
   utils::write.csv(cbind(classe_nous = rownames(m), as.data.frame.matrix(m)),
                    file.path(dir_out, paste0("matrice_confusion_", g, ".csv")), row.names = FALSE)
-  pm <- r$par_modalite; pm$modalite <- modal; pm$coupe_haute <- c(r$classes$coupes, NA)
+  pm <- r$par_modalite; pm$modalite <- modal
+  pm$part_obtenue_nous <- r$classes$parts_obtenues; pm$part_cible <- r$classes$parts; pm$coupe_haute <- c(r$classes$coupes, NA)
   utils::write.csv(pm, file.path(dir_out, paste0("par_modalite_", g, ".csv")), row.names = FALSE)
 }
 print(t_sp, digits = 3)
@@ -165,7 +166,8 @@ sens <- list(
   engorgement_4_5_contre_reste = transform(dh, ref = as.integer(ref >= 4L)))
 t_sens <- do.call(rbind, lapply(names(sens), function(n) {
   q <- sens[[n]]
-  sp <- carhab_spearman(q$x, q$ref, q$cx, q$cy, bloc_m = BLOC_M, pas_m = PAS_M, nboot = 0L)
+  sp <- carhab_spearman(q$x, q$ref, q$cx, q$cy, bloc_m = BLOC_M, pas_m = PAS_M, nboot = 0L,
+                       origine = c(1007010, 6790010))
   data.frame(sensibilite = n, n_cellules = nrow(q), spearman = sp$rho,
              spearman_espace = sp$espace$rho, ic_espace_bas = sp$espace$ic_bas,
              ic_espace_haut = sp$espace$ic_haut, n_espace = sp$espace$n)

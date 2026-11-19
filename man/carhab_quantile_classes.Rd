@@ -13,11 +13,21 @@ carhab_quantile_classes(x, ref)
 }
 \value{
 Une liste : \code{classe} (entiers 1..k, k modalités présentes de \code{ref}), \code{rangs}
-(rangs CarHab présents, dans l'ordre), \code{parts}, \code{coupes} (quantiles).
+(rangs CarHab présents, dans l'ordre), \code{parts} (parts cibles), \code{parts_obtenues}
+(parts réellement obtenues par \code{classe}), \code{coupes} (quantiles).
 }
 \description{
 Découpe \code{x} en autant de classes que \code{ref} (rang ordinal CarHab) a de modalités présentes,
 aux \strong{mêmes parts de surface} (quantiles de \code{x}), pour ne pas dépendre de nos seuils.
+}
+\details{
+\strong{Règle des égalités} : les coupes sont les quantiles (type 7) de \code{x} aux parts cumulées
+de \code{ref}, et une cellule est rangée par \code{findInterval(x, coupes, left.open = TRUE) + 1},
+c'est-à-dire que \code{x} égal à une coupe va dans la classe \strong{basse}. Les cellules à valeurs
+égales ne sont jamais séparées (pas de tirage au sort) : si une masse d'égalités
+recouvre une coupe, la classe basse est \strong{surgonflée} et la classe suivante sous-remplie,
+voire vide. Les parts obtenues peuvent donc s'écarter des parts cibles ; elles sont
+rendues (\code{parts_obtenues}) pour être lues avec le kappa.
 }
 \examples{
 carhab_quantile_classes(c(1, 2, 3, 4, 5, 6), c(1, 1, 2, 2, 3, 3))$classe

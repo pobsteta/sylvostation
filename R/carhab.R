@@ -171,10 +171,19 @@ carhab_rasterize <- function(polys, grid, champ = c("acidite_edaphique", "humidi
 #' Découpe `x` en autant de classes que `ref` (rang ordinal CarHab) a de modalités présentes,
 #' aux **mêmes parts de surface** (quantiles de `x`), pour ne pas dépendre de nos seuils.
 #'
+#' **Règle des égalités** : les coupes sont les quantiles (type 7) de `x` aux parts cumulées
+#' de `ref`, et une cellule est rangée par `findInterval(x, coupes, left.open = TRUE) + 1`,
+#' c'est-à-dire que `x` égal à une coupe va dans la classe **basse**. Les cellules à valeurs
+#' égales ne sont jamais séparées (pas de tirage au sort) : si une masse d'égalités
+#' recouvre une coupe, la classe basse est **surgonflée** et la classe suivante sous-remplie,
+#' voire vide. Les parts obtenues peuvent donc s'écarter des parts cibles ; elles sont
+#' rendues (`parts_obtenues`) pour être lues avec le kappa.
+#'
 #' @param x Gradient continu (nombres).
 #' @param ref Rang ordinal CarHab (même longueur, sans `NA`).
 #' @return Une liste : `classe` (entiers 1..k, k modalités présentes de `ref`), `rangs`
-#'   (rangs CarHab présents, dans l'ordre), `parts`, `coupes` (quantiles).
+#'   (rangs CarHab présents, dans l'ordre), `parts` (parts cibles), `parts_obtenues`
+#'   (parts réellement obtenues par `classe`), `coupes` (quantiles).
 #' @examples
 #' carhab_quantile_classes(c(1, 2, 3, 4, 5, 6), c(1, 1, 2, 2, 3, 3))$classe
 #' @export
@@ -187,7 +196,8 @@ carhab_quantile_classes <- function(x, ref) {
     unname(stats::quantile(x, cumsum(parts)[-length(rangs)], type = 7))
   } else numeric(0)
   classe <- findInterval(x, coupes, left.open = TRUE) + 1L
-  list(classe = classe, rangs = rangs, parts = parts, coupes = coupes)
+  obt <- as.numeric(table(factor(classe, levels = seq_along(rangs)))) / length(classe)
+  list(classe = classe, rangs = rangs, parts = parts, parts_obtenues = obt, coupes = coupes)
 }
 
 #' Kappa pondéré de deux classements ordinaux, accord à une classe près, matrice
@@ -230,7 +240,10 @@ carhab_kappa <- function(a, b, k = max(a, b), poids = c("lineaire", "quadratique
 #' 1. **bootstrap par blocs** : la zone est découpée en blocs carrés de `bloc_m` mètres
 #'    (Lambert-93), les blocs sont tirés avec remise, le Spearman est recalculé sur les cellules
 #'    des blocs tirés ; intervalle = quantiles 2,5 % et 97,5 % ;
-#' 2. **sous-échantillon espacé** : une cellule tous les `pas_m` mètres (en x et en y), Spearman
+#' 2. **sous-échantillon espacé** : réseau fixe, les cellules dont le centre tombe sur une
+#'    maille régulière de `pas_m` mètres à partir de `origine` (une cellule sur
+#'    `pas_m / résolution` en x et en y), ce qui garantit un écartement d'au moins `pas_m` ;
+#'    Spearman
 #'    et intervalle de Bonett-Wright (`se = sqrt((1 + rho^2 / 2) / (n - 3))` sur la
 #'    transformée de Fisher), valable si les cellules gardées sont quasi indépendantes
 #'    (`pas_m` à comparer à la portée de l'autocorrélation, à justifier à l'appel).
@@ -238,9 +251,11 @@ carhab_kappa <- function(a, b, k = max(a, b), poids = c("lineaire", "quadratique
 #' @param x,y Valeurs (numériques, mêmes longueurs, sans `NA`).
 #' @param cx,cy Coordonnées des cellules (Lambert-93 : `cx` = est, `cy` = nord, en m).
 #' @param bloc_m Côté des blocs (m).
-#' @param pas_m Pas du sous-échantillon espacé (m).
+#' @param pas_m Pas du sous-échantillon espacé (m), arrondi à un multiple de la résolution.
+#' @param origine Centre `c(x, y)` d'une cellule de la grille (défaut : minimum de `cx`, `cy`) ;
+#'   pour la grille d'un `SpatRaster`, `c(xmin + res / 2, ymin + res / 2)`.
 #' @param nboot Nombre de tirages.
-#' @param seed Graine.
+#' @param seed Graine (l'état du générateur aléatoire de l'appelant est restitué).
 #' @return Une liste : `rho`, `bloc` (`ic_bas`, `ic_haut`, `n_blocs`), `espace` (`rho`,
 #'   `ic_bas`, `ic_haut`, `n`).
 #' @examples
@@ -249,7 +264,7 @@ carhab_kappa <- function(a, b, k = max(a, b), poids = c("lineaire", "quadratique
 #' carhab_spearman(v, xy$cx, xy$cx, xy$cy, bloc_m = 200, pas_m = 100, nboot = 50)$rho
 #' @export
 carhab_spearman <- function(x, y, cx, cy, bloc_m = 1000, pas_m = 500, nboot = 300L,
-                            seed = 1L) {
+                            seed = 1L, origine = c(min(cx), min(cy))) {
   n <- length(x)
   if (length(y) != n || length(cx) != n || length(cy) != n) {
     stop("x, y, cx et cy doivent avoir la meme longueur.", call. = FALSE)
@@ -259,17 +274,20 @@ carhab_spearman <- function(x, y, cx, cy, bloc_m = 1000, pas_m = 500, nboot = 30
   bid <- paste(floor(cx / bloc_m), floor(cy / bloc_m))
   idx <- split(seq_len(n), bid)
   nb <- length(idx)
-  set.seed(seed)
+  withr::local_seed(seed)
   bs <- vapply(seq_len(nboot), function(b) {
     i <- unlist(idx[sample.int(nb, nb, replace = TRUE)], use.names = FALSE)
     stats::cor(x[i], y[i], method = "spearman")
   }, numeric(1))
   q <- unname(stats::quantile(bs, c(0.025, 0.975), na.rm = TRUE))
-  # sous-echantillon espace : cellules dont l'indice de bloc de pas_m est le premier de la
-  # tranche (une cellule tous les pas_m en x et en y, decalage fixe sur le minimum)
-  gx <- floor((cx - min(cx)) / pas_m); gy <- floor((cy - min(cy)) / pas_m)
-  cle <- paste(gx, gy)
-  keep <- !duplicated(cle)
+  # sous-echantillon espace : reseau fixe. Les cellules dont l'indice (en cellules) depuis
+  # l'origine est multiple de pas_m / resolution en x ET en y ; ecartement >= pas_m garanti.
+  dx <- diff(sort(unique(cx))); dy <- diff(sort(unique(cy)))
+  res <- min(c(dx[dx > 0], dy[dy > 0], Inf))
+  if (!is.finite(res)) res <- pas_m
+  pas <- max(1L, as.integer(round(pas_m / res)))
+  ix <- round((cx - origine[1]) / res); iy <- round((cy - origine[2]) / res)
+  keep <- (ix %% pas == 0) & (iy %% pas == 0)
   ns <- sum(keep)
   rs <- if (ns > 3L) stats::cor(x[keep], y[keep], method = "spearman") else NA_real_
   se <- sqrt((1 + rs^2 / 2) / (ns - 3))
@@ -293,7 +311,7 @@ carhab_spearman <- function(x, y, cx, cy, bloc_m = 1000, pas_m = 500, nboot = 30
 #' @param aoa `SpatRaster` (1 = dans la zone d'applicabilité) ou `NULL`.
 #' @param ... Arguments passés à [carhab_spearman()].
 #' @return Une liste : `comptes` (cellules), `spearman`, `kappa` (linéaire), `kappa_quad`,
-#'   `classes` (`rangs`, `parts`, `coupes`), `par_modalite` (`data.frame`), `domaine`
+#'   `classes` (`rangs`, `parts`, `parts_obtenues`, `coupes`), `par_modalite` (`data.frame`), `domaine`
 #'   (`data.frame` `cx`, `cy`, `x`, `ref`, `classe`).
 #' @export
 carhab_compare <- function(gradient, carhab, aoa = NULL, ...) {
@@ -311,7 +329,10 @@ carhab_compare <- function(gradient, carhab, aoa = NULL, ...) {
                hors_aoa = sum(commun & !dans), retenues = sum(dans))
   d <- data.frame(cx = xy[dans, 1], cy = xy[dans, 2], x = x[dans], ref = as.integer(r[dans]))
   if (nrow(d) < 10L) stop("Domaine commun trop petit (< 10 cellules).", call. = FALSE)
-  sp <- carhab_spearman(d$x, d$ref, d$cx, d$cy, ...)
+  rr <- terra::res(gradient)[1]
+  e <- terra::ext(gradient)
+  sp <- carhab_spearman(d$x, d$ref, d$cx, d$cy,
+                        origine = c(e$xmin + rr / 2, e$ymin + rr / 2), ...)
   qc <- carhab_quantile_classes(d$x, d$ref)
   d$classe <- qc$classe
   ref_k <- match(d$ref, qc$rangs)
@@ -325,5 +346,5 @@ carhab_compare <- function(gradient, carhab, aoa = NULL, ...) {
                q75 = unname(stats::quantile(v, 0.75)))
   }))
   list(comptes = comptes, spearman = sp, kappa = kap, kappa_quad = kapq,
-       classes = qc[c("rangs", "parts", "coupes")], par_modalite = pm, domaine = d)
+       classes = qc[c("rangs", "parts", "parts_obtenues", "coupes")], par_modalite = pm, domaine = d)
 }

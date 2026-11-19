@@ -108,6 +108,20 @@ test_that("carhab_quantile_classes : memes parts de surface que CarHab", {
   expect_error(carhab_quantile_classes(1:3, 1:2), "longueur")
 })
 
+test_that("carhab_quantile_classes : regle des egalites (egal a la coupe -> classe basse, classe surgonflee)", {
+  # 6 cellules a 1, 2 a 2, 2 a 3 : cibles 0,5 / 0,3 / 0,2 mais l'egalite a 1 recouvre la coupe
+  x <- c(rep(1, 6), 2, 2, 3, 3)
+  ref <- c(rep(1, 5), rep(2, 3), rep(3, 2))
+  q <- carhab_quantile_classes(x, ref)
+  expect_equal(q$parts, c(0.5, 0.3, 0.2))
+  expect_equal(q$classe, c(rep(1L, 6), 2L, 2L, 3L, 3L))   # les egalites ne sont pas separees
+  expect_equal(q$parts_obtenues, c(0.6, 0.2, 0.2))        # classe 1 surgonflee
+  # masse d'egalites sur toute la plage : classes hautes vides
+  q2 <- carhab_quantile_classes(c(rep(1, 8), 2, 3), c(1, 1, 1, 2, 2, 2, 3, 3, 4, 4))
+  expect_equal(q2$parts_obtenues, c(0.8, 0, 0, 0.2))
+  expect_equal(sum(q2$parts_obtenues), 1)
+})
+
 test_that("carhab_kappa : valeurs calculees a la main", {
   expect_equal(carhab_kappa(c(1, 2, 3), c(1, 2, 3))$kappa, 1)
   # deux classes : kappa pondere = kappa simple = 0,5 ; po = 0,75
@@ -133,6 +147,18 @@ test_that("carhab_spearman : monotone = 1, bruit = 0, blocs et sous-echantillon 
   expect_equal(s$rho, 1)
   expect_equal(s$bloc$n_blocs, 16)       # 4 x 4 blocs de 500 m
   expect_equal(s$espace$n, 100)          # 10 x 10 cellules espacees de 200 m
+  # reseau fixe : ecartement d'au moins pas_m, quelle que soit la forme du domaine
+  xy2 <- xy[!(xy$cx > 1007500 & xy$cx < 1008500 & xy$cy > 6790500), ]   # domaine troue
+  r <- carhab_spearman(xy2$cx, xy2$cx, xy2$cx, xy2$cy, bloc_m = 500, pas_m = 200, nboot = 5,
+                       origine = c(1007010, 6790010))
+  expect_lt(r$espace$n, 100)
+  ix <- round((xy2$cx - 1007010) / 20); iy <- round((xy2$cy - 6790010) / 20)
+  k <- ix %% 10 == 0 & iy %% 10 == 0
+  expect_equal(r$espace$n, sum(k))
+  # l'etat du generateur aleatoire de l'appelant est restitue
+  set.seed(3); a <- runif(1); set.seed(3)
+  carhab_spearman(xy$cx, xy$cx, xy$cx, xy$cy, nboot = 3)
+  expect_equal(runif(1), a)
   expect_equal(s$bloc$ic_haut, 1)
   # gradient en x + bruit : rho positif, intervalle autour de rho, graine reproductible
   set.seed(42)
