@@ -18,6 +18,22 @@ large (règle des 700 m) : climat SAFRAN (interpolé, 033), lithologie dominante
 (BD Charm-50 sur les départements de la GRECO D), pH SoilGrids 2.0 (CC BY 4.0, 250 m, § 18 de
 referentiels.md) moyenné dans 700 m. Absorbe le câblage de `geologie_700m` prévu en 034.
 
+## Ajouts du 2026-11-19 (Pascal : « oui » à la répartition des pistes)
+
+Après les trois temps du plan validé, mesurés de la même façon (R² par blocs, IC) :
+
+- **Classes de richesse calculées par l'IFN** : pour chaque formation BD Charm-50, trophique
+  moyen des placettes où elle domine dans 700 m, avec rétrécissement vers la moyenne pour les
+  formations peu représentées (encodage sans fuite : calculé dans les plis de la validation
+  croisée). Contrôle avec la roche observée par l'IFN (`ROCHED0`, `ROCHED2` selon la campagne,
+  référentiels § 7). Comparer à la lithologie provisoire et au brouillon de 034.
+- **Indice trophique des placettes moins bruité** : recalcul sans les essences arborées (aussi
+  pour lever la circularité de 037) ; pondération par l'abondance ; forme d'humus (`HUMUS`,
+  `HUMUS22`) en variable de contrôle ou en combinaison, à justifier. La réponse change :
+  mesurer les deux versions côte à côte.
+- **Composition forestière dans 700 m** (BD Forêt v2 : part des types de formation végétale dans
+  le disque) comme prédicteur à maille large, si 037 a vérifié la nomenclature.
+
 ## L'Homme
 
 - **Agent :** `dev` · **Modèle :** opus (plan d'abord)
