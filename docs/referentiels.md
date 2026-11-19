@@ -914,6 +914,28 @@ AgroParisTech reste la référence du brief (§ 9), et les relevés GNSS restent
    la tourbe ou un gley près de la surface, là où notre gradient hydrique (réserve utile, TWI) peut
    dire autre chose.
 
+### 26.6 Complément du 2026-11-19 (mission 031) : lecture réelle du WFS, exécutée en R
+
+- **Lecture paginée vérifiée** (`sf::read_sf` sur l'URL `GetFeature`, `SRSNAME=EPSG:2154`,
+  `SORTBY=id_polygone_carhab`, `COUNT=500`, `STARTINDEX` par pas de 500) : **3 103 polygones**
+  `occupation='foret'`, soit le `numberMatched` du § 26.2. Modalités lues (aucune absente de
+  l'ordre du § 26.4, aucune valeur vide) : acidité `très acide` 1 166, `légèrement acide` 1 375,
+  `neutre` 495, `basique` 67 ; humidité `assez sec` 786, `mésique` 1 416, `humide à nappe
+  circulante` 761, `légèrement humide` 127, `détrempé à nappe stagnante` 13 : les
+  décomptes de `légèrement humide` et `détrempé à nappe stagnante`, qui reposaient sur 140
+  entités, sont **confirmés**. Étage : `collinéen` 1 970, `montagnard` 1 130, `subalpin` 3.
+- **Pièges de lecture** : GDAL ne rend pas le CRS du GML (`st_crs` absent : on pose 2154,
+  `DefaultCRS` du § 26.1, puis on vérifie la plausibilité des x et y) ; la géométrie est une
+  `MULTISURFACE` (WKB 12), que GEOS refuse (`ParseException`) : conversion en `MULTIPOLYGON` par
+  `ogr2ogr -nlt MULTIPOLYGON` (`sf::gdal_utils`), après quoi les 3 103 géométries sont valides ;
+  une page a échoué par moments (`Failed to read TopoJSON data`, panne passagère, constatée deux fois) :
+  nouvel essai.
+- **Surface** : les 3 103 polygones entiers (non découpés) font 18 162,7 ha d'après le champ
+  `surface` (18 162,2 ha d'après la géométrie). Champ `layer` des 3 103 : `CarHab_68_Haut-Rhin_Habitats_CarHab`
+  2 978, `habitats_carhab` 93, vide 32.
+- **Décalage du chiffre de 26.1** : 126 polygones (93 + 33) sont de département non dit sur
+  toutes occupations ; en forêt, 93 + 32 = 125. Le département reste **à vérifier**.
+
 ---
 
 ## Écarts relevés entre sources
