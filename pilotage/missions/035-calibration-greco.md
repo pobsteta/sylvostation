@@ -31,8 +31,8 @@ Après les trois temps du plan validé, mesurés de la même façon (R² par blo
   pour lever la circularité de 037) ; pondération par l'abondance ; forme d'humus (`HUMUS`,
   `HUMUS22`) en variable de contrôle ou en combinaison, à justifier. La réponse change :
   mesurer les deux versions côte à côte.
-- **Composition forestière dans 700 m** (BD Forêt v2 : part des types de formation végétale dans
-  le disque) comme prédicteur à maille large, si 037 a vérifié la nomenclature.
+- ~~Composition forestière dans 700 m~~ : retirée (ADR 0008, le trophique ne dépend pas du
+  peuplement actuel).
 
 ## L'Homme
 
