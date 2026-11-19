@@ -15,6 +15,7 @@
 ## Validé
 
 - [033-empreinte-safran](missions/033-empreinte-safran.md) · depuis le cycle 5 · dev (opus, plan d'abord)
+- [034-predicteurs-piedallu](missions/034-predicteurs-piedallu.md) · depuis le cycle 5 · dev (opus, plan d'abord, code après 033)
 
 
 
