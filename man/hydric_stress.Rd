@@ -13,7 +13,8 @@ hydric_stress(
   forest_type = "broadleaved",
   budburst = 110,
   leaf_fall = 300,
-  pas_ru = 10
+  pas_ru = 10,
+  interpolation = c("bilineaire", "proche")
 )
 }
 \arguments{
@@ -30,6 +31,8 @@ de meteo.data.gouv.fr ; suffixe \verb{_Q} accepté) ou \code{NULL}.}
 \item{lai_max, forest_type, budburst, leaf_fall}{Paramètres de \code{\link[biljouR:biljou_run]{biljouR::biljou_run()}}.}
 
 \item{pas_ru}{Pas (mm) de la suite de réserves utiles pour une grille.}
+
+\item{interpolation}{\code{"bilineaire"} (défaut) ou \code{"proche"} (points seulement).}
 }
 \value{
 Points : \code{x} avec \code{maille_safran}, \code{is_biljou}, \code{nj_stress}, \code{n_annees},
@@ -48,14 +51,18 @@ Le gradient hydrique devient cet indice ; la réserve utile en est une entrée
 }
 \details{
 \itemize{
-\item \strong{Placettes} (\code{x} = \code{sf} de points en EPSG:2154 avec la colonne \code{ru_col}) : chaque
-point prend la maille SAFRAN la plus proche (maille large, croisable avec l'IFN :
-\code{\link[=assert_no_fine_extract_on_ifn]{assert_no_fine_extract_on_ifn()}} est appelée avec \code{coarse_safran}) ; un calcul
-BILJOU par couple (maille, réserve utile).
+\item \strong{Placettes} (\code{x} = \code{sf} de points en EPSG:2154 avec la colonne \code{ru_col}) : avec
+\code{interpolation = "bilineaire"} (défaut, mission 033), les séries journalières
+(\code{PRELIQ}, \code{PRENEI}, \code{ETP}) sont interpolées bilinéairement entre les centres des
+mailles SAFRAN, lues au point publié (\code{\link[=safran_weights]{safran_weights()}}) ; avec \code{"proche"}, le
+point prend la série de la maille la plus proche (avant 033). Les deux sont des
+variables larges (champ lissé à 8 km), croisables avec l'IFN :
+\code{\link[=assert_no_fine_extract_on_ifn]{assert_no_fine_extract_on_ifn()}} est appelée avec \code{coarse_safran}. Un calcul BILJOU
+par couple (série, réserve utile). \code{maille_safran} reste la maille la plus proche.
 \item \strong{Grille} (\code{x} = \code{SpatRaster} de réserve utile en mm, EPSG:2154) : pour chaque
-maille SAFRAN, l'indice est calculé sur une suite de réserves utiles (pas \code{pas_ru})
-puis interpolé linéairement pour chaque pixel (descente d'échelle par la réserve
-utile).
+maille SAFRAN (la plus proche, quelle que soit \code{interpolation}), l'indice est calculé
+sur une suite de réserves utiles (pas \code{pas_ru}) puis interpolé linéairement pour
+chaque pixel (descente d'échelle par la réserve utile).
 \item \strong{Sens} : \code{grad_hydrique} est orienté « plus haut = plus humide » dans les deux
 modes (attribut \code{sens}) : \code{-is_biljou} en mode nominal, la réserve utile en repli.
 \item \strong{Repli} : sans \code{safran} ou sans le paquet \code{biljouR}, l'indice vaut \code{NA} et

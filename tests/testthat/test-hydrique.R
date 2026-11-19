@@ -463,12 +463,19 @@ test_that("hydric_stress_grid : points precis en calcul direct ; placettes IFN r
   expect_error(hydric_stress_grid(k, ru, s, points = flou), "loc_precision_m")
   gnss <- points_l93(xy[1], xy[2], 100)
   gnss$loc_precision_m <- 5
-  p <- hydric_stress_grid(k, ru, s, points = gnss)
-  g <- terra::values(hydric_stress_grid(k, ru, s, n_controle = 0))
+  # meme meteo (maille la plus proche) : le point et sa cellule ont le meme indice
+  p <- hydric_stress_grid(k, ru, s, points = gnss, interpolation = "proche")
+  g <- terra::values(hydric_stress_grid(k, ru, s, n_controle = 0, interpolation = "proche"))
   expect_identical(p$maille_safran, "9640_23690")
   expect_equal(p$is_topo, unname(g[1, "is_topo"]))
   expect_equal(p$is_plat, unname(g[1, "is_plat"]))
   expect_equal(p$grad_hydrique_carte, -p$is_topo)
+  # interpolation bilineaire (mission 033) : le point a sa propre meteo, sa cellule celle du
+  # noeud (ici le centre de la maille, a 35 m) : ecart faible, pas nul
+  pb <- hydric_stress_grid(k, ru, s, points = gnss)
+  gb <- terra::values(hydric_stress_grid(k, ru, s, n_controle = 0))
+  expect_lt(abs(pb$is_topo - gb[1, "is_topo"]) / gb[1, "is_topo"], 0.01)
+  expect_equal(unname(gb[1, "is_topo"]), unname(g[1, "is_topo"]), tolerance = 1e-8)
 })
 
 test_that("hydric_stress_grid : replis signales (k = 1, SAFRAN sans SSI, SAFRAN absent)", {
@@ -590,12 +597,13 @@ test_that("hydric_stress_grid : points directs = biljou_run", {
   ru <- data.frame(maille = c(a$maille, b$maille), ru_mm = c(70, 130))
   h1 <- hydric_stress_grid(k, ru, s, n_controle = 3)
   expect_identical(sort(attr(h1, "ecart")$maille), sort(c(a$maille, b$maille)))
+  # reference lente : meteo de la maille la plus proche (avant 033)
   # points precis : l'indice direct est celui de biljou_run (reference lente), a 1e-12 pres
   xy <- rbind(c(a$x + 300, a$y - 200), c(b$x - 900, b$y + 400))
   g <- sf::st_as_sf(data.frame(id = 1:2, x = xy[, 1], y = xy[, 2]),
                     coords = c("x", "y"), crs = 2154)
   g$loc_precision_m <- 5
-  pr <- hydric_stress_grid(k, ru, s, points = g)
+  pr <- hydric_stress_grid(k, ru, s, points = g, interpolation = "proche")
   Kp <- terra::extract(k, xy)[, names(k)]
   for (i in 1:2) {
     mm <- list(a, b)[[i]]

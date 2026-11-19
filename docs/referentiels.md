@@ -1312,6 +1312,18 @@ de « En service » et `acces_vehicule_leger` = « Physiquement impossible ». L
 |---|---|---|---|
 | Échelle d'abondance-dominance (`r`, `+`, `1` à `5`) | **à vérifier** (non lue) | Braun-Blanquet J., 1964, *Pflanzensoziologie*, 3e éd., Springer, Wien | Formule usuelle : `r` un ou très peu d'individus ; `+` peu abondant, recouvrement très faible ; `1` nombreux, recouvrement < 5 % ; `2` 5 à 25 % ; `3` 25 à 50 % ; `4` 50 à 75 % ; `5` > 75 %. Citée de mémoire, sans accès à l'ouvrage (mission 029). |
 
+## 32. Descente d'échelle du climat SAFRAN (mission 033, 2026-11-19)
+
+| Point | État | Source | Résultat |
+|---|---|---|---|
+| Grille SAFRAN-SIM2 | **vérifié** (§ 25, lu en mission 020) | `LAMBX`, `LAMBY` en hm, Lambert II étendu (EPSG:27572), mailles de 8 km | Les centres sont les nœuds de l'interpolation ; la conversion se fait en EPSG:27572 puis Lambert-93 (x = est, y = nord). |
+| Interpolation bilinéaire entre centres de mailles | **à vérifier** (aucune référence publiée lue) | Choix de la mission 033 | Pondération des quatre mailles voisines ; bord d'extrait : poids renormalisés (extrapolation constante). Le champ est continu et lissé à 8 km. Ce n'est pas une méthode de descente d'échelle physique : aucune information de relief. |
+| Réseau de calcul de 1 km pour BILJOU | **à vérifier** (compromis coût / lissage) | `hydric_node_res_m: 1000` | Le saut résiduel entre nœuds voisins (médiane de |ΔIstress| 1,9 sur 20 m) vient de ce pas ; réversible par la config. |
+| Gradient vertical de température (option A) | **différée** | Γ mesuré dans le plan de 033 : −0,19 à −0,50 °C/100 m selon la maille (instable) ; aucune valeur publiée lue | Non implémentée : aucune correction d'altitude. Mission d'acquisition à prévoir (Γ, altitudes de maille). |
+| CHELSA (option C), RU par géologie (option D) | **différées** | Plan de 033 | À acquérir ou à évaluer ; la RU reste uniforme par maille et cause le saut résiduel d'Istress à la limite. |
+| RU de maille à moins de 5 placettes | **provisoire** | `ru_min_placettes: 5` | Repli sur la médiane des mailles de l'emprise (D11 : une maille sur 9, 2 placettes, `9720_23610`). Seuil non sourcé. |
+| Règle des 700 m | **respectée** | CLAUDE.md | Climat et RU : variables larges, croisables avec les placettes IFN ; k (r.sun) reste refusé aux placettes (`assert_no_fine_extract_on_ifn()`). |
+
 ## 33. Relevés floristiques ouverts, localisés à 25 m ou mieux, en D11 et GRECO D (mission 036)
 
 - **Décision éclairée :** peut-on calibrer le lien entre gradients (trophique, hydrique) et relief

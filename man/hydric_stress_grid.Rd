@@ -19,7 +19,9 @@ hydric_stress_grid(
   pas_ru = 10,
   n_controle = 30,
   seed = 1,
-  k_methode = attr(k, "methode")
+  k_methode = attr(k, "methode"),
+  interpolation = c("bilineaire", "proche"),
+  node_res = 1000
 )
 }
 \arguments{
@@ -48,6 +50,12 @@ ou \code{SpatRaster} (mm) sur la grille de \code{k}.}
 \item{seed}{Graine du tirage des cellules de contrôle.}
 
 \item{k_methode}{Méthode de \code{k} (\code{attr(k, "methode")} par défaut).}
+
+\item{interpolation}{\code{"bilineaire"} (défaut, mission 033) ou \code{"proche"}.}
+
+\item{node_res}{Pas (m) du réseau des nœuds de calcul de la météo interpolée (1000).
+L'interpolation bilinéaire (aucune référence publiée lue) et ce pas de 1 km sont
+provisoires : à vérifier.}
 }
 \value{
 Grille : \code{SpatRaster} \code{is_topo}, \code{nj_topo}, \code{is_plat}, \code{k_sv}, \code{ru_maille},
@@ -62,9 +70,20 @@ modulée par le rayonnement reçu par la pente ; ni la réserve utile, ni TWI, n
 ni HAND n'entrent dans BILJOU (ils restent des prédicteurs à part).
 }
 \details{
-Pour chaque cellule \code{x} de la grille, dans sa maille SAFRAN (8 km) :
+\strong{Climat de la cellule (mission 033).} Avec \code{interpolation = "bilineaire"} (défaut), les
+séries journalières SAFRAN (\code{PRELIQ}, \code{PRENEI}, \code{T}, \code{FF}, \code{HU}, \code{SSI}) sont
+interpolées bilinéairement entre les centres des mailles de 8 km (\code{\link[=safran_weights]{safran_weights()}})
+au centre de chaque nœud d'un réseau de \code{node_res} m (1 km, carrés partant du coin
+nord-ouest de la grille, rognés à son emprise) :
+toutes les cellules du nœud partagent cette météo, sans saut aux limites des mailles.
+Latitude et altitude de Penman sont pondérées de même (altitude moyenne des mailles,
+\strong{provisoire}, sans correction des températures : option A différée). Avec \code{"proche"},
+chaque cellule prend la série de sa maille (comportement d'avant 033). La réserve utile
+reste celle de la maille la plus proche (\code{\link[=ru_by_safran_cell]{ru_by_safran_cell()}}).
+
+Pour chaque cellule \code{x} de la grille, avec la météo de son nœud (ou de sa maille) :
 \enumerate{
-\item rayonnement du jour \code{d} : rg(x, d) = SSI(maille, d) × 0,01 × k(x, mois de d)
+\item rayonnement du jour \code{d} : rg(x, d) = SSI(nœud, d) × 0,01 × k(x, mois de d)
 (SSI en J/cm², unité vérifiée dans le document « Données quotidiennes SIM » de
 Météo-France du 2026-03-31 ; k de \code{\link[=solar_factor]{solar_factor()}}). Ce document nomme \code{SSI}
 « Rayonnement visible » : il est lu ici comme le rayonnement global de courte
@@ -73,31 +92,33 @@ longueur d'onde, \strong{à vérifier} ; la hauteur du vent \code{FF} (10 m supp
 \item ETP de Penman de \code{biljouR} (\code{\link[biljouR:safran_to_meteo]{biljouR::safran_to_meteo()}} avec \code{compute_pet = TRUE} :
 \code{penman_pet(T, rg, wind_to_2m(FF, 10), HU, doy, latitude, altitude)}) ; latitude du
 centre de la maille, altitude = moyenne de \code{altitude} dans la maille (\strong{provisoire}) ;
-\item \code{Istress(x)} = BILJOU(ETP(x), P(maille), RU(maille)) ;
+\item \code{Istress(x)} = BILJOU(ETP(x), P(nœud), RU(maille)) ;
 \item \strong{plat de référence} (\code{is_plat}) par la même formule avec k = 1 : l'écart
 \code{is_topo - is_plat} est purement topographique (l'ETP SAFRAN, Penman-Monteith,
 n'est pas la référence).
 }
 
-\strong{Table par maille.} BILJOU ne tourne pas cellule par cellule (environ 2 s par
-passe sur 30 ans). Chaque cellule reçoit un facteur scalaire \code{k_sv}, moyenne de ses 12
+\strong{Table par nœud (ou par maille).} BILJOU ne tourne pas cellule par cellule (environ 2 s par
+passe sur 30 ans). Dans chaque nœud (ou maille), chaque cellule reçoit un facteur scalaire \code{k_sv}, moyenne de ses 12
 facteurs mensuels pondérée par le rayonnement SAFRAN moyen des jours de la saison de
 BILJOU (\code{budburst} à \code{leaf_fall}) ; les cellules sont classées par pas de \code{pas_k}, et
 BILJOU tourne une fois par classe avec le profil mensuel moyen de la classe, et par
 réserve utile (une seule valeur si la RU est uniforme par maille, sinon une suite de
 pas \code{pas_ru}). Chaque cellule est interpolée linéairement en \code{k_sv} puis en RU.
 \strong{Écart mesuré} : sur \code{n_controle} cellules tirées dans chaque maille, BILJOU tourne
-avec le vrai profil de 12 facteurs ; l'écart à la table est rendu (attribut \code{ecart}),
+avec le vrai profil de 12 facteurs et la météo de leur nœud ; l'écart à la table est rendu (attribut \code{ecart}),
 sans seuil bloquant.
 
 \strong{Points} (\code{points}, \code{sf} en EPSG:2154) : calcul direct, sans table, pour des points
-précis (relevés GNSS, points au sol). \code{\link[=assert_no_fine_extract_on_ifn]{assert_no_fine_extract_on_ifn()}} est appelée
+précis (relevés GNSS, points au sol), météo interpolée au point même.
+\code{\link[=assert_no_fine_extract_on_ifn]{assert_no_fine_extract_on_ifn()}} est appelée
 d'abord : \strong{k n'est jamais appliqué aux placettes IFN} (localisées à 700 m), dont
 l'indice reste celui de \code{\link[=hydric_stress]{hydric_stress()}}, sans k.
 
 \strong{Replis} (attribut \code{methode}, avertissement) : \code{"biljou_topo"} (k de \code{r.sun}) ;
 \code{"biljou_climatique"} (k = 1, GRASS absent) ; \code{"climatique_etp_safran"} (colonnes
-\code{T}, \code{FF}, \code{HU} ou \code{SSI} absentes : BILJOU sur l'ETP SAFRAN, sans k) ; \code{"repli_ru"}
+\code{T}, \code{FF}, \code{HU} ou \code{SSI} absentes : BILJOU sur l'ETP SAFRAN de la maille la plus
+proche, sans k ni interpolation) ; \code{"repli_ru"}
 (SAFRAN ou \code{biljouR} absent : la réserve utile).
 
 Valeurs \strong{provisoires} (§ 25.5) : ciel clair pour k, passage de Turc au Penman de

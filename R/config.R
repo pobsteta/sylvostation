@@ -18,7 +18,9 @@
 #'   `bdcharm_departements`, `gbif_method` (`"search"`), `forest_mask` (`TRUE`),
 #'   `forest_height_m` (5), `cache_dir`, la carte hydrique (mission 021,
 #'   provisoires) : `solar_linke` (3), `solar_albedo` (0,2), `solar_step_h` (0,5),
-#'   `hydric_pas_k` (0,02), `hydric_n_controle` (30), `ifn_archive_url` et `taxref_url` (sans valeur
+#'   `hydric_pas_k` (0,02), `hydric_n_controle` (30), la descente d'échelle du climat
+#'   (mission 033, provisoires) : `safran_interpolation` (`"bilineaire"` ou `"proche"`),
+#'   `hydric_node_res_m` (1000), `ru_min_placettes` (5), `ifn_archive_url` et `taxref_url` (sans valeur
 #'   par défaut : seule source, config.yml ; exigées en ligne), et les
 #'   entrées optionnelles `gnss_path`, `reference_path`, `soil_paths`, `tichy_path`
 #'   (`NULL` si absentes : jamais remplacées).
@@ -102,6 +104,8 @@ read_config <- function(path = "config.yml") {
   # carte hydrique (mission 021), valeurs provisoires (referentiels § 25.5)
   solar_linke = 3, solar_albedo = 0.2, solar_step_h = 0.5, hydric_pas_k = 0.02,
   hydric_n_controle = 30L,
+  # descente d'echelle du climat SAFRAN (mission 033), valeurs provisoires
+  safran_interpolation = "bilineaire", hydric_node_res_m = 1000, ru_min_placettes = 5L,
   # reprise sur incident reseau des telechargements (mission 026), provisoire
   download_retries = 3L
 )
@@ -123,6 +127,7 @@ read_config <- function(path = "config.yml") {
   }
   logique("offline")
   logique("forest_mask")
+  est_chaine_cfg <- function(x) is.character(x) && length(x) == 1L && !is.na(x)
   entier_pos <- function(k, x = cfg[[k]]) {
     if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 1 || x != round(x)) {
       stop("`", k, "` doit \u00eatre un entier >= 1.", call. = FALSE)
@@ -148,6 +153,16 @@ read_config <- function(path = "config.yml") {
   if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0 || x != round(x)) {
     stop("`hydric_n_controle` doit \u00eatre un entier >= 0.", call. = FALSE)
   }
+  if (!est_chaine_cfg(cfg$safran_interpolation) ||
+      !cfg$safran_interpolation %in% c("bilineaire", "proche")) {
+    stop("`safran_interpolation` doit valoir bilineaire ou proche.", call. = FALSE)
+  }
+  x <- cfg$hydric_node_res_m
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0) {
+    stop("`hydric_node_res_m` doit \u00eatre un nombre > 0 (m).", call. = FALSE)
+  }
+  entier_pos("ru_min_placettes")
+  cfg$ru_min_placettes <- as.integer(cfg$ru_min_placettes)
   x <- cfg$download_retries
   if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 1 || x != round(x)) {
     stop("`download_retries` doit \u00eatre un entier >= 1.", call. = FALSE)

@@ -760,40 +760,37 @@ fetch_safran <- function(years, emprise, cache_dir, offline = FALSE,
 #' précipitations (`PRELIQ + PRENEI`, couche `p_sv`) et de l'ETP (`etp_sv`), et
 #' température moyenne annuelle (`t_moy`, `NA` si la colonne `T` manque). Le raster
 #' est construit en Lambert II étendu (EPSG:27572, grille SAFRAN) puis projeté en
-#' Lambert-93 à `res` m (plus proche voisin) : la maille reste celle de SAFRAN, donc
-#' utilisable avec les placettes IFN.
+#' Lambert-93 à `res` m.
+#'
+#' * `interpolation = "bilineaire"` (défaut, mission 033) : chaque cellule de `res` m
+#'   reçoit l'interpolation bilinéaire des valeurs des mailles entre leurs centres
+#'   ([safran_weights()]) : le champ est continu, sans saut aux limites des mailles.
+#'   Lissé à l'échelle de 8 km, il reste un climat kilométrique (variable large),
+#'   croisable avec les placettes IFN. Aucune correction d'altitude.
+#' * `interpolation = "proche"` : plus proche voisin (comportement d'avant 033), la
+#'   valeur de la maille est uniforme sur ses 8 km.
 #'
 #' @param safran `data.frame` de [read_safran()].
 #' @param months Mois de la saison de végétation (4:9).
 #' @param res Résolution du raster en Lambert-93 (1000 m, minimum pour l'IFN).
-#' @return Un `SpatRaster` (EPSG:2154) : `p_sv`, `etp_sv`, `t_moy`.
+#' @param interpolation `"bilineaire"` (défaut) ou `"proche"`.
+#' @return Un `SpatRaster` (EPSG:2154) : `p_sv`, `etp_sv`, `t_moy` ; attributs `months`
+#'   et `interpolation`.
 #' @examples
 #' s <- read_safran(system.file("extdata", "safran_sim2_12mailles_extrait.csv",
 #'                               package = "sylvostation"))
 #' safran_climate(s)
 #' @export
-safran_climate <- function(safran, months = 4:9, res = 1000) {
+safran_climate <- function(safran, months = 4:9, res = 1000,
+                           interpolation = c("bilineaire", "proche")) {
+  interpolation <- match.arg(interpolation)
   if (!is.data.frame(safran) || !all(c("LAMBX", "LAMBY", "DATE") %in% names(safran))) {
     stop("`safran` doit venir de read_safran().", call. = FALSE)
   }
   if (!is.numeric(months) || !length(months) || any(!months %in% 1:12)) {
     stop("`months` doit contenir des mois de 1 \u00e0 12.", call. = FALSE)
   }
-  d <- as.data.frame(safran)
-  d$an <- as.integer(substr(as.character(d$DATE), 1, 4))
-  d$mois <- as.integer(substr(as.character(d$DATE), 5, 6))
-  d$cle <- paste(d$LAMBX, d$LAMBY, sep = "_")
-  sv <- d[d$mois %in% months, , drop = FALSE]
-  p <- stats::aggregate(cbind(p = PRELIQ + PRENEI, etp = ETP) ~ cle + an, data = sv, FUN = sum)
-  p <- stats::aggregate(cbind(p, etp) ~ cle, data = p, FUN = mean)
-  if ("T" %in% names(d) && any(!is.na(d$T))) {
-    t <- stats::aggregate(T ~ cle + an, data = d, FUN = mean)
-    t <- stats::aggregate(T ~ cle, data = t, FUN = mean)
-  } else {
-    t <- data.frame(cle = p$cle, T = NA_real_)
-  }
-  m <- unique(d[, c("cle", "LAMBX", "LAMBY")])
-  m <- merge(merge(m, p, by = "cle"), t, by = "cle", all.x = TRUE)
+  m <- .climat_mailles(safran, months)   # R/climat.R
   x <- m$LAMBX * 100
   y <- m$LAMBY * 100
   r <- terra::rast(xmin = min(x) - 4000, xmax = max(x) + 4000, ymin = min(y) - 4000,
@@ -804,8 +801,10 @@ safran_climate <- function(safran, months = 4:9, res = 1000) {
   terra::values(r) <- v
   names(r) <- c("p_sv", "etp_sv", "t_moy")
   out <- terra::project(r, "EPSG:2154", method = "near", res = res)
+  if (interpolation == "bilineaire") out <- .climat_bilineaire(out, m)
   assert_crs_2154(out)
   attr(out, "months") <- months
+  attr(out, "interpolation") <- interpolation
   out
 }
 
@@ -1011,6 +1010,8 @@ apply_bioclim <- function(x, axis) {
 #' @param safran `data.frame` de [read_safran()].
 #' @param ru_source Source de la réserve utile (`"euptf2"`, défaut ADR 0006).
 #' @param annees Années SAFRAN gardées (`NULL` : toutes).
+#' @param interpolation Séries SAFRAN aux placettes : `"bilineaire"` (défaut, mission 033)
+#'   ou `"proche"` ([hydric_stress()]).
 #' @return Un `sf` (une ligne par placette retenue avec flore) : `id_placette`,
 #'   `source`, `loc_precision_m`, `grad_trophique`, `ru_mm`, `grad_hydrique`,
 #'   `is_biljou`, `coarse_p_etp_sv`, `coarse_t_moy`, `bioclim`, `trophic`, `hydric`.
@@ -1031,13 +1032,13 @@ apply_bioclim <- function(x, axis) {
 #' }
 #' @export
 ifn_real_gradients <- function(ifn, indicateurs, climat, safran, ru_source = "euptf2",
-                               annees = NULL) {
+                               annees = NULL, interpolation = "bilineaire") {
   ind <- as.data.frame(indicateurs)
   g <- compute_gradients(ifn, ind, climat)
   ru <- ru_from_texture(ifn$placettes, ru_source = ru_source)
   g$ru_mm <- ru$ru_mm[match(g$id_placette, ru$id_placette)]
   g <- g[!is.na(g$grad_trophique), ]
-  h <- hydric_stress(g, safran, ru_col = "ru_mm", annees = annees)
+  h <- hydric_stress(g, safran, ru_col = "ru_mm", annees = annees, interpolation = interpolation)
   axis <- bioclim_axis(h)
   h$bioclim <- apply_bioclim(h, axis)
   h$trophic <- h$grad_trophique

@@ -70,11 +70,11 @@ hydrique ».
 | `geol_*` | `read_geology()`, `recode_lithology()`, `dominant_lithology(700)` | BD Charm-50 (`bdcharm_departements`) | extrait |
 | `ifn` | `load_ifn()`, `filter_greco()`, `filter_releves()` | `fetch_ifn()` | extrait |
 | `taxref`, `indicateurs` | `read_taxref()`, `load_indicator_values("tichy")` | `taxref_url`, `tichy_path` | extraits |
-| `safran`, `climat` | `fetch_safran()`, `read_safran()`, `safran_climate()` (avril-septembre) | SIM2 | 12 mailles |
+| `safran`, `climat` | `fetch_safran()`, `read_safran()`, `safran_climate()` (avril-septembre, interpolation bilinéaire entre centres de mailles, `safran_interpolation`, mission 033) | SIM2 | 12 mailles |
 | `ifn_gradients` | `ifn_real_gradients()` : Tichý, `ru_from_texture()`, `hydric_stress()` (ADR 0006), `bioclim_axis()` | | |
 | `solar_k` | `solar_factor()` : k mensuel de GRASS `r.sun` (ciel clair) sur l'altitude de la grille ; repli k = 1 sans GRASS | | |
-| `ru_mailles` | `ru_by_safran_cell()` : RU uniforme par maille SAFRAN (médiane euptf2 des placettes IFN), provisoire | | |
-| `hydric_grid` | `hydric_stress_grid()` : Istress à `resolution_m` (BILJOU, ETP Penman biljouR sur SSI × k), plat de référence, écart table / calcul direct | | |
+| `ru_mailles` | `ru_by_safran_cell()` : RU uniforme par maille SAFRAN (médiane euptf2 des placettes IFN ; médiane de l'emprise sous `ru_min_placettes` = 5 placettes, provisoire) | | |
+| `hydric_grid` | `hydric_stress_grid()` : Istress à `resolution_m` (BILJOU, ETP Penman biljouR sur SSI × k), plat de référence, écart table / calcul direct ; météo interpolée sur un réseau de `hydric_node_res_m` = 1 000 m (mission 033) | | |
 | `anchors`, `local_trophic` | `get_gbif()`, `clean_occ()`, `grid_bioindication()`, `gbif_anchors()` | `occ_search` ou `occ_download` | **absent** |
 | `models`, `cvs`, `maps` | `fit_gradient()`, `spatial_cv()`, `predict_raster()` (trophique, hydrique) ; bioclimat = `apply_bioclim()` ; couche `hydric` de `gradient_map` = `-is_topo` de `hydric_grid` (le modèle régional hydrique ne sert qu'à la validation croisée) ; `incertitude.tif` : trophique seul | | régional seul |
 | typologie | `default_thresholds()`, `discretise()`, `merge_rare(plots = types des placettes)`, `type_raster()`, `real_type_legend()` (`azonal = FALSE`) | | |
@@ -132,6 +132,38 @@ topographie module l'**ETP** par le rayonnement reçu par la pente, jamais la r�
   réelles ; l'ancien run de 19 min pour 9 392 placettes ramené à 2 894 placettes donne au
   plus 6 min (proportionnel), soit ≈ 6 s avec le facteur ×60 mesuré.
 - RU uniforme par maille (`ru_by_safran_cell()`, `hydrique_mailles.csv`) : provisoire.
+- **Descente d'échelle du climat (mission 033, provisoire, référentiels § 32).** Avant 033,
+  le climat était celui de la maille SAFRAN de 8 km, uniforme : la maille expliquait 84 %
+  de la variance d'Istress, 78 % du trophique, 95 % du bioclimat. Maintenant
+  (`safran_interpolation: bilineaire`) :
+  - les séries journalières (pluie liquide, neige, T, vent, humidité, SSI, ETP) sont
+    interpolées **bilinéairement entre les centres des mailles** (`safran_weights()`) ;
+    BILJOU tourne **par nœud d'un réseau de 1 km** (`hydric_node_res_m`), non par cellule
+    de 20 m ; la latitude et l'altitude d'un nœud sont pondérées de même ; la RU reste
+    **uniforme par maille** (plus proche maille), donc un saut de RU subsiste à la limite ;
+  - `climat` (`p_sv`, `etp_sv`, `t_moy`) est l'interpolation bilinéaire des agrégats de
+    maille ; les placettes IFN reçoivent **le même climat kilométrique** (`coarse_*`), et
+    leur Istress est calculé sur les séries interpolées au point (variable large : la règle
+    des 700 m est respectée, `safran_weights()` n'extrait rien de fin) ;
+  - **aucune correction d'altitude** (option A différée : gradient vertical non stable,
+    aucune valeur publiée lue) : le champ est lissé à l'échelle de 8 km, il ne reproduit pas
+    le relief ;
+  - `safran_interpolation: proche` redonne le comportement d'avant 033.
+  Mesure sur les 225 dalles de D11 (entrées de 018, même emprise, sans r.sun refait ; avant =
+  `data/sorties/D11/` de 018, après = même chaîne en aval, scratchpad) : part de la variance
+  expliquée par la maille (cellules forestières typées, n = 394 055) : Istress 0,844 → 0,631 ;
+  trophique 0,778 → 0,142 ; bioclimat 0,950 → 0,753 ; part des cellules dans le type modal de
+  leur maille 0,896 → 0,532 ; part des limites entre types sur une limite de maille 0,052 →
+  0,009. Saut médian d'Istress entre cellules voisines (20 m), limite de maille / intérieur :
+  horizontal 15,7 / 0,39 (rapport 40) → 8,8 / 0,34 (rapport 26) ; vertical 6,1 / 0,53 (rapport
+  12) → 1,6 / 0,48 (rapport 3,4). Trophique et bioclimat : rapport 1,0 à 2,4 (continus). Le saut
+  qui subsiste sur Istress est celui de la RU (écart médian 40 mm entre mailles voisines,
+  même valeur de 8,8 sur les 1 509 paires à RU différente ; saut aux autres limites de
+  nœuds de 1 km : 1,9). Temps de `hydric_grid` : 15 s → 258 s (réseau de 1 km, 9 mailles).
+  **Prix à lire** : la validation croisée spatiale du trophique passe de R² ≈ 0 à −0,23
+  (187 placettes, 2 variables climatiques lissées) : la carte ne dit plus « 9 mailles », elle
+  dit « un gradient climatique lisse », pas plus de signal ; le trophique attend la mission
+  034.
 - Sorties : couche `hydric` de `gradients.tif` (= `grad_hydrique_carte` = -Istress),
   `hydrique.tif` écrit par `write_hydric_grid()` (COG, préfixe `synth_` si
   synthétique ; `is_topo`, `nj_topo`, `is_plat`, `k_sv`, `ru_maille`, masqués par la

@@ -76,6 +76,24 @@ test_that("cles de la carte hydrique de 25 m : defauts provisoires et controles"
   expect_error(read_config(ecrire_config(list(hydric_n_controle = 2.5))), "hydric_n_controle")
 })
 
+test_that("cles de la descente d'echelle du climat (mission 033) : defauts et controles", {
+  cfg <- read_config(ecrire_config())
+  expect_identical(cfg$safran_interpolation, "bilineaire")
+  expect_equal(cfg$hydric_node_res_m, 1000)
+  expect_identical(cfg$ru_min_placettes, 5L)
+  expect_identical(read_config(ecrire_config(list(safran_interpolation = "proche")))$safran_interpolation,
+                   "proche")
+  expect_error(read_config(ecrire_config(list(safran_interpolation = "krigeage"))),
+               "safran_interpolation")
+  expect_error(read_config(ecrire_config(list(hydric_node_res_m = 0))), "hydric_node_res_m")
+  expect_error(read_config(ecrire_config(list(ru_min_placettes = 0))), "ru_min_placettes")
+  f <- testthat::test_path("..", "..", "config.yml")
+  skip_if_not(file.exists(f), "config.yml absent du paquet installe")
+  cf <- read_config(f)
+  expect_identical(cf$safran_interpolation, "bilineaire")
+  expect_identical(cf$ru_min_placettes, 5L)
+})
+
 test_that("config.yml du depot : grille de 20 m (mission 025, ADR 0007)", {
   f <- testthat::test_path("..", "..", "config.yml")
   skip_if_not(file.exists(f))
