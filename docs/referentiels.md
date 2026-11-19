@@ -1347,7 +1347,7 @@ de « En service » et `acces_vehicule_leger` = « Physiquement impossible ». L
   `search-data.ubfc.fr` (Anubis), `agroenvgeo.data.inra.fr` (hôte introuvable),
   `appgeodb.nancy.inra.fr` (hôte introuvable), `inpn.mnhn.fr` (hôte non ouvert, § « hôtes refusés »).
 
-### 32.1 Décompte GBIF à ≤ 25 m déclarés, par jeu (96 350 occurrences)
+### 33.1 Décompte GBIF à ≤ 25 m déclarés, par jeu (96 350 occurrences)
 
 Somme des jeux = 96 350 (vérifiée). Licences : § 8 et pages `dataset/<clé>` (relues ici pour les
 jeux CardObs, naturgucker).
@@ -1372,7 +1372,7 @@ occurrences), **583 à ≤ 1 000 m**. CBAL (`69580c67-…`) : 26 077 ; incertitu
 selon sensibilité », recherche web, non lu à la source). Les occurrences sans valeur
 d'incertitude sont refusées par la règle du projet.
 
-### 32.2 Les deux jeux qui passent le filtre
+### 33.2 Les deux jeux qui passent le filtre
 
 **CQQCOQP.** *Pourquoi :* observations naturalistes, pas des relevés de calibration. *Qui :*
 naturgucker = réseau social de NABU (citoyens), CardObs = outil de PatriNat (OFB, MNHN, CNRS, IRD),
@@ -1404,7 +1404,7 @@ hêtre : **cette liste couvre plus que 5 m** ; le point est un centre de lieu-di
 placette. La précision de 5 m vaut pour la coordonnée, pas pour l'étendue du relevé.
 **Aucune des deux précisions n'est vérifiée contre un repère de terrain.**
 
-### 32.3 sPlotOpen (Sabatini et al. 2021) : écart avec le § 27
+### 33.3 sPlotOpen (Sabatini et al. 2021) : écart avec le § 27
 
 | Point | État | Source | Résultat |
 |---|---|---|---|
@@ -1422,7 +1422,7 @@ sous-ensemble a été ouvert par ses propriétaires. Il **n'améliore pas la pr�
 nécessaire : lire `Location_uncertainty`, `Country` et les coordonnées dans l'en-tête
 (un téléchargement de l'orchestrateur, hors mission 036).
 
-### 32.4 Réseaux de placettes, sols, jeux de recherche
+### 33.4 Réseaux de placettes, sols, jeux de recherche
 
 | Source | État | Résultat |
 |---|---|---|
@@ -1432,7 +1432,7 @@ nécessaire : lire `Location_uncertainty`, `Country` et les coordonnées dans l'
 | INRAE Nancy, essais de fertilisation de la sapinière (SapVF) | **piste faible** | 4 sites (Vologne et Mortagne, versant lorrain, grès ; Grendelbruch et Russ, versant alsacien, granite de Kagenfels) × 10 placettes de 30 m de côté ; relevé de 1985-1990. Pas de coordonnées dans les 4 pages lues ; conditions d'accès non lues. |
 | Prairies de fauche Jura-Vosges (2020) | **piste, non vue** | « données ouvertes », 66 + 66 relevés (2005-2009, 2019) selon un extrait de recherche ; prairies, pas forêt ; page bloquée (Anubis). |
 
-### 32.5 Recommandation classée
+### 33.5 Recommandation classée
 
 1. **Aucune source ouverte trouvée ne fournit, à ce jour, de vrais relevés forestiers à ≤ 25 m
    en D11 en nombre suffisant.** Les relevés précis restent fermés (EcoPlant, SOPHY) ; les jeux
@@ -1462,7 +1462,7 @@ nécessaire : lire `Location_uncertainty`, `Country` et les coordonnées dans l'
    un DOI par jeu CardObs) ; **ne pas recopier `recordedBy`** (noms d'observateurs dans CardObs,
    données personnelles). Dietz : Etalab 2.0, compatible, DOI 10.15454/AZNS3A.
 
-### 32.6 Écarts relevés entre sources (§ 33)
+### 33.6 Écarts relevés entre sources (§ 33)
 
 1. IFN : 41,7 % des occurrences à ≤ 25 m ici (rectangle, toutes années) contre 40,5 % au § 8
    (emprise test, 2000-2026) ; 96 350 toutes années contre 96 151 depuis 2000 (199 avant 2000).
@@ -1477,7 +1477,7 @@ nécessaire : lire `Location_uncertainty`, `Country` et les coordonnées dans l'
 6. Numérotation : deux sections portent déjà le n° 26 (§ 27, écart 5) ; ce § 33 suit le dernier
    numéro lu (§ 31).
 
-### 32.7 Trois points au sol (à vérifier par Pascal)
+### 33.7 Trois points au sol (à vérifier par Pascal)
 
 1. **Senones, mare ou prairie humide, 48,308254 ; 6,965473** (naturgucker, 2022-06-14) : quatre
    espèces à 3 m (`Lysimachia nummularia`, `L. vulgaris`, `Caltha palustris`, `Juncus acutiflorus`) ;
