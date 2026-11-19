@@ -1311,3 +1311,186 @@ de « En service » et `acces_vehicule_leger` = « Physiquement impossible ». L
 | Point | État | Source | Résultat |
 |---|---|---|---|
 | Échelle d'abondance-dominance (`r`, `+`, `1` à `5`) | **à vérifier** (non lue) | Braun-Blanquet J., 1964, *Pflanzensoziologie*, 3e éd., Springer, Wien | Formule usuelle : `r` un ou très peu d'individus ; `+` peu abondant, recouvrement très faible ; `1` nombreux, recouvrement < 5 % ; `2` 5 à 25 % ; `3` 25 à 50 % ; `4` 50 à 75 % ; `5` > 75 %. Citée de mémoire, sans accès à l'ouvrage (mission 029). |
+
+## 33. Relevés floristiques ouverts, localisés à 25 m ou mieux, en D11 et GRECO D (mission 036)
+
+- **Décision éclairée :** peut-on calibrer le lien entre gradients (trophique, hydrique) et relief
+  fin LiDAR sur des relevés ou occurrences **ouverts**, sans EcoPlant ni SOPHY (accès sur demande,
+  refusés par Pascal) ; et laquelle des sources trouvées entre dans la chaîne.
+- **Propriétaire :** Pascal (délégué à l'orchestrateur). **Rédigé par :** agent `acquereur`,
+  mission 036, le 2026-11-19. **Outils :** `WebFetch` (pages résumées par un petit modèle ; les
+  décomptes de l'API GBIF sont ceux du serveur, les **dépouillements de facettes** de plus de
+  30 entrées sont comptés par le résumeur, donc approchés), `WebSearch`, lecture en image de
+  trois PDF enregistrés par l'outil. **Pas de `curl`, pas de R** : aucun polygone SER croisé,
+  aucun fichier téléchargé, rien dans `inst/extdata`, aucun compte, aucune demande d'accès.
+- **Emprise des décomptes GBIF :** rectangle lon 6,6-7,4, lat 47,8-48,6 (consigne), plantes
+  vasculaires (`taxonKey=7707728`), `hasCoordinate=true`, `hasGeospatialIssue=false`, **toutes
+  années**, `coordinateUncertaintyInMeters=0,25`, requêtes du 2026-11-19. **Ce rectangle n'est
+  pas D11** : il contient la plaine d'Alsace et une part de la Lorraine, et ignore l'ouest de
+  D11 (lon < 6,6). Sensibilité : (a) cœur de massif lon 6,8-7,2, lat 47,9-48,5 : 40 757
+  occurrences à ≤ 25 m ; (b) bande ouest lon 6,2-6,6 : 19 554, dont **13 136 IFN** et 50 + 5
+  des deux jeux utiles ci-dessous (l'ouest n'ajoute rien d'exploitable). Part en D11 des
+  chiffres ci-dessous : **non mesurée** (croisement avec `ser_l93.shp` à faire en R).
+- **URL consultées le 2026-11-19 :** API GBIF `https://api.gbif.org/v1/occurrence/search` (facettes
+  `datasetKey`, `eventDate`, `locality`, `speciesKey`, `year`, `coordinateUncertaintyInMeters`) et
+  `https://api.gbif.org/v1/dataset/<clé>` ; Sabatini et al. 2021, *Global Ecol. Biogeogr.* 30 :
+  1740-1764, DOI 10.1111/geb.13346 (PDF `https://www.africamuseum.be/publication_docs/Sabatini et al 2021 GEB.pdf`,
+  pages 1-20 lues en image) ; `https://doi.org/10.25829/idiv.3474-40-3292` (redirige vers
+  `https://idata.idiv.de/ddm/Data/ShowData/3474`) ; `https://www.idiv.de/en/splot/splotopen.html` ;
+  `https://ces-unsw-edu-au.github.io/cesdata/docs/vegetation-plots/global/sPlotOpen` ; Dietz L.
+  et al. 2023, *Rev. For. Fr.* 74(4) : 481-, `https://revueforestierefrancaise.agroparistech.fr/article/download/7899/33491`
+  (pages 2-5) ; `https://b2find.eudat.eu/dataset/edb097c4-268f-5959-a44a-529394c4124b` ;
+  métadonnées INRAE Nancy SapVF
+  `https://appgeodb.nancy.inrae.fr/donnees/documentations/bdd/db_phyto/source_complementaire/SapVF/SapVF_metadonnees_pour_BDD.pdf`.
+  **Inaccessibles :** `entrepot.recherche.data.gouv.fr` (API et OAI : page « Access Denied » du
+  filtre Anubis, non contourné), `hal.inrae.fr` (idem), `isidore.science` (403),
+  `search-data.ubfc.fr` (Anubis), `agroenvgeo.data.inra.fr` (hôte introuvable),
+  `appgeodb.nancy.inra.fr` (hôte introuvable), `inpn.mnhn.fr` (hôte non ouvert, § « hôtes refusés »).
+
+### 32.1 Décompte GBIF à ≤ 25 m déclarés, par jeu (96 350 occurrences)
+
+Somme des jeux = 96 350 (vérifiée). Licences : § 8 et pages `dataset/<clé>` (relues ici pour les
+jeux CardObs, naturgucker).
+
+| Jeu (`datasetKey`) | n à ≤ 25 m | Licence | Lecture |
+|---|---|---|---|
+| IFN (`e5f16d86-…`) | 40 144 (41,7 %) | CC BY 4.0 | **Exclu** : placettes à 700 m déclarées à 1 m (§ 8). |
+| Pl@ntNet automatically identified (`14d5676a-…`) | 23 694 | CC BY 4.0 | **Écarté** : identification automatique, non validée. |
+| Observation.org (`8a863029-…`) | 11 777 | **CC BY-NC 4.0** | **Écarté** (licence). |
+| Pl@ntNet observations (`7a3679ef-…`) | 6 222 | CC BY 4.0 | Une photo = une espèce ; dates : 11 jours à ≥ 5 occurrences, 2 à ≥ 10 ; pas de `recordedBy` ; **non échantillonné** (facettes seules). Non retenu comme relevé. |
+| **naturgucker (NABU)** (`6ac3f774-…`) | **6 143** | CC BY 4.0, DOI 10.15468/uc1apo | Voir 32.2. |
+| iNaturalist (`50c9509d-…`) | 4 879 | **CC BY-NC 4.0** | **Écarté** (licence). |
+| **CardObs** (11 jeux d'observateurs, dont `7d2dc1b9-…`) | **≈ 3 007** | CC BY 4.0 (pages de jeux relues) | Voir 32.2. |
+| INPN Espèces (`7247dc2e-…`) | 448 | CC BY 4.0 | Incertitude 10 m ; 3 observateurs, points isolés (20 lus : 1 espèce par point, vignes, prairies) : **pas des relevés**. |
+| Autres (11 jeux) | 36 | — | Non examinés. |
+
+**Jeux régionaux de flore : aucun à ≤ 25 m.** Flore d'Alsace (SBA, `72b6bac4-…`) : 199 435
+occurrences dans le rectangle, incertitudes de 1 529 m à 7 997 m (30 premières valeurs, 112 467
+occurrences), **583 à ≤ 1 000 m**. CBAL (`69580c67-…`) : 26 077 ; incertitudes 1 583 m à 7 997 m,
+**95 à ≤ 1 000 m**. Ce sont les données des CBN en diffusion ouverte : **floutées à la commune**
+(cohérent avec les CBN de Brest, qui diffusent sur OpenObs « à la commune ou à la maille 5x5 km
+selon sensibilité », recherche web, non lu à la source). Les occurrences sans valeur
+d'incertitude sont refusées par la règle du projet.
+
+### 32.2 Les deux jeux qui passent le filtre
+
+**CQQCOQP.** *Pourquoi :* observations naturalistes, pas des relevés de calibration. *Qui :*
+naturgucker = réseau social de NABU (citoyens), CardObs = outil de PatriNat (OFB, MNHN, CNRS, IRD),
+naturalistes expérimentés. *Quoi :* occurrences d'espèces (humaines, `HUMAN_OBSERVATION`).
+*Comment :* point par espèce (naturgucker) ; liste d'espèces posée sur un point de lieu-dit
+(CardObs). *Où :* voir ci-dessous. *Quand :* naturgucker 2007-2026 (2021 : 2 683 sur 6 143) ;
+CardObs principal 2007-2021. *Combien :* incertitude **déclarée**, jamais mesurée par la source.
+
+| Point | naturgucker | CardObs (jeu principal `7d2dc1b9-…`, DOI 10.15468/gc267b) |
+|---|---|---|
+| Occurrences ≤ 25 m, rectangle ; cœur de massif | 6 143 ; 1 162 | 1 196 ; 412 |
+| Incertitude déclarée | **25,0 m** sur tous les enregistrements lus (40) | **5,0 m** sur les 20 lus |
+| Regroupement possible | `recordedBy` : **un seul code haché pour 6 050 occurrences sur 6 143** (observateurs non séparables) ; 400 jours, dont 156 à ≥ 10, 85 à ≥ 20, 39 à ≥ 50 occurrences | 1 observateur dominant ; 30 jours (18 à ≥ 10, 13 à ≥ 20) ; **45 lieux-dits, 25 à ≥ 10 espèces, 17 à ≥ 20** |
+| Géométrie lue | 20 + 20 enregistrements : points **individuels**, étalés sur 1,2 à 2 km par jour ; au plus 3-4 espèces aux mêmes coordonnées (Senones 2022-06-14 : 4 espèces à 3 m, 3 à 1 m) ; Thann 2021-10-20 : 20 points distincts | 12 espèces aux **mêmes coordonnées** (48,34486 ; 7,38116, lieu-dit « Neuematten ») le 2012-06-09, puis 6 + 1 + 1 aux deux autres lieux-dits |
+| `locality` | **n'est pas un lieu** : cellule UTM de 25 km (17 valeurs, `UTM25_32T_0350_5275`…), à ne pas confondre avec les « 25 m » | nom de lieu-dit |
+| Qualité de détermination | non renseignée | « Non réalisable » (la plupart), « Probable » (3 sur 20) |
+| Autres jeux CardObs (à ≤ 25 m) | — | `0200e5ab-…` 678 (une seule année, 2023, 9 jours) ; `aa79690b-…` 466 (2012, 2018 ; lieux dont Lac de Sewen 108) ; `c9147f19-…` 340 ; `130eea59-…` 148 ; `99ce61d0-…` 66 ; `0c7bfc03-…` 43 |
+
+**Volume utile.** naturgucker + 8 jeux CardObs : 9 080 occurrences, **1 017 espèces** ; 281 espèces
+à ≥ 10 points, **61 à ≥ 30, aucune à ≥ 100** (dépouillement de facettes par le résumeur :
+somme 8 607 ≠ 9 080, voir écarts).
+
+**Deux sources pour la précision.** (1) déclaration : 25 m et 5 m ; (2) géométrie des points :
+naturgucker met bien des points distincts (3 m entre deux espèces d'une même mare, 570 m entre
+deux stations) : **cohérent avec un pointage au GPS ou sur carte, incompatible avec un calage sur
+grille**. CardObs : les 12 espèces du point « Neuematten » mêlent source (`Caltha palustris`,
+`Chrysosplenium alternifolium`), lande sèche (`Genista sagittalis`, `Festuca trachyphylla`) et
+hêtre : **cette liste couvre plus que 5 m** ; le point est un centre de lieu-dit, pas une
+placette. La précision de 5 m vaut pour la coordonnée, pas pour l'étendue du relevé.
+**Aucune des deux précisions n'est vérifiée contre un repère de terrain.**
+
+### 32.3 sPlotOpen (Sabatini et al. 2021) : écart avec le § 27
+
+| Point | État | Source | Résultat |
+|---|---|---|---|
+| Contenu | **vérifié** | article p. 6, 11 | 95 104 relevés de 105 jeux, 114 pays, 1888-2015, surface 0,03 à 40 000 m² (médiane 100 m²), espèces vasculaires. Rééchantillonné pour équilibrer l'espace climatique : **non représentatif d'une région** (p. 18). |
+| France | **vérifié** | tableau 1 p. 14 | **Un seul jeu français : `EU-FR-003` SOPHY, 7 986 relevés en accès ouvert** (custodien E. Garbolino, suppléant P. De Ruffray). **Ni EcoPlant (`EU-FR-005`), ni VegFrance (`EU-FR-004`).** Vosges : part **non comptée** (fichier non téléchargé). |
+| Précision | **vérifié (documentation)** | tableau 2 p. 17 ; p. 9 | `Location_uncertainty` **1 à 2 750 m**, renseigné pour 95 075 relevés ; les relevés au-dessus de **3 km** ont été retirés avant le rééchantillonnage. Pour SOPHY, niveaux 100-500 m, 0,5-5 km (§ 27) : **aucun relevé à 25 m attendu** ; minimum du jeu français **non lu**. Pour les jeux de l'iDiv, une valeur manquante est remplacée par la médiane du jeu avec un signe négatif (recherche web sur le code `splot3_build`, non lu à la source) : à tester sur le fichier. |
+| Licence | **non vérifié pour les fichiers** | page iData sans licence ; article CC BY 4.0 | Les propriétaires ont **donné permission d'ouvrir** les relevés (p. 10). Licence de `sPlotOpen.zip` : **à lire sur la page iData** (version 2.0, 2023) avant tout usage. |
+| Accès | **vérifié** | DOI ; page du guide CES | `https://idata.idiv.de/ddm/Data/DownloadZip/3474?version=5047` (taille non publiée) ; tables `header`, `DT`, `CWM_CWV`, `metadata`, `references`, fichiers texte à tabulations ; `Latitude`/`Longitude` WGS84. Taxons harmonisés sur un référentiel propre à sPlot (pas TAXREF). |
+
+**Écart avec le § 27 :** le § 27 conclut « accès fermé, aucune licence ouverte » ; sPlotOpen publie
+7 986 relevés de la même base SOPHY. Les deux sont vrais : SOPHY entière reste fermée, ce
+sous-ensemble a été ouvert par ses propriétaires. Il **n'améliore pas la précision** (toujours
+> 25 m, donc inutilisable pour la calibration fine), mais il peut servir à **nommer les types**
+à maille large (niveau 1 de SOPHY, 100-500 m) **sans demande d'accès**. Dernier contrôle
+nécessaire : lire `Location_uncertainty`, `Country` et les coordonnées dans l'en-tête
+(un téléchargement de l'orchestrateur, hors mission 036).
+
+### 32.4 Réseaux de placettes, sols, jeux de recherche
+
+| Source | État | Résultat |
+|---|---|---|
+| RENECOFOR (ONF) | **piste, non vérifiée** | 102 placettes en forêt publique (source secondaire) ; relevés floristiques décennaux. **Aucun jeu ouvert avec coordonnées trouvé** (recherche web ; `onf.fr/renecofor` non ouvert). Part vosgienne inconnue. Non retenu. |
+| RMQS (GIS Sol) | **piste, source primaire inaccessible** | Grille de 16 km ; les jeux publiés utiliseraient les coordonnées du **centre de maille** (« erreur » d'attribuer la valeur à la parcelle), licence Etalab 2.0 pour les cartes (extrait de recherche d'un jeu AgroEnvGeo, page non lue). **Écarté** (maille 16 km, pas de coordonnées réelles). |
+| **Dietz et al. : trouées de la tempête de 1999 et peuplements voisins** (DOI 10.15454/AZNS3A, UMR Silva, 2020, **Etalab 2.0**) | **piste sérieuse, contenu non vu** | 139 placettes de 20 m de diamètre en trouée (relevés floristiques 2002 et 2018) + 139 en forêt non perturbée (2018), températures, altitude, surface ; **145 sites dans la GRECO Grand Est** dont la partie vosgienne (carte, fig. 1 p. 483 de l'article ; points en D11 **non comptés**) ; **pH eau de l'horizon 0-5 cm** mesuré à chaque site (p. 485), fosse pédologique. **Précision des coordonnées non publiée** sur les pages lues ; l'entrepôt est derrière un filtre anti-robot (non contourné). Données **ouvertes, sans demande** : à télécharger depuis un navigateur. Biais : trouées de tempête, sites ciblés sur des problèmes de régénération. |
+| INRAE Nancy, essais de fertilisation de la sapinière (SapVF) | **piste faible** | 4 sites (Vologne et Mortagne, versant lorrain, grès ; Grendelbruch et Russ, versant alsacien, granite de Kagenfels) × 10 placettes de 30 m de côté ; relevé de 1985-1990. Pas de coordonnées dans les 4 pages lues ; conditions d'accès non lues. |
+| Prairies de fauche Jura-Vosges (2020) | **piste, non vue** | « données ouvertes », 66 + 66 relevés (2005-2009, 2019) selon un extrait de recherche ; prairies, pas forêt ; page bloquée (Anubis). |
+
+### 32.5 Recommandation classée
+
+1. **Aucune source ouverte trouvée ne fournit, à ce jour, de vrais relevés forestiers à ≤ 25 m
+   en D11 en nombre suffisant.** Les relevés précis restent fermés (EcoPlant, SOPHY) ; les jeux
+   ouverts précis sont des occurrences, les jeux de relevés ouverts sont flous.
+2. **Calibration « par espèce » sur GBIF (naturgucker + CardObs, CC BY 4.0)** : la seule voie
+   immédiate et libre. Le lien relief-gradient se teste **espèce par espèce** (pour chaque espèce
+   à ≥ 30 points, 61 espèces en tout, distribution du TWI, de la position et de la pente au
+   point, comparée à la valeur indicatrice de l'espèce, § 14), pas relevé par relevé. À faire
+   **après** croisement avec le polygone D11, filtre `loc_precision_m` ≤ 25 (valeurs déclarées : 25 et 5),
+   exclusion de l'IFN. Limites : échantillonnage opportuniste (chemins, bords de route),
+   déterminations non validées, un code observateur haché unique sur naturgucker, précision
+   **déclarée**.
+3. **Pseudo-relevés GBIF : trop peu pour calibrer** (≈ 25 lieux-dits à ≥ 10 espèces dans CardObs ;
+   naturgucker pose des points isolés) et, pour CardObs, la liste couvre plus que le point.
+   À garder comme **contrôle visuel**, pas comme jeu de calibration.
+4. **Dietz et al. (Etalab 2.0)** : meilleure piste pour les **relevés avec pH mesuré** ; à
+   ouvrir par un humain depuis un navigateur : lire les coordonnées, leur précision, le nombre de
+   sites en D11 et la colonne du pH. Si les coordonnées sont au GPS : jeu de calibration trophique
+   de quelques dizaines de sites.
+5. **sPlotOpen** : pas pour la calibration fine (> 25 m) ; utile pour **nommer les types** à maille
+   large, après lecture de `Location_uncertainty` et de la licence des fichiers.
+6. **Écartés :** jeux CC BY-NC (Observation.org, iNaturalist), Pl@ntNet identifié par
+   algorithme, jeux de CBN floutés (Alsace), INPN Espèces (points isolés), RMQS (maille 16 km),
+   IFN (700 m).
+7. **Licence et dépôt public :** seuls naturgucker et CardObs (CC BY 4.0) pourraient donner un
+   extrait dans `inst/extdata`, avec DOI dans `SOURCES.md` (10.15468/uc1apo ; 10.15468/gc267b et
+   un DOI par jeu CardObs) ; **ne pas recopier `recordedBy`** (noms d'observateurs dans CardObs,
+   données personnelles). Dietz : Etalab 2.0, compatible, DOI 10.15454/AZNS3A.
+
+### 32.6 Écarts relevés entre sources (§ 33)
+
+1. IFN : 41,7 % des occurrences à ≤ 25 m ici (rectangle, toutes années) contre 40,5 % au § 8
+   (emprise test, 2000-2026) ; 96 350 toutes années contre 96 151 depuis 2000 (199 avant 2000).
+2. § 27 (SOPHY fermée, sans licence ouverte) contre sPlotOpen (7 986 relevés SOPHY ouverts) :
+   voir 32.3.
+3. CardObs : 5 m déclarés contre une liste d'espèces qui couvre une source et une lande sèche.
+4. naturgucker : `coordinateUncertaintyInMeters` = 25 et `locality` = cellule UTM de 25 km : même
+   nombre, deux sens ; la valeur « 25 m » n'a pas pu être confirmée par une documentation du jeu
+   (description sans précision de localisation).
+5. Dépouillements de facettes par le résumeur : espèces 8 607 contre 9 080 (473 occurrences
+   sans `speciesKey` ou erreur de comptage) ; CardObs `aa79690b-…` : jours 432 contre 466.
+6. Numérotation : deux sections portent déjà le n° 26 (§ 27, écart 5) ; ce § 33 suit le dernier
+   numéro lu (§ 31).
+
+### 32.7 Trois points au sol (à vérifier par Pascal)
+
+1. **Senones, mare ou prairie humide, 48,308254 ; 6,965473** (naturgucker, 2022-06-14) : quatre
+   espèces à 3 m (`Lysimachia nummularia`, `L. vulgaris`, `Caltha palustris`, `Juncus acutiflorus`) ;
+   et **48,307926 ; 6,973337**, trois espèces de pelouse sèche (`Briza media`, `Bromus erectus`,
+   `Genista sagittalis`) à 570 m. Y a-t-il bien une zone humide ici et de la pelouse là, à ≤ 25 m
+   du point ?
+2. **Thann (Haut-Rhin), 47,837933 ; 7,061987 et 47,840321 ; 7,061588** (naturgucker, 2021-10-20) :
+   `Aruncus dioicus` et `Lunaria rediviva`, espèces de ravins frais. Les points tombent-ils bien
+   dans un ravin ou en bas de versant ? C'est le test du lien relief-gradient en miniature.
+3. **Lieu-dit « Neuematten », 48,34486 ; 7,38116** (CardObs, 2012-06-09) : 12 espèces à un même
+   point, dont source et lande sèche. Le point est-il une placette ou un centre de lieu-dit ?
+   **Ce point est peut-être hors de D11** (piémont de Villé, polygone non croisé).
+
+**Question de contrôle :** quelle décision cette donnée va-t-elle éclairer ? Si la calibration
+relief-gradient se fait sur des occurrences GBIF à 25 m (espèce par espèce) faute de relevés
+ouverts, ou s'il faut attendre le jeu de Dietz et al. ou l'accès fermé.
