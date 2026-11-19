@@ -10,6 +10,8 @@ Description: Fonctions et pipeline pour produire, à partir du seul code d'une
     (EPSG:2154) et interdit toute extraction de variable fine aux coordonnées
     des placettes de l'Inventaire forestier national, localisées à 700 m près.
 License: GPL (>= 3)
+URL: https://pobsteta.github.io/sylvostation/, https://github.com/pobsteta/sylvostation
+BugReports: https://github.com/pobsteta/sylvostation/issues
 Encoding: UTF-8
 Language: fr
 Roxygen: list(markdown = TRUE)
@@ -38,6 +40,7 @@ Suggests:
     lidR,
     mgcv,
     permute,
+    pkgdown,
     quarto,
     ranger,
     rgbif,

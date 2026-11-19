@@ -267,3 +267,24 @@ rien. Le rendu est dans `inst/rapport/rendre_rapport.R` (`rendre_rapport()`, lu 
   cible n'existe pas (comme avant).
 - **Dépendance LaTeX** : polices DejaVu, paquets `longtable`, `booktabs`, `etoolbox`,
   `fontspec` ; `tinytex` installe un paquet manquant par `tlmgr` s'il a le réseau.
+
+## Site pkgdown et page de résultats (mission 023)
+
+Le site (`_pkgdown.yml`, construit dans `site/` car `docs/` porte la documentation du projet)
+est publié par `.github/workflows/pkgdown.yaml` : construction sur chaque pull request (sans
+déploiement), déploiement sur la branche `gh-pages` seulement après un push sur `main`.
+Prérequis, à faire une fois par Pascal : Réglages du dépôt > Pages > Source = branche `gh-pages`.
+
+- **Référence** des fonctions groupée par étape du pipeline ; **articles** : le tutoriel
+  `massif-test` (démo, données synthétiques) et `vignettes/articles/resultats-vosges-d11.Rmd`
+  (résultats du run réel de la mission 018 sur l'emprise test de la SER D11).
+- **L'article ne calcule rien** : il lit `vignettes/articles/figures/` (images PNG réduites,
+  moins de 2 Mo au total, et petites tables CSV), produit à la main par
+  `Rscript inst/scripts/figures_article_vosges.R <data/sorties/D11>` après un run réel. Le
+  script refuse un dossier de sorties à préfixe `synth_`. Chaque figure porte sa source, la
+  date du run, l'emprise et le système (EPSG:2154). Pour mettre l'article à jour : relancer le
+  script, relire les chiffres du texte, commiter.
+- Les rasters complets ne sont pas versionnés ; le rapport PDF du run n'est pas joint à la
+  release (la release ne porte que le tarball du paquet).
+- Construction locale : `pkgdown::check_pkgdown()` puis
+  `pkgdown::build_site(override = list(destination = tempfile()))`.

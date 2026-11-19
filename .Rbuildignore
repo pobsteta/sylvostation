@@ -15,3 +15,7 @@
 ^sylvostation\.Rcheck$
 ^\.git$
 ^inst/extdata/\.gitkeep$
+^_pkgdown\.yml$
+^vignettes/articles$
+^inst/scripts/figures_article_vosges\.R$
+^site$
