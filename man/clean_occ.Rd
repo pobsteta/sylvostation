@@ -8,6 +8,8 @@ clean_occ(
   occ,
   max_uncertainty = 25,
   exclude_datasets = IFN_GBIF_DATASET_KEYS,
+  exclude_noncommercial = TRUE,
+  exclude_plantnet = PLANTNET_GBIF_DATASET_KEYS,
   keep_unknown = FALSE,
   forest = NULL,
   canopy = NULL,
@@ -24,6 +26,11 @@ clean_occ(
 
 \item{exclude_datasets}{\code{datasetKey} à écarter.}
 
+\item{exclude_noncommercial}{Écarter les licences \verb{CC_BY_NC*} (\code{TRUE}).}
+
+\item{exclude_plantnet}{\code{datasetKey} Pl@ntNet à écarter (défaut
+\link{PLANTNET_GBIF_DATASET_KEYS} ; \code{character(0)} pour les garder).}
+
 \item{keep_unknown}{Garder les points de précision inconnue (\code{FALSE}).}
 
 \item{forest}{Polygones BD Forêt (\code{sf}, EPSG:2154, colonne \code{code_tfv}) ou \code{NULL}.}
@@ -34,8 +41,9 @@ clean_occ(
 }
 \value{
 Un objet \code{sf} (points, EPSG:2154) avec \code{gbif_id}, \code{species}, \code{species_key},
-\code{dataset_key}, \code{license}, \code{year}, \code{loc_precision_m}, \code{source}, et l'attribut
-\code{clean_log}.
+\code{dataset_key}, \code{license}, \code{year}, \code{loc_precision_m}, \code{source}, et les attributs
+\code{clean_log} et \code{ecartees} (\code{data.frame} \code{motif}, \code{n} : \code{licence_non_commerciale},
+\code{plantnet}, \code{licence_inconnue} (gardées)).
 }
 \description{
 Étapes (nombre d'occurrences conservé à chacune dans \code{attr(, "clean_log")}) :
@@ -46,6 +54,13 @@ Un objet \code{sf} (points, EPSG:2154) avec \code{gbif_id}, \code{species}, \cod
 \link{IFN_GBIF_DATASET_KEYS}) : leur incertitude déclarée (1 m) est fausse. Si on les
 garde (\code{exclude_datasets = character(0)}), ils sont marqués \code{source = "ifn"} et
 \code{loc_precision_m = 700} (comme \code{\link[=mark_ifn]{mark_ifn()}}) ;
+2 bis. licence et Pl@ntNet : les occurrences sous licence non commerciale (tout code
+\verb{CC_BY_NC*}, quelle que soit la variante) sont écartées si \code{exclude_noncommercial}
+(défaut \code{TRUE}), et celles des jeux de \code{exclude_plantnet} (défaut
+\link{PLANTNET_GBIF_DATASET_KEYS}) aussi. Une occurrence en est écartée par un seul motif,
+dans l'ordre : licence, puis Pl@ntNet. Les effectifs par motif sont rendus dans
+l'attribut \code{ecartees} et dans le message émis (jamais de suppression silencieuse) ;
+les licences absentes ou non reconnues sont \strong{gardées} et comptées (\code{licence_inconnue}) ;
 \item précision : \code{loc_precision_m} = \code{coordinateUncertaintyInMeters} ; elle vaut \code{NA}
 si l'incertitude est absente \strong{ou} si \code{dataGeneralizations} / \code{informationWithheld}
 est renseigné (donnée généralisée). Sont gardés les points de précision

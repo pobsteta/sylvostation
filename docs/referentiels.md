@@ -1474,6 +1474,14 @@ nécessaire : lire `Location_uncertainty`, `Country` et les coordonnées dans l'
    un DOI par jeu CardObs) ; **ne pas recopier `recordedBy`** (noms d'observateurs dans CardObs,
    données personnelles). Dietz : Etalab 2.0, compatible, DOI 10.15454/AZNS3A.
 
+### 33.5 bis Mise en œuvre dans `clean_occ()` (mission 037, 2026-11-19)
+
+`clean_occ()` écarte par défaut les occurrences dont la licence normalisée commence par `CC_BY_NC`
+(toutes variantes) et celles des jeux `14d5676a-2c54-4f94-9023-1e8dcd822aa0` (« Pl@ntNet automatically
+identified ») et `7a3679ef-5582-4aaa-81f0-8c2545cafc81` (« Pl@ntNet observations »), clés lues au § 8 ;
+`PLANTNET_GBIF_DATASET_KEYS`, **liste non exhaustive hors emprise (à vérifier)**. Les effectifs par motif
+sont rendus (message et attribut `ecartees`). Licences absentes ou non reconnues : gardées et comptées.
+
 ### 33.6 Écarts relevés entre sources (§ 33)
 
 1. IFN : 41,7 % des occurrences à ≤ 25 m ici (rectangle, toutes années) contre 40,5 % au § 8

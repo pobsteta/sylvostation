@@ -11,6 +11,18 @@
 #' @export
 IFN_GBIF_DATASET_KEYS <- "e5f16d86-e225-4822-97be-a64ce17079c7"
 
+#' Jeux GBIF Pl@ntNet (identification par algorithme)
+#'
+#' `datasetKey` des deux jeux Pl@ntNet vus dans l'emprise (`docs/referentiels.md`, § 8 et
+#' § 33.1) : « Pl@ntNet automatically identified occurrences » et « Pl@ntNet
+#' observations ». Une photo = une espèce, identification non validée : `clean_occ()` les
+#' écarte par défaut. Liste **non exhaustive** : d'autres jeux Pl@ntNet peuvent exister
+#' ailleurs (à vérifier hors emprise).
+#' @format Un vecteur de caractères.
+#' @export
+PLANTNET_GBIF_DATASET_KEYS <- c("14d5676a-2c54-4f94-9023-1e8dcd822aa0",
+                                "7a3679ef-5582-4aaa-81f0-8c2545cafc81")
+
 # Clés vérifiées au § 8 de docs/referentiels.md.
 .GBIF_TRACHEOPHYTA_KEY <- 7707728L
 .GBIF_BACKBONE_KEY <- "d7dddbf4-2cf0-4f39-9b2a-bb099caae36c"
@@ -207,6 +219,13 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
 #'    [IFN_GBIF_DATASET_KEYS]) : leur incertitude déclarée (1 m) est fausse. Si on les
 #'    garde (`exclude_datasets = character(0)`), ils sont marqués `source = "ifn"` et
 #'    `loc_precision_m = 700` (comme [mark_ifn()]) ;
+#' 2 bis. licence et Pl@ntNet : les occurrences sous licence non commerciale (tout code
+#'    `CC_BY_NC*`, quelle que soit la variante) sont écartées si `exclude_noncommercial`
+#'    (défaut `TRUE`), et celles des jeux de `exclude_plantnet` (défaut
+#'    [PLANTNET_GBIF_DATASET_KEYS]) aussi. Une occurrence en est écartée par un seul motif,
+#'    dans l'ordre : licence, puis Pl@ntNet. Les effectifs par motif sont rendus dans
+#'    l'attribut `ecartees` et dans le message émis (jamais de suppression silencieuse) ;
+#'    les licences absentes ou non reconnues sont **gardées** et comptées (`licence_inconnue`) ;
 #' 3. précision : `loc_precision_m` = `coordinateUncertaintyInMeters` ; elle vaut `NA`
 #'    si l'incertitude est absente **ou** si `dataGeneralizations` / `informationWithheld`
 #'    est renseigné (donnée généralisée). Sont gardés les points de précision
@@ -228,13 +247,17 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
 #'   `informationWithheld`.
 #' @param max_uncertainty Précision maximale gardée, en mètres (25).
 #' @param exclude_datasets `datasetKey` à écarter.
+#' @param exclude_noncommercial Écarter les licences `CC_BY_NC*` (`TRUE`).
+#' @param exclude_plantnet `datasetKey` Pl@ntNet à écarter (défaut
+#'   [PLANTNET_GBIF_DATASET_KEYS] ; `character(0)` pour les garder).
 #' @param keep_unknown Garder les points de précision inconnue (`FALSE`).
 #' @param forest Polygones BD Forêt (`sf`, EPSG:2154, colonne `code_tfv`) ou `NULL`.
 #' @param canopy `SpatRaster` de hauteur de canopée (EPSG:2154) ou `NULL`.
 #' @param min_canopy Hauteur minimale de canopée, en mètres (5).
 #' @return Un objet `sf` (points, EPSG:2154) avec `gbif_id`, `species`, `species_key`,
-#'   `dataset_key`, `license`, `year`, `loc_precision_m`, `source`, et l'attribut
-#'   `clean_log`.
+#'   `dataset_key`, `license`, `year`, `loc_precision_m`, `source`, et les attributs
+#'   `clean_log` et `ecartees` (`data.frame` `motif`, `n` : `licence_non_commerciale`,
+#'   `plantnet`, `licence_inconnue` (gardées)).
 #' @examples
 #' f <- system.file("extdata", "synth_occ.csv", package = "sylvostation")
 #' if (nzchar(f)) {
@@ -243,6 +266,8 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
 #' }
 #' @export
 clean_occ <- function(occ, max_uncertainty = 25, exclude_datasets = IFN_GBIF_DATASET_KEYS,
+                      exclude_noncommercial = TRUE,
+                      exclude_plantnet = PLANTNET_GBIF_DATASET_KEYS,
                       keep_unknown = FALSE, forest = NULL, canopy = NULL, min_canopy = 5) {
   if (!is.data.frame(occ)) stop("`occ` doit \u00eatre un data.frame.", call. = FALSE)
   manque <- setdiff(c("decimalLongitude", "decimalLatitude", "species"), names(occ))
@@ -288,6 +313,24 @@ clean_occ <- function(occ, max_uncertainty = 25, exclude_datasets = IFN_GBIF_DAT
   }
   log <- .log_step(log, "hors_jeux_exclus", nrow(pts))
 
+  # 2 bis. licence non commerciale, puis Pl@ntNet (motifs comptes, jamais en silence)
+  nc <- if (isTRUE(exclude_noncommercial)) {
+    !is.na(pts$license) & grepl("^CC_BY_NC", pts$license)
+  } else rep(FALSE, nrow(pts))
+  pts <- pts[!nc, ]
+  log <- .log_step(log, "hors_licence_nc", nrow(pts))
+  pn <- if (length(exclude_plantnet)) {
+    !is.na(pts$dataset_key) & pts$dataset_key %in% exclude_plantnet
+  } else rep(FALSE, nrow(pts))
+  pts <- pts[!pn, ]
+  log <- .log_step(log, "hors_plantnet", nrow(pts))
+  lic_ok <- !is.na(pts$license) & grepl("^(CC_BY_[0-9]|CC0_1_0)", pts$license)
+  ecartees <- data.frame(motif = c("licence_non_commerciale", "plantnet", "licence_inconnue"),
+                         n = c(sum(nc), sum(pn), sum(!lic_ok)), stringsAsFactors = FALSE)
+  message("clean_occ : ", ecartees$n[1], " occurrence(s) ecartee(s) pour licence non ",
+          "commerciale, ", ecartees$n[2], " pour Pl@ntNet ; ", ecartees$n[3],
+          " a licence absente ou non reconnue (gardee(s)).")
+
   # 3. precision de localisation
   pts$source <- "gbif"
   pts$loc_precision_m <- ifelse(pts$generalise, NA_real_, pts$incert)
@@ -323,6 +366,7 @@ clean_occ <- function(occ, max_uncertainty = 25, exclude_datasets = IFN_GBIF_DAT
   }
   rownames(pts) <- NULL
   attr(pts, "clean_log") <- log
+  attr(pts, "ecartees") <- ecartees
   pts
 }
 
