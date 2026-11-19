@@ -16,7 +16,6 @@
 
 - [033-empreinte-safran](missions/033-empreinte-safran.md) · depuis le cycle 5 · dev (opus, plan d'abord)
 
-- [032-cache-lidar](missions/032-cache-lidar.md) · depuis le cycle 5 · dev
 
 
 
@@ -33,6 +32,8 @@
 
 
 ## Terminé
+
+- [032-cache-lidar](missions/032-cache-lidar.md) · cycle 5 · dev · cache par dalle, lidar_files hors de cfg
 
 - [023-page-pkgdown-vosges](missions/023-page-pkgdown-vosges.md) · cycle 5 · dev · site pkgdown, article D11 (à refaire après 033 et 034)
 
