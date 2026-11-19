@@ -221,6 +221,142 @@ print.sylvo_gradient <- function(x, ...) {
   sqrt(mean((obs[ok] - pred[ok])^2))
 }
 
+#' Encodage d'une variable catégorielle par la moyenne de la réponse (rétrécie)
+#'
+#' Pour chaque niveau de `x` (par exemple la lithologie ou la formation géologique
+#' dominante dans 700 m), moyenne de `y` sur les placettes du niveau, **rétrécie vers la
+#' moyenne générale** : `(n * moyenne + k * moyenne_generale) / (n + k)`. Un niveau rare
+#' (n petit) est tiré vers la moyenne générale ; un niveau fréquent garde sa moyenne
+#' (mission 035). L'encodage utilise la réponse : **il ne doit jamais être calculé sur les
+#' lignes qu'il sert à prédire** ([oof_target_encoding()] pour l'apprentissage, et
+#' [spatial_cv()] avec `encode` pour la validation croisée sans fuite).
+#'
+#' @param x Vecteur de niveaux (texte ou facteur) ; `NA` ignoré.
+#' @param y Réponse numérique.
+#' @param k Poids de la moyenne générale, en nombre de placettes équivalentes (10 par
+#'   défaut, valeur provisoire).
+#' @return Un `data.frame` (`niveau`, `n`, `moyenne`, `valeur`) ; attributs `generale`
+#'   (moyenne générale) et `k`.
+#' @examples
+#' target_encoding(c("a", "a", "a", "b"), c(1, 2, 3, 10), k = 2)
+#' @export
+target_encoding <- function(x, y, k = 10) {
+  if (!is.numeric(y) || length(y) != length(x)) {
+    stop("`y` doit \u00eatre num\u00e9rique, de la longueur de `x`.", call. = FALSE)
+  }
+  if (!is.numeric(k) || length(k) != 1L || !is.finite(k) || k < 0) {
+    stop("`k` doit \u00eatre un nombre >= 0.", call. = FALSE)
+  }
+  ok <- !is.na(x) & is.finite(y)
+  if (!any(ok)) stop("Aucune ligne avec niveau et r\u00e9ponse.", call. = FALSE)
+  xc <- as.character(x[ok])
+  g <- mean(y[ok])
+  lv <- sort(unique(xc))
+  f <- factor(xc, lv)
+  n <- as.integer(table(f))
+  mu <- as.numeric(tapply(y[ok], f, mean))
+  out <- data.frame(niveau = lv, n = n, moyenne = mu,
+                    valeur = (n * mu + k * g) / (n + k), stringsAsFactors = FALSE)
+  attr(out, "generale") <- g
+  attr(out, "k") <- k
+  out
+}
+
+#' Appliquer un encodage de [target_encoding()]
+#'
+#' @param x Vecteur de niveaux. Un niveau absent de l'encodage reçoit la moyenne générale
+#'   (jamais une valeur inventée) ; `NA` reste `NA`.
+#' @param encoding Résultat de [target_encoding()].
+#' @return Un vecteur numérique de la longueur de `x`.
+#' @examples
+#' e <- target_encoding(c("a", "a", "b"), c(1, 3, 10), k = 1)
+#' apply_target_encoding(c("a", "b", "z", NA), e)
+#' @export
+apply_target_encoding <- function(x, encoding) {
+  if (!is.data.frame(encoding) || !all(c("niveau", "valeur") %in% names(encoding))) {
+    stop("`encoding` doit venir de target_encoding().", call. = FALSE)
+  }
+  v <- encoding$valeur[match(as.character(x), encoding$niveau)]
+  v[!is.na(x) & is.na(v)] <- attr(encoding, "generale")
+  v
+}
+
+#' Encodage hors pli (sans fuite) pour l'apprentissage
+#'
+#' Chaque ligne est encodée avec une table calculée **sans** les lignes de son pli
+#' (plis spatiaux de préférence) : la réponse d'une ligne n'entre jamais dans son propre
+#' encodage.
+#'
+#' @param x,y,k Voir [target_encoding()].
+#' @param folds Identifiants de plis (longueur de `x`), au moins deux.
+#' @return Un vecteur numérique (`NA` si `x` est `NA`).
+#' @examples
+#' oof_target_encoding(rep(c("a", "b"), 6), 1:12, rep(1:3, 4), k = 1)
+#' @export
+oof_target_encoding <- function(x, y, folds, k = 10) {
+  if (length(folds) != length(x) || length(unique(folds)) < 2L) {
+    stop("`folds` doit avoir la longueur de `x` et au moins deux plis.", call. = FALSE)
+  }
+  out <- rep(NA_real_, length(x))
+  for (f in unique(folds)) {
+    te <- which(folds == f)
+    tr <- which(folds != f)
+    out[te] <- apply_target_encoding(x[te], target_encoding(x[tr], y[tr], k))
+  }
+  out
+}
+
+#' Ajouter à un tableau d'apprentissage une variable encodée hors pli (blocs spatiaux)
+#'
+#' Pour le modèle final : la colonne `name` reçoit l'encodage **hors pli**
+#' ([oof_target_encoding()], plis = blocs spatiaux) de `var`, donc sans que la réponse d'une
+#' placette entre dans sa propre valeur ; l'encodage calculé sur toutes les lignes sert à
+#' prédire de nouvelles unités (cellules de la carte). Les lignes sans `var` sont
+#' retirées (comptées dans l'attribut `retirees`).
+#'
+#' @param data Objet `sf` (EPSG:2154, points) ou tableau `x`/`y`.
+#' @param response Nom de la réponse (numérique).
+#' @param var Colonne catégorielle de `data`.
+#' @param name Nom de la colonne numérique créée.
+#' @param k Voir [target_encoding()].
+#' @param block_size Taille des blocs (m) ; `NULL` : portée estimée de la réponse, à défaut
+#'   5 000 m, comme [spatial_cv()].
+#' @param nfolds Nombre de plis (5).
+#' @param seed Graine de l'affectation des blocs aux plis.
+#' @param oof `TRUE` (défaut) : encodage hors pli ; `FALSE` : encodage avec toutes les lignes
+#'   (la réponse d'une placette entre alors dans sa propre valeur, atténuée par `k`).
+#' @return Une liste : `data` (lignes avec `var`, colonne `name` ajoutée), `encoding`
+#'   ([target_encoding()] sur toutes ces lignes), `retirees` (nombre de lignes sans `var`).
+#' @examples
+#' set.seed(2)
+#' d <- data.frame(x = runif(60, 1e6, 1.03e6), y = runif(60, 6.8e6, 6.83e6),
+#'                 lev = sample(c("a", "b", "c"), 60, TRUE), g = rnorm(60))
+#' r <- encode_by_blocks(d, "g", "lev", "enc", block_size = 8000)
+#' r$encoding
+#' @export
+encode_by_blocks <- function(data, response, var, name = "coarse_litho_enc", k = 10,
+                             block_size = NULL, nfolds = 5L, seed = 1L, oof = TRUE) {
+  data <- .as_points_2154(data)
+  if (!all(c(response, var) %in% names(data))) {
+    stop("`response` et `var` doivent \u00eatre des colonnes de `data`.", call. = FALSE)
+  }
+  garde <- !is.na(data[[var]]) & is.finite(data[[response]])
+  retirees <- sum(!garde)
+  data <- data[garde, , drop = FALSE]
+  xy <- .coords_xy(data)
+  if (is.null(block_size)) {
+    r <- .estimate_range(xy, .drop_geom(data)[[response]])
+    block_size <- if (is.finite(r) && r > 0) r else 5000
+  }
+  nb <- length(unique(paste(floor(xy[, 1] / block_size), floor(xy[, 2] / block_size))))
+  folds <- .block_folds(xy, block_size, min(nfolds, nb), seed)
+  v <- .drop_geom(data)[[var]]
+  y <- .drop_geom(data)[[response]]
+  data[[name]] <- if (isTRUE(oof)) oof_target_encoding(v, y, folds, k) else
+    apply_target_encoding(v, target_encoding(v, y, k))
+  list(data = data, encoding = target_encoding(v, y, k), retirees = retirees)
+}
+
 #' Validation croisée spatiale par blocs
 #'
 #' Découpe l'espace en blocs carrés (Lambert-93, mètres) affectés à `k` plis ; tous
@@ -236,6 +372,14 @@ print.sylvo_gradient <- function(x, ...) {
 #' @param folds Identifiants de plis fournis par l'utilisateur (diagnostic, par
 #'   exemple un tirage aléatoire pour mesurer l'optimisme d'une CV non spatiale) ;
 #'   `NULL` : blocs spatiaux.
+#' @param encode `NULL`, une liste `list(var, name, k, oof)` ou une liste de telles listes
+#'   (mission 035 ; `oof = FALSE` encode l'apprentissage avec toute sa partie, sans plis
+#'   internes ; défaut `TRUE`) : `var` est une
+#'   colonne catégorielle de `data` (lithologie, formation) et `name` le nom du prédicteur
+#'   numérique à créer (il doit figurer dans `predictors`, pas dans `data`). Dans chaque
+#'   pli, l'apprentissage reçoit l'encodage **hors pli** ([oof_target_encoding()], blocs
+#'   de la même taille) et le pli de test l'encodage de toute la partie d'apprentissage :
+#'   la réponse du pli de test n'intervient jamais, sans fuite.
 #' @param ... Transmis à [fit_gradient()] (`num_trees`, `seed`, `points_source`).
 #' @return Une liste : `par_pli` (pli, n, r2, rmse), `global` (r2, rmse sur toutes les
 #'   prédictions hors pli), `predictions` (observé, prédit, écart-type prédit `sd`, pli),
@@ -251,10 +395,23 @@ print.sylvo_gradient <- function(x, ...) {
 #' }
 #' @export
 spatial_cv <- function(data, response, predictors, method = c("ranger", "gam"),
-                       block_size = NULL, k = 5L, weights = NULL, folds = NULL, ...) {
+                       block_size = NULL, k = 5L, weights = NULL, folds = NULL, encode = NULL, ...) {
   method <- match.arg(method)
   data <- .as_points_2154(data)
   xy <- .coords_xy(data)
+  if (!is.null(encode)) {
+    if (is.list(encode) && "var" %in% names(encode)) encode <- list(encode)   # une seule specification
+    for (e in encode) {
+      if (!is.list(e) || !all(c("var", "name") %in% names(e)) || !e$var %in% names(data)) {
+        stop("`encode` doit \u00eatre list(var, name, k) avec `var` colonne de `data`.", call. = FALSE)
+      }
+    }
+    encode <- lapply(encode, function(e) {
+      if (is.null(e$k)) e$k <- 10
+      if (is.null(e$oof)) e$oof <- TRUE
+      e
+    })
+  }
   df <- .drop_geom(data)
   if (!response %in% names(df)) stop("R\u00e9ponse absente de `data`.", call. = FALSE)
   if (is.null(block_size)) {
@@ -276,9 +433,21 @@ spatial_cv <- function(data, response, predictors, method = c("ranger", "gam"),
   met <- lapply(ids, function(f) {
     te <- which(folds == f)
     tr <- which(folds != f)
-    m <- fit_gradient(data[tr, , drop = FALSE], response, predictors, method = method,
+    d_tr <- data[tr, , drop = FALSE]
+    d_te <- df[te, , drop = FALSE]
+    for (e in encode) {
+      xv <- df[[e$var]]
+      if (isTRUE(e$oof)) {
+        inner <- .block_folds(xy[tr, , drop = FALSE], block_size, min(k, 5L))
+        d_tr[[e$name]] <- oof_target_encoding(xv[tr], df[[response]][tr], inner, e$k)
+      } else {   # encodage de l'apprentissage avec toute la partie d'apprentissage (non hors pli)
+        d_tr[[e$name]] <- apply_target_encoding(xv[tr], target_encoding(xv[tr], df[[response]][tr], e$k))
+      }
+      d_te[[e$name]] <- apply_target_encoding(xv[te], target_encoding(xv[tr], df[[response]][tr], e$k))
+    }
+    m <- fit_gradient(d_tr, response, predictors, method = method,
                       weights = if (is.null(weights)) NULL else weights[tr], ...)
-    pp <- .predict_df(m, df[te, , drop = FALSE])
+    pp <- .predict_df(m, d_te)
     p <- pp$pred
     pred[te] <<- p
     pred_sd[te] <<- pp$sd

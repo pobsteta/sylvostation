@@ -71,11 +71,20 @@ hydric_n_controle: 30
 safran_interpolation: bilineaire
 hydric_node_res_m: 1000
 ru_min_placettes: 5
+# Calibration sur la GRECO (mission 035), valeurs provisoires, à vérifier : un disque de 700 m
+# couvert à moins de litho_min_cover par la BD Charm-50 n'a pas de lithologie (placette
+# retirée de l'apprentissage, comptée) ; litho_encoding_k = poids de la moyenne générale
+# (en placettes) dans l'encodage de la lithologie par le trophique moyen.
+litho_min_cover: 0.5
+litho_encoding_k: 10
+# pH SoilGrids 2.0 (ISRIC, CC BY 4.0, 250 m, 0-5 cm) moyenné dans 700 m : prédicteur à maille large.
+# Exactitude sur la France non évaluée (à vérifier). false : sans pH (jamais remplacé).
+soilgrids_ph: true
 # Téléchargements (SER, dalles LiDAR, WFS, TOPAGE, SAFRAN, IFN) : nombre total de tentatives
 # avant arrêt (attentes 5, 20, 60 s). Provisoire (mission 026).
 download_retries: 3
 # Départements BD Charm-50 de l'emprise (référentiels § 5) : liste explicite.
-bdcharm_departements: ["067", "068", "088"]
+bdcharm_departements: ["054", "057", "067", "068", "070", "088", "090"]
 ifn_archive_url: "https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip"
 # GBIF : search sans compte ; download si GBIF_USER, GBIF_PWD, GBIF_EMAIL sont posées.
 gbif_method: search
