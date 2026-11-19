@@ -26,7 +26,7 @@
 #' @export
 safran_weights <- function(x, y, safran) {
   if (!is.numeric(x) || !is.numeric(y) || length(x) != length(y)) {
-    stop("`x` et `y` doivent être des coordonnées numériques de même longueur.",
+    stop("`x` et `y` doivent \u00eatre des coordonn\u00e9es num\u00e9riques de m\u00eame longueur.",
          call. = FALSE)
   }
   if (!is.data.frame(safran) || !all(c("LAMBX", "LAMBY") %in% names(safran))) {

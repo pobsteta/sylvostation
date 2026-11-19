@@ -745,7 +745,7 @@ ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm",
                               min_placettes = 1) {
   if (!is.numeric(min_placettes) || length(min_placettes) != 1L || is.na(min_placettes) ||
       min_placettes < 1) {
-    stop("`min_placettes` doit être un entier >= 1.", call. = FALSE)
+    stop("`min_placettes` doit \u00eatre un entier >= 1.", call. = FALSE)
   }
   if (!inherits(points, "sf")) stop("`points` doit \u00eatre un sf de points.", call. = FALSE)
   assert_crs_2154(points)
@@ -1219,7 +1219,7 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
   infos_u <- list()
   for (o in sorties) {
     if (inherits(o, "try-error") || is.null(o)) {
-      stop("Carte hydrique : échec du calcul d'une unité (maille ou nœud).",
+      stop("Carte hydrique : \u00e9chec du calcul d'une unit\u00e9 (maille ou n\u0153ud).",
            call. = FALSE)
     }
     res[o$i, "k_sv"] <- o$k_sv
