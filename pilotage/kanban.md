@@ -14,6 +14,9 @@
 
 ## Validé
 
+- [023-page-pkgdown-vosges](missions/023-page-pkgdown-vosges.md) · depuis le cycle 5 · dev
+- [031-comparaison-carhab](missions/031-comparaison-carhab.md) · depuis le cycle 5 · dev
+
 - [029-plan-echantillonnage-gnss](missions/029-plan-echantillonnage-gnss.md) · depuis le cycle 5 · dev
 
 
@@ -26,7 +29,7 @@
 
 
 
-- [023-page-pkgdown-vosges](missions/023-page-pkgdown-vosges.md) · après 018, 022 · depuis le cycle 5 · dev
+- [032-cfg-lidar](à créer) · dépendances de lidar_files à cfg · dev
 
 ## Terminé
 
