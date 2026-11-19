@@ -14,6 +14,8 @@
 
 ## Validé
 
+- [033-empreinte-safran](missions/033-empreinte-safran.md) · depuis le cycle 5 · dev (opus, plan d'abord)
+
 - [032-cache-lidar](missions/032-cache-lidar.md) · depuis le cycle 5 · dev
 
 - [023-page-pkgdown-vosges](missions/023-page-pkgdown-vosges.md) · depuis le cycle 5 · dev
