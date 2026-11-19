@@ -71,7 +71,7 @@ bdcharm_departements: ["067", "068", "088"]
 ifn_archive_url: "https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip"
 # GBIF : search sans compte ; download si GBIF_USER, GBIF_PWD, GBIF_EMAIL sont posées.
 gbif_method: search
-# Masque forestier : MHC > forest_height_m sur au moins la moitié de la cellule de 25 m.
+# Masque forestier : MHC > forest_height_m sur au moins la moitié de la cellule (resolution_m).
 forest_mask: true
 forest_height_m: 5
 cache_dir: data/cache

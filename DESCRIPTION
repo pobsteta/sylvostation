@@ -28,6 +28,7 @@ Suggests:
     biljouR,
     blockCV,
     CAST,
+    clhs,
     cluster,
     euptf2,
     happign,
