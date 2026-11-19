@@ -27,7 +27,7 @@ tab <- function(x, ...) knitr::kable(x, format = "html", ...)
 ::: {.alert .alert-warning}
 **Première carte, à composante régionale, non validée sur le terrain.** Ce qui suit est le
 résultat d'un **run réel** du pipeline (`demo: false`, aucune donnée fabriquée) du
-`r ch("date_run")`, sur une emprise de 15 km x 15 km de la sylvoécorégion D11 (Massif vosgien
+`r ch("date_run")` (date saisie à la main à partir du journal du run : les sorties n'en consignent pas), sur une emprise de 15 km x 15 km de la sylvoécorégion D11 (Massif vosgien
 central). Aucune des cibles de qualité du brief n'est atteinte : lisez d'abord la section
 « Limites ». Cette carte ne doit pas servir à décider sur le terrain.
 :::
@@ -40,7 +40,7 @@ Les chiffres du run, tels quels :
 lim <- data.frame(
   Mesure = c("Types de stations", "Surface forestière typée",
              "Clé de détermination : bon classement", "Gradient trophique : R² en validation croisée spatiale",
-             "Gradient hydrique : R² en validation croisée spatiale",
+             "Gradient hydrique : R² du modèle régional en validation croisée spatiale (il ne mesure pas la carte Istress affichée)",
              "Ancrages locaux (GBIF)", "Sols", "Validation sur relevés GNSS indépendants",
              "Comparaison à la référence AgroParisTech"),
   Obtenu = c(
@@ -60,18 +60,23 @@ tab(lim)
 
 À lire avec ces chiffres :
 
+- **La carte reproduit pour l'essentiel les 9 mailles climatiques.** Les prédicteurs sont à
+  maille large (climat SAFRAN de 8 km, réserve utile uniforme par maille). Mesuré sur les
+  sorties du run : la maille SAFRAN explique `r pct(ch("r2_maille_istress"))` de la variance de
+  l'Istress topographique et `r pct(ch("r2_maille_trophique"))` du gradient trophique ;
+  `r pct(ch("part_type_modal_maille"))` des cellules typées sont dans le type modal de leur maille ;
+  entre cellules voisines, le type change `r pct(ch("changement_type_voisins_dans_maille"))` du
+  temps à l'intérieur d'une maille, contre `r pct(ch("changement_type_voisins_limite_v"))` à
+  `r pct(ch("changement_type_voisins_limite_h"))` à une limite de maille. Les limites rectilignes
+  des cartes sont celles de la grille du climat, pas celles du terrain. À l'échelle de la
+  station, la carte ne dit presque rien de plus que le climat régional ; la composante locale
+  (LiDAR, topographie) n'a que 5 ancrages GBIF pour s'appuyer.
 - **Le trophique n'est pas prédit.** Un R² de l'ordre de zéro (`r fr4(v_tr$r2)`) veut dire
   que le modèle régional ne fait pas mieux que la moyenne. La part « trophique » des types
   (`T1` ou `T4`) ne repose donc sur aucune prédiction vérifiée.
-- **L'hydrique explique `r pct(v_hy$r2)` de la variance** des placettes en validation
-  croisée, contre un repère de `r fr(v_hy$r2_repere, 2)`. La carte hydrique est un indice calculé
-  (BILJOU sur la pente), pas un modèle ajusté.
-- **La carte porte la trace de la maille climatique.** Les prédicteurs sont à maille large
-  (climat SAFRAN de 8 km, réserve utile uniforme par maille) : on voit des **limites
-  rectilignes** sur les cartes des types et de l'hydrique, qui paraissent suivre la grille du
-  climat et non le terrain (lecture visuelle, non vérifiée par un calcul). À l'échelle de la station, la carte ne dit presque rien de plus que le
-  climat régional ; la composante locale (LiDAR, topographie) n'a que 5 ancrages GBIF pour
-  s'appuyer.
+- **Le modèle régional hydrique explique `r pct(v_hy$r2)` de la variance** des placettes en
+  validation croisée, contre un repère de `r fr(v_hy$r2_repere, 2)` ; ce R² ne mesure pas la carte
+  Istress affichée, qui est un indice calculé et n'a pas de validation propre. 
 - **Les placettes IFN sont localisées à 700 m près** : aucune variable fine (LiDAR, pente, TWI...)
   n'est extraite à leurs coordonnées (règle bloquante du projet). Le LiDAR et le terrain n'entrent donc
   dans aucun modèle régional : ils servent à la carte hydrique (pente) et au seul modèle local
@@ -86,9 +91,11 @@ tab(lim)
 
 L'emprise test est un carré de 15 km de côté (x de 1 007 000 à 1 022 000, y de 6 790 000 à
 6 805 000, Lambert-93 EPSG:2154, x = est, y = nord), au bord est de la SER. Le run a
-traité les 225 dalles LiDAR HD qui la recouvrent.
+traité les 225 dalles LiDAR HD qui la recouvrent. Environ `r pct(ch("part_emprise_hors_d11"))` de
+l'emprise (carré de 15 km) et `r pct(ch("part_foret_hors_d11"))` de la forêt typée tombent hors de la
+SER D11 : la carte y est tout de même calculée.
 
-```{r situation}
+```{r situation, fig.alt = "Carte de situation : emprise test de 15 km de côté au bord est de la sylvoécorégion D11, voisine de la D12, en Lambert-93."}
 knitr::include_graphics(file.path(fig, "situation.png"))
 ```
 
@@ -127,6 +134,22 @@ src <- data.frame(
 tab(src)
 ```
 
+**Citations dues.**
+
+- IGN, Inventaire forestier national français, Données brutes, Campagnes annuelles 2005 et
+  suivantes, <https://inventaire-forestier.ign.fr/dataIFN/>, site consulté le 16/11/2026
+  (Licence Ouverte Etalab 2.0). Ces données ne servent pas ici à produire des statistiques
+  d'inventaire.
+- Météo-France, SAFRAN (SIM2 quotidien) : « Source : Météo-France ».
+- GBIF.org, occurrences de plantes vasculaires (Tracheophyta) de l'emprise test, consultées en
+  novembre 2026. L'emprise compte 30 jeux de données, dont 26 sous CC BY 4.0 et 4 sous CC BY-NC
+  4.0 (liste, titres et licences : `docs/referentiels.md`, § 8). Les jeux exactement utilisés par
+  le run ne sont pas consignés dans les sorties ; le DOI de citation est **à vérifier** (il n'existe
+  que pour un téléchargement avec compte, pas pour une recherche directe).
+- La carte et les chiffres de cette page **dérivent en partie d'occurrences GBIF**, dont certaines
+  sous CC BY-NC. Seuls des chiffres et des cartes dérivés et agrégés sont publiés ; aucune
+  occurrence, aucune coordonnée de point n'est publiée.
+
 Les ressources, versions et adresses détaillées sont dans le rapport du run et dans
 `docs/referentiels.md` du dépôt. La licence du millésime 2025 de la BD TOPAGE et le DOI des
 occurrences GBIF (il n'existe que pour un téléchargement, pas pour une recherche directe) restent
@@ -134,7 +157,7 @@ occurrences GBIF (il n'existe que pour un téléchargement, pas pour une recherc
 
 ## Chaîne de calcul
 
-```{r schema}
+```{r schema, fig.alt = "Schéma en neuf étapes, de la dalle LiDAR HD à la validation, en passant par les modèles régionaux et la carte hydrique."}
 knitr::include_graphics(file.path(fig, "schema.png"))
 ```
 
@@ -161,7 +184,7 @@ knitr::include_graphics(file.path(fig, "schema.png"))
 Le run donne **`r nrow(typ)` types** sur **`r fr(ch("surface_foret_ha"), 0)` ha** de forêt. Leur code
 combine un niveau trophique (`T`), hydrique (`H`) et bioclimatique (`B`).
 
-```{r types-carte}
+```{r types-carte, fig.alt = "Carte des quatre types de stations sur les cellules forestières de 20 m ; les contours sont des rectangles qui suivent la maille climatique."}
 knitr::include_graphics(file.path(fig, "types.png"))
 ```
 
@@ -181,21 +204,22 @@ Voir « Limites » : les contours rectilignes viennent de la maille climatique.
 
 ### La contrainte hydrique à 20 m
 
-```{r hydrique}
+```{r hydrique, fig.alt = "Carte de l indice de contrainte hydrique Istress à 20 m ; des sauts rectilignes séparent des zones plus ou moins sèches."}
 knitr::include_graphics(file.path(fig, "hydrique.png"))
 ```
 
 L'indice **Istress** est calculé cellule par cellule : plus il est élevé, plus la contrainte
 hydrique est forte. Il module l'évapotranspiration par le rayonnement de la pente. Les
-**sauts francs** entre rectangles viennent de la réserve utile, uniforme par maille SAFRAN (9
-mailles, de 49 à 114 mm) : ils ne sont pas réels. Limites propres à cette carte (adaptation non
+**sauts francs** entre rectangles viennent du climat (précipitations et rayonnement SAFRAN) et de
+la réserve utile (de 49 à 114 mm), tous deux uniformes par maille SAFRAN (9 mailles) : ils ne
+correspondent à aucune limite du terrain. Limites propres à cette carte (adaptation non
 validée de Dyer 2009) : rayonnement de ciel clair appliqué au rayonnement nuageux (contraste
 d'exposition surestimé), apports latéraux et engorgement non captés, aucune validation française
 à cette résolution.
 
 ### L'incertitude
 
-```{r incertitude}
+```{r incertitude, fig.alt = "À gauche, écart-type de prédiction trophique ; à droite, zone d applicabilité du modèle, avec des bandes en croix hors zone."}
 knitr::include_graphics(file.path(fig, "incertitude.png"))
 ```
 

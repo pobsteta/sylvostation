@@ -1,7 +1,8 @@
 name: pkgdown
 
-# Site pkgdown (mission 023). Sur pull request : construction seule, SANS déploiement.
-# Sur push vers main : construction puis déploiement sur la branche gh-pages.
+# Site pkgdown (mission 023). Deux jobs : « build » construit le site avec un jeton en LECTURE
+# seule (le code d'une pull request ne tourne jamais avec un jeton en écriture) ; « deploy »
+# publie sur gh-pages, seulement sur un push de main.
 # L'article des résultats lit des figures précalculées et versionnées (vignettes/articles/figures) :
 # aucun calcul de pipeline, aucun téléchargement de données en CI.
 # Prérequis (à faire par Pascal, une fois) : Réglages > Pages > Source = branche gh-pages.
@@ -19,14 +20,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pkgdown:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-    permissions:
-      contents: write   # écriture sur gh-pages, utilisée seulement à l'étape de déploiement
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # pkgdown rend tout fichier .md de la racine : CLAUDE.md (consignes internes) ne doit pas
+      # être publié. Il reste dans le dépôt ; on le retire de la copie de CI seulement.
+      - name: Retirer CLAUDE.md de la copie de CI
+        run: rm -f CLAUDE.md
 
       - uses: r-lib/actions/setup-pandoc@v2
 
@@ -46,11 +54,51 @@ jobs:
       - name: Construire le site
         run: Rscript -e 'pkgdown::check_pkgdown(); pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)'
 
-      # Seulement sur un push de main : jamais depuis une pull request ni une autre branche.
+      # Garde : aucune PAGE interne dans le site (fichier, plan du site, index de recherche,
+      # llms.txt). Une simple mention de CLAUDE.md ou de pilotage/ dans un texte d'aide est permise.
+      - name: Garde contre la publication de fichiers internes
+        run: |
+          fail=0
+          if [ -e site/CLAUDE.html ] || [ -e site/CLAUDE.md ]; then echo "page CLAUDE dans site/"; fail=1; fi
+          if find site \( -ipath '*CLAUDE*' -o -ipath '*pilotage*' -o -ipath '*/.claude*' \) | grep -q .; then
+            echo "fichier interne dans site/ :"; find site \( -ipath '*CLAUDE*' -o -ipath '*pilotage*' -o -ipath '*/.claude*' \); fail=1
+          fi
+          for f in site/sitemap.xml site/llms.txt; do
+            if grep -q "CLAUDE" "$f"; then echo "CLAUDE apparaît dans $f"; fail=1; fi
+            if grep -qE "/pilotage/|/\.claude" "$f"; then echo "chemin interne dans $f"; fail=1; fi
+          done
+          if grep -qE '"path":"[^"]*(CLAUDE|pilotage|\.claude)' site/search.json; then
+            echo "page interne dans site/search.json"; fail=1
+          fi
+          exit $fail
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: site
+          if-no-files-found: error
+
+  deploy:
+    # Seulement sur un push de main : jamais depuis une pull request ni une autre branche.
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # écriture sur gh-pages seulement
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site
+
       - name: Déployer sur gh-pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@v4.5.0
         with:
-          clean: false
+          # gh-pages ne contient que le site : clean retire les pages disparues du dépôt.
+          clean: true
           branch: gh-pages
           folder: site

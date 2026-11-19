@@ -2,8 +2,10 @@
 # (mission 023). À lancer à la main, depuis la racine du dépôt, APRÈS un run réel du pipeline
 # (mission 018) :
 #
-#   Rscript inst/scripts/figures_article_vosges.R [dossier_sorties] [dossier_figures]
+#   Rscript inst/scripts/figures_article_vosges.R AAAA-MM-JJ [dossier_sorties] [dossier_figures]
 #
+# Le premier argument est la DATE DU RUN, obligatoire : les sorties ne consignent aucune date
+# (le mtime des fichiers n'est pas une date consignée) ; on la recopie du journal du run.
 # Défauts : data/sorties/D11 (lecture seule) et vignettes/articles/figures. Le script ne
 # lance aucun calcul de pipeline, aucun téléchargement : il met en image des sorties
 # existantes (rasters, tables CSV). L'article, lui, ne lit que le résultat de ce script.
@@ -12,8 +14,12 @@
 suppressPackageStartupMessages({ library(terra); library(sf) })
 
 args <- commandArgs(trailingOnly = TRUE)
-dossier <- if (length(args) >= 1) args[[1]] else file.path("data", "sorties", "D11")
-sortie  <- if (length(args) >= 2) args[[2]] else file.path("vignettes", "articles", "figures")
+if (length(args) < 1 || !grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}$", args[[1]])) {
+  stop("Premier argument obligatoire : date du run au format AAAA-MM-JJ.")
+}
+date_run <- args[[1]]
+dossier <- if (length(args) >= 2) args[[2]] else file.path("data", "sorties", "D11")
+sortie  <- if (length(args) >= 3) args[[3]] else file.path("vignettes", "articles", "figures")
 dir.create(sortie, showWarnings = FALSE, recursive = TRUE)
 
 if (any(grepl("^synth_", list.files(dossier)))) {
@@ -23,7 +29,6 @@ chemin <- function(f) file.path(dossier, f)
 stopifnot(file.exists(chemin("types.tif")), file.exists(chemin("hydrique.tif")),
           file.exists(chemin("incertitude.tif")), file.exists(chemin("etat_de_preuve.csv")))
 
-date_run <- format(file.mtime(chemin("etat_de_preuve.csv")), "%Y-%m-%d")
 types <- rast(chemin("types.tif"))
 hydro <- rast(chemin("hydrique.tif"))
 incer <- rast(chemin("incertitude.tif"))
@@ -37,7 +42,7 @@ cols_types <- c("#1b9e77", "#d95f02", "#7570b3", "#e6ab02")[seq_len(nrow(legende
 masque <- !is.na(types)
 
 pied <- function(...) {
-  mtext(paste0(..., "run réel D11 du ", date_run, " | emprise x ", e[1], "-", e[2],
+  mtext(paste0(..., "sylvostation, run réel D11 du ", date_run, " | emprise x ", e[1], "-", e[2],
                ", y ", e[3], "-", e[4], " | EPSG:2154 | grille ", res_m, " m"),
         side = 1, line = 4.2, cex = 0.55, adj = 0, col = "grey30")
 }
@@ -68,7 +73,7 @@ png_fig("situation.png", 1100, 1000, {
   cent <- suppressWarnings(st_centroid(st_geometry(ser)))
   text(st_coordinates(cent), labels = ser$codeser, cex = 1.1, font = 2, col = "grey20")
   text(e[[2]] + 3000, mean(e[3:4]), "emprise\ntest\n15 x 15 km", col = "red", cex = 0.8, adj = 0)
-  pied("Source : IGN, sylvoécorégions (extrait D11 et D12, Licence Ouverte) | ")
+  pied("Fond : IGN, sylvoécorégions (Licence Ouverte) | ")
 })
 
 # --- 2. carte des types ---------------------------------------------------------------------
@@ -115,13 +120,15 @@ aoa_hors <- as.numeric(global(mask(incer[["aoa_trophic"]] == 0, types), "sum", n
 
 # --- 5. schéma de la chaîne ------------------------------------------------------------------
 png_fig("schema.png", 1500, 700, {
-  par(mar = c(0.2, 0.2, 2, 0.2))
+  par(mar = c(1.2, 0.2, 2, 0.2))
   etapes <- c("1  LiDAR HD\nMNT 1 m, MHC", paste0("2  Terrain ", res_m, " m\nmasque forestier"),
               "3  Gradients des\nplacettes IFN", "4  Modèles régionaux,\nvalidation croisée",
               paste0("5  Carte hydrique\n", res_m, " m (BILJOU)"), "6  Typologie\n(seuils, fusions)",
               "7  Caractérisation\ndes types", "8  Clé de\ndétermination", "9  Validation")
   plot(NA, xlim = c(0, 3), ylim = c(0, 3), axes = FALSE, xlab = "", ylab = "",
        main = "Chaîne de calcul (de la dalle LiDAR au catalogue)")
+  mtext(paste0("Source : sylvostation, run réel D11 du ", date_run, " | schéma, pas une donnée"),
+        side = 1, line = -0.3, cex = 0.6, adj = 0, col = "grey30")
   bw <- 0.40; bh <- 0.30
   xs <- rep(c(0.5, 1.5, 2.5), 3); ys <- rep(c(2.5, 1.5, 0.5), each = 3)
   cols <- c("#cfe3f1", "#cfe3f1", "#dfeccf", "#dfeccf", "#dfeccf", "#f5e6c4", "#f5e6c4",
@@ -140,6 +147,39 @@ png_fig("schema.png", 1500, 700, {
   }
 })
 
+# --- 5 bis. la carte reproduit-elle les mailles climatiques ? -------------------------------
+# La couche ru_maille de hydrique.tif prend une valeur par maille SAFRAN (9 mailles) : elle
+# sert d'identifiant de maille.
+grad <- rast(chemin("gradients.tif"))
+mk <- round(values(hydro[["ru_maille"]])[, 1], 3)
+tv <- values(types)[, 1]
+ok <- !is.na(tv) & !is.na(mk)
+r2_maille <- function(y) {
+  y <- y[ok]; f <- factor(mk[ok]); 1 - sum(resid(lm(y ~ f))^2) / sum((y - mean(y))^2)
+}
+r2_is <- r2_maille(values(hydro[["is_topo"]])[, 1])
+r2_tr <- r2_maille(values(grad[["trophic"]])[, 1])
+tb <- table(mk[ok], tv[ok])
+part_modal <- sum(apply(tb, 1, max)) / sum(tb)
+M <- matrix(mk, nrow = nrow(types), byrow = TRUE); Tm <- matrix(tv, nrow = nrow(types), byrow = TRUE)
+chg <- function(a, b, ma, mb) {
+  v <- !is.na(a) & !is.na(b); same <- ma == mb
+  c(dans = sum((a != b)[v & same]), n_dans = sum(v & same),
+    limite = sum((a != b)[v & !same]), n_limite = sum(v & !same))
+}
+cc <- chg(Tm[, -ncol(Tm)], Tm[, -1], M[, -ncol(M)], M[, -1]) +
+  chg(Tm[-nrow(Tm), ], Tm[-1, ], M[-nrow(M), ], M[-1, ])
+chg_dans <- cc[["dans"]] / cc[["n_dans"]]; chg_limite <- cc[["limite"]] / cc[["n_limite"]]
+# chaque sens séparément (le relecteur donne une plage) : 12 à 18 % à une limite
+ch_h <- chg(Tm[, -ncol(Tm)], Tm[, -1], M[, -ncol(M)], M[, -1])
+ch_v <- chg(Tm[-nrow(Tm), ], Tm[-1, ], M[-nrow(M), ], M[-1, ])
+lim_h <- ch_h[["limite"]] / ch_h[["n_limite"]]; lim_v <- ch_v[["limite"]] / ch_v[["n_limite"]]
+# part de la grille et de la forêt typée hors de la SER D11 (centres de cellules, Lambert-93)
+d11 <- st_union(ser[ser$codeser == "D11", ])
+xy <- xyFromCell(types, seq_len(ncell(types)))
+dedans <- lengths(st_intersects(st_as_sf(as.data.frame(xy), coords = c("x", "y"), crs = 2154), d11)) > 0
+hors_grille <- mean(!dedans); hors_foret <- mean(!dedans[!is.na(tv)])
+
 # --- 6. petites tables précalculées ---------------------------------------------------------
 for (f in c("etat_de_preuve.csv", "validation_stats.csv", "cle_resume.csv", "types.csv")) {
   file.copy(chemin(f), file.path(sortie, f), overwrite = TRUE)
@@ -147,8 +187,14 @@ for (f in c("etat_de_preuve.csv", "validation_stats.csv", "cle_resume.csv", "typ
 n_forest <- as.numeric(global(masque, "sum"))
 chiffres <- data.frame(
   cle = c("date_run", "resolution_m", "cellules_forestieres", "surface_foret_ha",
-          "part_hors_zone_aoa_trophique"),
-  valeur = c(date_run, res_m, n_forest, round(n_forest * res_m^2 / 1e4, 1), round(aoa_hors, 4)))
+          "part_hors_zone_aoa_trophique", "n_mailles", "r2_maille_istress", "r2_maille_trophique",
+          "part_type_modal_maille", "changement_type_voisins_dans_maille",
+          "changement_type_voisins_limite_h", "changement_type_voisins_limite_v",
+          "part_emprise_hors_d11", "part_foret_hors_d11"),
+  valeur = c(date_run, res_m, n_forest, round(n_forest * res_m^2 / 1e4, 1), round(aoa_hors, 4),
+             length(unique(mk[ok])), round(r2_is, 4), round(r2_tr, 4), round(part_modal, 4),
+             round(chg_dans, 4), round(lim_h, 4), round(lim_v, 4),
+             round(hors_grille, 4), round(hors_foret, 4)))
 write.csv(chiffres, file.path(sortie, "chiffres.csv"), row.names = FALSE)
 message("Figures écrites dans ", sortie, " (",
         round(sum(file.size(list.files(sortie, full.names = TRUE))) / 1e6, 2), " Mo)")

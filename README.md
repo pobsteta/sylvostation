@@ -3,7 +3,7 @@
 [![CI](https://github.com/pobsteta/sylvostation/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/pobsteta/sylvostation/actions/workflows/ci.yml)
 [![Release](https://github.com/pobsteta/sylvostation/actions/workflows/release.yml/badge.svg)](https://github.com/pobsteta/sylvostation/actions/workflows/release.yml)
 [![Version](https://img.shields.io/github/v/release/pobsteta/sylvostation?label=version)](https://github.com/pobsteta/sylvostation/releases/latest)
-[![Couverture](.github/badges/couverture.svg)](https://github.com/pobsteta/sylvostation/actions/workflows/ci.yml)
+[![Couverture](https://raw.githubusercontent.com/pobsteta/sylvostation/main/.github/badges/couverture.svg)](https://github.com/pobsteta/sylvostation/actions/workflows/ci.yml)
 [![Site](https://img.shields.io/badge/site-pkgdown-blue)](https://pobsteta.github.io/sylvostation/)
 [![R](https://img.shields.io/badge/R-%E2%89%A5%204.1-276DC3)](https://www.r-project.org/)
 [![Licence : GPL-3](https://img.shields.io/badge/licence-GPL--3-blue)](LICENSE.md)

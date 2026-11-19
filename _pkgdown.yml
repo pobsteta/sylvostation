@@ -152,6 +152,23 @@ reference:
       - empty_layers
       - write_outputs
       - write_types_gpkg_real
+  - title: "10. Plan d'échantillonnage et fiches de terrain"
+    desc: "Plan de relevés terrain (cellules homogènes, accessibilité, temps de terrain) et lecture des fiches."
+    contents:
+      - sampling_frame
+      - homogeneous_cells
+      - get_access_network
+      - ACCESS_NATURES
+      - filter_access
+      - access_cost
+      - field_time
+      - sampling_plan
+      - sampling_coverage
+      - write_sampling_plan
+      - read_field_sheet
+      - read_station_sheet
+      - BRAUN_BLANQUET
+      - HUMUS_FORMS
   - title: "Mode démonstration (données synthétiques)"
     desc: "Jeux d'essai fabriqués (préfixe synth_, synthetic = TRUE) : ne valent rien sur données réelles."
     contents:
