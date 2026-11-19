@@ -197,3 +197,20 @@ AgroParisTech n ont pas ete obtenus) : trois gradients vrais synthetiques (grill
 moyennes a 50 m, plus un bruit. Fabriquee par `inst/scripts/synth_reference.R` (refaite le
 2026-11-18, mission 025, a partir de la grille de 20 m). `synthetic = TRUE`. Aucune licence a
 respecter : aucune donnee reelle. Ne dit rien sur la vraie carte.
+
+## `carhab_extrait_emprise_test.gpkg` (CarHab 68, mission 031)
+
+- **Source :** PatriNat (OFB-MNHN-CNRS-IRD), IGN, EVS, CBN, « CarHab, habitats du Haut-Rhin
+  (68) », service WFS Géoplateforme `https://data.geopf.fr/wfs/ows`, type
+  `Carhab_habitat:habitats_carhab` (métadonnée du 2023-06-01 ; voir `docs/referentiels.md`
+  § 26), lu le 2026-11-19 (`occupation = 'foret'`, 3 103 polygones sur l'emprise test, paginés
+  par 500 ; cache `data/cache/carhab/`, hors dépôt).
+- **Traitement :** les **25 polygones forestiers** qui recoupent le carré
+  `x 1013000-1014000, y 6797000-6798000` (EPSG:2154), polygones entiers (non découpés),
+  8 champs conservés (`id_polygone_carhab`, `code_biotope`, `etage_de_vegetation`,
+  `acidite_edaphique`, `humidite_edaphique`, `occupation`, `surface`, `layer`), géométrie
+  convertie de MULTISURFACE en MULTIPOLYGON par GDAL. Fabriqué par `carhab_fetch()` puis un
+  découpage par `sf::st_intersects`. Sert aux tests de `R/carhab.R` (sans réseau). 229 Ko.
+- **Licence :** Licence Ouverte / Open License (Etalab), métadonnée CSW
+  `INPN-CARHAB_HABITATS` (`useLimitation` « Aucune contrainte »). CarHab est une carte
+  **prédictive** : ces polygones ne sont pas une vérité terrain.

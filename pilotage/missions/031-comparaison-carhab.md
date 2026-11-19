@@ -7,7 +7,7 @@ et hydrique de l'emprise test de D11 (run 018 des 225 dalles) aux paramètres d'
 d'humidité édaphiques de CarHab 68, seule carte SIG ouverte de l'emprise (référentiels § 26),
 pour donner à la carte un premier contrôle externe en attendant les relevés GNSS (029).
 
-**Redite par l'agent :** _à compléter par l'agent._
+**Redite par l'agent :** comparer, gradient par gradient (Spearman par blocs, kappa pondéré après découpage aux parts CarHab), nos cartes trophique et hydrique de l'emprise test de D11 (run 018) aux paramètres d'acidité et d'humidité édaphiques de CarHab 68, de grille à grille à 20 m en Lambert-93, pour un premier contrôle externe de la carte, CarHab étant une carte prédictive et non une vérité terrain.
 
 ## Les trois questions (règle de staffing)
 
