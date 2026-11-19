@@ -38,7 +38,9 @@ si ses deux sorties \verb{mnt_<dalle>.tif} et \verb{mhc_<dalle>.tif} existent, s
 consignés à leur calcul (fichier \verb{params_<dalle>.txt}) sont ceux demandés (\code{res},
 \code{buffer}, \code{engine}). Une dalle sans fichier de paramètres (calculée avant la mission
 032) est acceptée sur les seuls contrôles du raster. Sinon elle est recalculée.
-\code{force = TRUE} recalcule toutes les dalles du bloc. Les LAZ téléchargés sont effacés
+Avant tout recalcul, les sorties et le fichier de paramètres de la dalle sont effacés
+(pas de dalle mixte après une interruption). Une dalle reprise sans \code{params_*.txt} est
+signalée par un message. \code{force = TRUE} recalcule toutes les dalles du bloc. Les LAZ téléchargés sont effacés
 après le bloc (\code{keep_laz = FALSE}). Le nombre de coeurs (\code{ncores}) ne change pas le
 résultat et n'est pas consigné.
 }

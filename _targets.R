@@ -318,7 +318,7 @@ if (!isTRUE(cfg$demo)) {
     tar_target(lidar_files, sylvostation::run_tile_block(
       tile_blocks, lidar_dir, res = p_lidar_res_m, buffer = p_lidar_buffer_m,
       ncores = p_lidar_ncores, engine = p_lidar_engine,
-      force = nzchar(Sys.getenv("SYLVOSTATION_LIDAR_FORCE"))),
+      force = identical(Sys.getenv("SYLVOSTATION_LIDAR_FORCE"), "1")),
       pattern = map(tile_blocks), format = "file"),
     tar_target(dtm, sylvostation::mosaic_tiles(lidar_files, "mnt", fact = 5,
                                                tile_ids = tiles$tile_id)),

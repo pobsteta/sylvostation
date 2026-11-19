@@ -383,7 +383,9 @@ tile_blocks <- function(tiles, size = 3) {
 #' consignés à leur calcul (fichier `params_<dalle>.txt`) sont ceux demandés (`res`,
 #' `buffer`, `engine`). Une dalle sans fichier de paramètres (calculée avant la mission
 #' 032) est acceptée sur les seuls contrôles du raster. Sinon elle est recalculée.
-#' `force = TRUE` recalcule toutes les dalles du bloc. Les LAZ téléchargés sont effacés
+#' Avant tout recalcul, les sorties et le fichier de paramètres de la dalle sont effacés
+#' (pas de dalle mixte après une interruption). Une dalle reprise sans `params_*.txt` est
+#' signalée par un message. `force = TRUE` recalcule toutes les dalles du bloc. Les LAZ téléchargés sont effacés
 #' après le bloc (`keep_laz = FALSE`). Le nombre de coeurs (`ncores`) ne change pas le
 #' résultat et n'est pas consigné.
 #'
@@ -406,7 +408,7 @@ run_tile_block <- function(block, out_dir, res = 1, buffer = 20, ncores = 3,
     stop("`block` doit venir de tile_blocks().", call. = FALSE)
   }
   if (!is.logical(force) || length(force) != 1L || is.na(force)) {
-    stop("`force` doit être TRUE ou FALSE.", call. = FALSE)
+    stop("`force` doit \u00eatre TRUE ou FALSE.", call. = FALSE)
   }
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   mnt <- file.path(out_dir, paste0("mnt_", block$tile_id, ".tif"))
@@ -417,7 +419,16 @@ run_tile_block <- function(block, out_dir, res = 1, buffer = 20, ncores = 3,
     !vapply(seq_len(nrow(block)), function(i) {
       .tile_cached(mnt[i], mhc[i], par[i], res, params)
     }, logical(1))
+  sans_params <- !a_faire & !file.exists(par)
+  if (any(sans_params)) {
+    message("run_tile_block : ", sum(sans_params), " dalle(s) reprise(s) sans params_*.txt ",
+            "(calcul ant\u00e9rieur \u00e0 la mission 032, param\u00e8tres non v\u00e9rifi\u00e9s) ; ",
+            "param\u00e8tres demand\u00e9s : ", params)
+  }
   if (any(a_faire)) {
+    # efface sorties et params des dalles a refaire : un calcul interrompu ne laisse jamais
+    # une dalle mixte (mnt d'un calcul, mhc d'un autre) qui serait reprise ensuite
+    unlink(c(mnt[a_faire], mhc[a_faire], par[a_faire]))
     runner(block$url[a_faire], out_dir, res = res, ncores = ncores, buffer = buffer,
            keep_laz = FALSE, engine = engine)
     for (i in which(a_faire)) {

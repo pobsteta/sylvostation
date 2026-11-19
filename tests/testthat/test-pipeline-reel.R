@@ -880,6 +880,41 @@ test_that("mode réel hors ligne : 0 appel réseau, reprise après interruption,
   expect_true(any(grepl("non atteint (entrée absente)", ep$etat, fixed = TRUE)))
 })
 
+test_that("run_tile_block : recalcul interrompu, pas de dalle mixte ; message sans params (032)", {
+  blk <- tile_blocks(fausses_dalles(1), 3)[[1]]
+  d <- tempfile("lidar")
+  j <- new.env(); j$appels <- list()
+  fr <- faux_runner_lidar(j)
+  run_tile_block(blk, d, buffer = 20, runner = fr)
+  # recalcul à buffer 30 interrompu après l'écriture du mnt seul
+  interrompu <- function(laz_files, out_dir, res = 1, ...) {
+    r <- terra::rast(xmin = 1015000, xmax = 1015010, ymin = 6794000, ymax = 6794010,
+                     resolution = res, crs = "EPSG:2154")
+    terra::values(r) <- 2
+    terra::writeRaster(r, file.path(out_dir, "mnt_1007-6805.tif"), overwrite = TRUE)
+    stop("coupure")
+  }
+  expect_error(run_tile_block(blk, d, buffer = 30, runner = interrompu), "coupure")
+  # relance à buffer 20 : la dalle mixte ne doit pas être reprise
+  j$appels <- list()
+  run_tile_block(blk, d, buffer = 20, runner = fr)
+  expect_length(j$appels, 1)
+  # dalle sans params : reprise avec un message
+  unlink(list.files(d, "^params_", full.names = TRUE))
+  expect_message(run_tile_block(blk, d, buffer = 20, runner = fr), "sans params")
+  expect_length(j$appels, 1)
+  run_tile_block(blk, d, buffer = 20, runner = fr, force = TRUE)  # recalcul : params réécrits
+  expect_no_message(run_tile_block(blk, d, buffer = 20, runner = fr))
+})
+
+test_that("_targets.R : seule la valeur 1 de SYLVOSTATION_LIDAR_FORCE force le recalcul (032)", {
+  racine <- testthat::test_path("..", "..")
+  skip_if_not(file.exists(file.path(racine, "_targets.R")), "_targets.R absent")
+  txt <- paste(readLines(file.path(racine, "_targets.R"), encoding = "UTF-8"), collapse = "\n")
+  expect_match(txt, 'identical(Sys.getenv("SYLVOSTATION_LIDAR_FORCE"), "1")', fixed = TRUE)
+  expect_false(grepl('nzchar(Sys.getenv("SYLVOSTATION_LIDAR_FORCE"))', txt, fixed = TRUE))
+})
+
 test_that("_targets.R : une clé sans rapport ne périme pas lidar_files, lidar_buffer_m la périme (032)", {
   skip_on_cran()
   skip_if_not_installed("targets")

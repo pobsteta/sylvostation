@@ -190,7 +190,12 @@ maille demandée (1 m) et si le fichier `params_<dalle>.txt` (écrit à leur cal
 tampon, moteur) correspond aux paramètres demandés ; sinon la dalle est recalculée. Une dalle
 sans `params_*.txt` (calculée avant la mission 032) est acceptée sur les contrôles du raster.
 Le nombre de coeurs (`lidar_ncores`) ne change pas le résultat et n'est pas consigné.
-Recalcul forcé de toutes les dalles : `SYLVOSTATION_LIDAR_FORCE=1` dans l'environnement, puis
+Avant tout recalcul, `run_tile_block()` efface les sorties et le `params_*.txt` de la dalle
+(une coupure ne laisse pas de dalle mixte). Une dalle reprise sans `params_*.txt` est signalée
+par un message (une ligne par bloc : nombre de dalles et paramètres demandés) ; l'écriture
+des paramètres des 225 dalles de 018 se fera hors de la mission 032.
+Recalcul forcé de toutes les dalles : seule la valeur exacte `SYLVOSTATION_LIDAR_FORCE=1` (toute
+autre valeur, `0` comprise, ne force pas) dans l'environnement, puis
 `targets::tar_invalidate(lidar_files)` et `tar_make()` ; ou `run_tile_block(force = TRUE)`.
 
 **Dépendances de `_targets.R` à `config.yml`.** `targets` suit chaque objet global lu par une
