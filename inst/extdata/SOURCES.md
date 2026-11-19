@@ -214,3 +214,14 @@ respecter : aucune donnee reelle. Ne dit rien sur la vraie carte.
 - **Licence :** Licence Ouverte / Open License (Etalab), métadonnée CSW
   `INPN-CARHAB_HABITATS` (`useLimitation` « Aucune contrainte »). CarHab est une carte
   **prédictive** : ces polygones ne sont pas une vérité terrain.
+
+## `ifn_espar_cdref.csv` (mission 035)
+
+- **Source :** IGN, Inventaire forestier national, données brutes campagnes 2005 à 2025
+  (`export_dataifn_2005_2025.zip`, fichier `espar-cdref13.csv`, 193 lignes : code d'essence
+  `espar`, libellé, `cd_ref` en TAXREF v13.0), lu le 2026-11-19.
+- **Traitement :** BOM et préfixe `// ` de la ligne d'en-tête retirés ; contenu inchangé.
+- **Licence :** Licence Ouverte / Open Licence Etalab 2.0 (docs/referentiels.md § 7).
+  Citation : « IGN – Inventaire forestier national français, Données brutes, Campagnes
+  annuelles 2005 et suivantes, https://inventaire-forestier.ign.fr/dataIFN/ , site consulté le
+  2026-11-19 ».

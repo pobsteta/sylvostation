@@ -464,6 +464,42 @@ test_that("fetch_safran : téléchargement simulé, filtrage aux mailles de l'em
   expect_equal(length(unique(paste(read_safran(f2)$LAMBX, read_safran(f2)$LAMBY))), 9)
 })
 
+test_that("fetch_safran : un fichier filtre pour une autre emprise n'est jamais resservi (mission 035)", {
+  d <- tempfile("safran")
+  dir.create(d)
+  src <- read_safran(ex("safran_sim2_12mailles_extrait.csv"))
+  faux <- function(url, destfile, ...) {
+    con <- gzfile(destfile, "w")
+    utils::write.table(src[substr(src$DATE, 1, 4) == "2003", ], con, sep = ";", quote = FALSE,
+                       row.names = FALSE)
+    close(con)
+    0L
+  }
+  petite <- c(1014000, 6798000, 1015000, 6799000)
+  grande <- c(1007000, 6790000, 1022000, 6805000)
+  f1 <- fetch_safran(2003, petite, d, downloader = faux)
+  f2 <- fetch_safran(2003, grande, d, downloader = faux)
+  expect_false(identical(f1, f2))
+  expect_true(file.exists(f1))
+  n <- function(f) length(unique(paste(read_safran(f)$LAMBX, read_safran(f)$LAMBY)))
+  expect_equal(n(f1), 1)
+  expect_equal(n(f2), 9)
+  # meme emprise : le fichier existant est resservi tel quel (pas de second filtrage)
+  mt <- file.mtime(f2)
+  expect_identical(fetch_safran(2003, grande, d, offline = TRUE), f2)
+  expect_equal(file.mtime(f2), mt)
+  # l'ancien nom sans emprise n'est plus lu
+  writeLines("LAMBX;LAMBY;DATE;PRENEI;PRELIQ;ETP\n1;1;20030101;0;0;0", file.path(d, "emprise_2003.csv"))
+  expect_identical(fetch_safran(2003, grande, d, offline = TRUE), f2)
+  # colonnes gardees = celles de read_safran, valeurs inchangees
+  expect_true(all(c("LAMBX", "LAMBY", "DATE", "PRENEI", "PRELIQ", "ETP", "T") %in% names(read_safran(f2))))
+  r2 <- read_safran(f2)
+  k2 <- paste(r2$LAMBX, r2$LAMBY)
+  s03 <- src[substr(src$DATE, 1, 4) == "2003" & paste(src$LAMBX, src$LAMBY) %in% k2, ]
+  expect_equal(sum(r2$PRELIQ), sum(s03$PRELIQ))      # valeurs inchangees sur les mailles gardees
+  expect_equal(nrow(r2), nrow(s03))
+})
+
 test_that("safran_climate : couches p_sv, etp_sv, t_moy à maille kilométrique en Lambert-93", {
   s <- read_safran(ex("safran_sim2_12mailles_extrait.csv"))
   # plus proche voisin : valeurs de la maille (l'interpolation bilineaire, defaut depuis la
@@ -993,4 +1029,22 @@ test_that("evidence_table_real et evidence_table : la maille vient de resolution
   expect_true(any(grepl("grille de 30 m", e30$detail, fixed = TRUE)))
   d <- evidence_table(n_ifn = 3, resolution_m = 20)
   expect_true(grepl("grille de 20 m", d$detail[1], fixed = TRUE))
+})
+
+test_that("calibration_counts : entonnoir des effectifs, chute a l'etape climat visible", {
+  ifn <- filter_releves(load_ifn(system.file("extdata", package = "sylvostation")))
+  g <- data.frame(coarse_t_moy = c(1, NA, NA, NA, 2))
+  litho <- data.frame(coarse_litho_700m = c("gres", NA))
+  r <- calibration_counts(ifn, g, list(trophic = 2, hydric = data.frame(a = 1)), litho,
+                          data.frame(a = 1))
+  expect_named(r, c("etape", "n", "perdues", "cause"))
+  expect_equal(r$n[1], nrow(ifn$placettes))
+  expect_equal(r$n[r$etape == "trophique calculable"], 5L)
+  expect_equal(r$n[r$etape == "avec climat SAFRAN"], 2L)
+  expect_equal(r$perdues[r$etape == "avec climat SAFRAN"], 3L)
+  expect_equal(r$n[r$etape == "avec lithologie (disque couvert)"], 1L)
+  expect_equal(r$n[r$etape == "apprentissage trophique"], 1L)
+  expect_true(is.na(r$perdues[1]))
+  r0 <- calibration_counts(ifn, g, list(trophic = 2, hydric = 1))
+  expect_false(any(grepl("lithologie|apprentissage trophique", r0$etape)))
 })
