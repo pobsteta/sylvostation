@@ -16,6 +16,8 @@
 
 - [033-empreinte-safran](missions/033-empreinte-safran.md) · depuis le cycle 5 · dev (opus, plan d'abord)
 - [034-predicteurs-piedallu](missions/034-predicteurs-piedallu.md) · depuis le cycle 5 · dev (opus, plan d'abord, code après 033)
+- [035-calibration-greco](missions/035-calibration-greco.md) · depuis le cycle 5 · dev (opus, plan d'abord, code après 033 ; absorbe le code de 034)
+- [036-placettes-ouvertes-precises](missions/036-placettes-ouvertes-precises.md) · depuis le cycle 5 · acquereur
 
 
 
