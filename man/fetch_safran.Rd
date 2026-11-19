@@ -28,14 +28,18 @@ fetch_safran(
 toute la France) est filtré à la lecture, jamais chargé en entier.}
 }
 \value{
-Les chemins des fichiers \verb{emprise_<année>.csv}.
+Les chemins des fichiers \verb{emprise_<année>_<emprise>.csv}.
 }
 \description{
 Pour chaque année, télécharge (une fois, cache \code{cache_dir}) le fichier
 \verb{QUOT_SIM2_<année>.csv.gz} de meteo.data.gouv.fr (docs/referentiels.md, § 23,
 Licence Ouverte 2.0, « Source : Météo-France »), garde les mailles dont le centre est
 à moins d'une demi-diagonale de maille (5,7 km) de l'emprise, et écrit
-\verb{emprise_<année>.csv} dans le cache.
+\verb{emprise_<année>_<emprise>.csv} dans le cache. \strong{Le nom du fichier porte l'emprise}
+(\code{.cle_emprise_safran()}) : un fichier filtré pour une autre emprise n'est jamais
+resservi (mission 035 : l'ancien nom \verb{emprise_<année>.csv}, sans emprise, avait resservi
+12 mailles pour toute la GRECO D). Seules les colonnes lues par \code{\link[=read_safran]{read_safran()}} sont
+écrites.
 }
 \examples{
 \dontrun{

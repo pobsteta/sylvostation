@@ -70,18 +70,47 @@ hydrique ».
 | `geol_*` | `read_geology()`, `recode_lithology()`, `dominant_lithology(700)` | BD Charm-50 (`bdcharm_departements`) | extrait |
 | `ifn` | `load_ifn()`, `filter_greco()`, `filter_releves()` | `fetch_ifn()` | extrait |
 | `taxref`, `indicateurs` | `read_taxref()`, `load_indicator_values("tichy")` | `taxref_url`, `tichy_path` | extraits |
-| `safran`, `climat` | `fetch_safran()`, `read_safran()`, `safran_climate()` (avril-septembre, interpolation bilinéaire entre centres de mailles, `safran_interpolation`, mission 033) | SIM2 | 12 mailles |
+| `safran`, `climat` | `fetch_safran()`, `read_safran()`, `safran_climate()` (avril-septembre, interpolation bilinéaire entre centres de mailles, `safran_interpolation`, mission 033). **Emprise lue = boîte de toutes les placettes de la GRECO ∪ emprise de la carte** (497 mailles pour la GRECO D) ; le fichier filtré `emprise_<année>_<emprise>.csv` porte son emprise dans son nom, jamais resservi pour une autre (mission 035) | SIM2 | 12 mailles |
 | `ifn_gradients` | `ifn_real_gradients()` : Tichý, `ru_from_texture()`, `hydric_stress()` (ADR 0006), `bioclim_axis()` | | |
 | `solar_k` | `solar_factor()` : k mensuel de GRASS `r.sun` (ciel clair) sur l'altitude de la grille ; repli k = 1 sans GRASS | | |
 | `ru_mailles` | `ru_by_safran_cell()` : RU uniforme par maille SAFRAN (médiane euptf2 des placettes IFN ; médiane de l'emprise sous `ru_min_placettes` = 5 placettes, provisoire) | | |
 | `hydric_grid` | `hydric_stress_grid()` : Istress à `resolution_m` (BILJOU, ETP Penman biljouR sur SSI × k), plat de référence, écart table / calcul direct ; météo interpolée sur un réseau de `hydric_node_res_m` = 1 000 m (mission 033) | | |
 | `anchors`, `local_trophic` | `get_gbif()`, `clean_occ()` (écarte les licences CC BY-NC, les jeux Pl@ntNet et les licences inconnues, effectifs par motif dans l'attribut `ecartees`, mission 037), `grid_bioindication()`, `gbif_anchors()` | `occ_search` ou `occ_download` | **absent** |
+| `geol_placettes`, `geol_classes_placettes`, `litho_placettes` | `read_geology()` sur tous les départements de `bdcharm_departements` (7 pour la GRECO D) recoupés à la boîte des placettes ; `lithology_at_points()` : classe et formation (`NOTATION`) dominantes dans 700 m, disque couvert à moins de `litho_min_cover` = pas de lithologie (placette retirée et comptée) ; formations sans règle listées (`formations_non_classees`) | BD Charm-50 | extrait |
+| `soilgrids_file`, `ph_layer` | `fetch_soilgrids_ph()` : pH SoilGrids 2.0 0-5 cm (250 m, CC BY 4.0), fenêtre de la GRECO, cache par emprise ; `soilgrids_disk_mean()` : moyenne dans 700 m (`soilgrids_ph: true`) | files.isric.org | **absent** (jamais remplacé) |
+| `train_climat`, `trophic_enc`, `litho_layer`, `formation_layer`, `calibration_effectifs` | placettes avec climat complet ; `encode_by_blocks()` : lithologie et formation encodées par le trophique moyen rétréci (`litho_encoding_k`), **hors pli** (blocs spatiaux) pour l'apprentissage ; `lithology_encoded_layer()` et `formation_encoded_layer()` (mode du disque calculé à 100 m) pour la carte ; `calibration_counts()` : entonnoir des effectifs | | |
 | `models`, `cvs`, `maps` | `fit_gradient()`, `spatial_cv()`, `predict_raster()` (trophique, hydrique) ; bioclimat = `apply_bioclim()` ; couche `hydric` de `gradient_map` = `-is_topo` de `hydric_grid` (le modèle régional hydrique ne sert qu'à la validation croisée) ; `incertitude.tif` : trophique seul | | régional seul |
 | typologie | `default_thresholds()`, `discretise()`, `merge_rare(plots = types des placettes)`, `type_raster()`, `real_type_legend()` (`azonal = FALSE`) | | |
 | fiches, clé | `indicator_species()`, `real_fertility()`, `build_key()` sur `obs_pente`, `obs_topo`, `obs_humus` (notés par l'IFN) | | |
 | `gnss_validation` | `load_gnss()`, `gnss_field_gradients()`, `validate_maps()` | si `gnss_path` | absent |
 | `comparison_table` | `load_reference()`, `compare_gradients()` (à 100 m : plus petit multiple commun de `resolution_m` et de 50 m, ADR 0007) | si `reference_path` | absent |
 | `evidence`, `outputs`, `rapport` | `evidence_table_real()`, `write_outputs(synthetic = FALSE)`, `write_types_gpkg_real()`, Quarto | | |
+
+### Calibration sur toute la GRECO (mission 035)
+
+Le modèle régional est calibré sur **toutes** les placettes IFN de la GRECO (D : 2 894 avec
+trophique calculé, au lieu de 187 en 018) avec des prédicteurs tous à maille large (règle des
+700 m) : climat SAFRAN interpolé (033), lithologie et formation géologique dominantes dans
+700 m (BD Charm-50, 7 départements), pH SoilGrids moyenné dans 700 m. L'effectif 187 de 018
+n'était pas une limite des données : le cache `emprise_<année>.csv` de 12 mailles avait été
+resservi pour toute la GRECO (`fetch_safran()` ne regardait pas l'emprise). Le tableau
+`effectifs_calibration` (table de sortie) donne l'entonnoir : lignes `PLACETTE` → relevé →
+saison → sans incident → trophique → climat → lithologie → apprentissage.
+
+- **Encodage sans fuite** : la lithologie (classe) et la formation sont remplacées par le
+  trophique moyen rétréci vers la moyenne générale (`(n × moyenne + k × générale) / (n + k)`,
+  `litho_encoding_k` = 10, provisoire). L'apprentissage reçoit l'encodage **hors pli**
+  (blocs spatiaux) ; en validation croisée (`spatial_cv(encode = )`) l'encodage est refait
+  dans chaque pli : la réponse du pli de test n'y intervient jamais (un test le vérifie).
+- **Pas de variable de peuplement** (ADR 0008) : ni essence, ni BD Forêt dans les prédicteurs.
+- **Placettes sans géologie** (disque couvert à moins de `litho_min_cover`) : retirées de
+  l'apprentissage et comptées, jamais complétées ; formations sans règle : `non_classe`
+  (jamais d'affectation par défaut), listées dans `formations_non_classees`.
+- **Réponse trophique** : indice de Tichý sur toutes les espèces à valeur indicatrice
+  (historique). `compute_gradients(exclude_cd_ref = read_tree_cd_ref(), abundance_weights = TRUE)`
+  calcule la variante sans essences arborées et pondérée par l'abondance ; voir
+  `docs/referentiels.md` § 35 pour les R² côte à côte. Non activée dans `_targets.R`.
+- **Hydrique** : prédicteurs climatiques seuls ; la lithologie n'y entre pas.
 
 ### Carte hydrique (mission 021)
 

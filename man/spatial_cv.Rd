@@ -13,6 +13,7 @@ spatial_cv(
   k = 5L,
   weights = NULL,
   folds = NULL,
+  encode = NULL,
   ...
 )
 }
@@ -39,6 +40,15 @@ prédicteurs et \code{loc_precision_m}.}
 \item{folds}{Identifiants de plis fournis par l'utilisateur (diagnostic, par
 exemple un tirage aléatoire pour mesurer l'optimisme d'une CV non spatiale) ;
 \code{NULL} : blocs spatiaux.}
+
+\item{encode}{\code{NULL}, une liste \code{list(var, name, k, oof)} ou une liste de telles listes
+(mission 035 ; \code{oof = FALSE} encode l'apprentissage avec toute sa partie, sans plis
+internes ; défaut \code{TRUE}) : \code{var} est une
+colonne catégorielle de \code{data} (lithologie, formation) et \code{name} le nom du prédicteur
+numérique à créer (il doit figurer dans \code{predictors}, pas dans \code{data}). Dans chaque
+pli, l'apprentissage reçoit l'encodage \strong{hors pli} (\code{\link[=oof_target_encoding]{oof_target_encoding()}}, blocs
+de la même taille) et le pli de test l'encodage de toute la partie d'apprentissage :
+la réponse du pli de test n'intervient jamais, sans fuite.}
 
 \item{...}{Transmis à \code{\link[=fit_gradient]{fit_gradient()}} (\code{num_trees}, \code{seed}, \code{points_source}).}
 }

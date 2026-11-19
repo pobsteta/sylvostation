@@ -1653,3 +1653,155 @@ Aucune coordonnée n'est donnée : le référentiel ne permet pas de les établi
 **Question de contrôle :** quelle décision cette donnée va-t-elle éclairer ? Si le trophique à
 maille large s'appuie sur une richesse chimique mesurée, ce qui exige l'accès à l'Inventaire minier
 du BRGM, ou sur la lithologie de la BD Charm-50 classée par rang.
+
+
+# Passe 8 (mission 035, 2026-11-19) : calibration sur toute la GRECO D
+
+## 35. Calibration régionale sur la GRECO D : effectifs, géologie, pH SoilGrids, encodages
+
+Mesures exécutées le 2026-11-19 sur les placettes IFN de la GRECO D (store du run 018 en lecture
+seule pour `ifn`, `indicateurs` ; SAFRAN, BD Charm-50 et SoilGrids lus avec le code de la
+branche `mission-035-calibration-greco`). Scripts et sorties : scratchpad de la session, non
+versés. R² par blocs spatiaux : blocs de 8 358 m (portée estimée en 018), 5 plis, `ranger` 500
+arbres, **moyenne de 5 affectations de blocs aux plis** (graines 1 à 5) ; IC à 95 % et gain par
+bootstrap de blocs (1 000 tirages, graine de plis 1). Réponse : indice trophique de Tichý
+(historique), sauf mention.
+
+### 35.1 Effectifs : où se perdaient les placettes
+
+| Étape | n | Perdues | Cause |
+|---|---|---|---|
+| lignes `PLACETTE` de la GRECO D (D11 6 475, D12 2 917) | 9 392 | | une ligne par visite |
+| avec relevé `ECOLOGIE` | 5 354 | 4 038 | la 2e visite n'a ni écologie ni flore |
+| relevé en saison (avril à septembre) | 3 024 | 2 330 | `filter_releves(months = 4:9)` |
+| sans incident récent | 2 923 | 101 | `NINCID`, `INCID` |
+| trophique calculable | **2 894** (D11 2 116, D12 778) | 29 | aucune espèce à valeur indicatrice |
+| avec climat SAFRAN | 187 en 018 ; **2 894** ici | 2 707 en 018 | **cache SAFRAN périmé** |
+| avec lithologie (disque couvert à 50 % ou plus) | 2 893 | 1 | disque hors des 7 départements |
+| apprentissage trophique final (avec pH SoilGrids) | 2 893 | | |
+| apprentissage hydrique | 2 827 | 67 | réserve utile ou BILJOU manquant |
+
+Le « 187 » de 018 n'était pas une limite des données : la cible `safran` demande la boîte de
+toutes les placettes de la GRECO, mais `fetch_safran()` renvoyait tout fichier
+`emprise_<année>.csv` existant sans regarder l'emprise, donc les 12 mailles lues en 017.
+Corrigé : le nom du fichier porte désormais l'emprise (`emprise_<année>_x<boîte>_m<marge>.csv`).
+**À vérifier** : le mécanisme exact dans le run 018 (confirmé par la lecture du code et par la
+chute à une seule étape, non par un nouveau `tar_make` complet).
+
+### 35.2 SAFRAN sur la GRECO D
+
+| Point | Résultat |
+|---|---|
+| Emprise lue | boîte des placettes (909 550 à 1 060 558 est ; 6 723 356 à 6 912 236 nord) + marge de 5,66 km : **497 mailles** (182 portent des placettes) |
+| Coût | 30 `.csv.gz` complets déjà en cache (aucun téléchargement) ; filtrage en R : **25 min** ; 30 fichiers filtrés de 284 Mo au total (colonnes lues seulement) ; `read_safran` 72 s et 436 Mo en mémoire (5 446 126 lignes) ; `safran_climate` 65 s ; `ifn_real_gradients` 126 s |
+| Résultat | 2 894 placettes avec climat bilinéaire (033) ; hydrique 2 827 |
+
+### 35.3 BD Charm-50 : 4 départements ajoutés
+
+Téléchargés le 2026-11-19 depuis `https://infoterre.brgm.fr/telechargements/BDCharm50/GEO050K_HARM_0DD.zip`
+(même motif que § 5 ; `unzip -t` sans erreur) : 054 (12 327 478 octets), 057 (20 790 543),
+070 (25 721 862), 090 (4 906 068). Avec 067, 068, 088 : 39 643 polygones, **666 formations**
+(`NOTATION`), lecture 64 s. Le site InfoTerre est annoncé fermé (§ 5) : copie locale dans
+`data/cache/bdcharm`, hors dépôt. **Placette `DEP` = 52 (1) : non couverte** (département non lu).
+
+Lithologie dominante dans 700 m (règles provisoires 008, non validées) : 2 893 placettes avec
+géologie. Classes dominantes : grès 744, conglomérat 740, granite 502, `non_classe` 296,
+gneiss/migmatite 227, marne/argile 144, alluvions 133, colluvions/éboulis 28, glaciaire 41,
+calcaire 18, lœss 18, roche basique 2.
+
+**Formations sans règle (jamais affectées)** : 170 formations (1 465 km² sur 25 774 km² lus) ;
+155 d'entre elles tombent dans les disques (435 km²) ; 296 placettes ont `non_classe` pour classe
+dominante. Les plus étendues dans les disques : `h2-3LãER` (leucogranite d'Épinal et de Remiremont,
+32 km²), `h2PK` et `h2PK3` (complexe volcanique de Plancher-Bas, 31 et 21 km²), `h2ã4CFS` (granodiorite du
+Champ-du-Feu, 21 km²), `h2-3ã3Sn` (monzogranite de Senones), `h2öáq`, `d-h`, `h2Góá` (volcanites),
+`P` (épandages de piémont), `o-s` (schistes de Steige), `FzI` (limons de l'Ill). Les règles
+provisoires manquent surtout les roches cristallines dont la description ne commence pas par
+« granite » (« leucogranite », « massif granitique », « monzogranite »). **Décision de Pascal**
+(règles à ajouter, jamais par défaut). Défauts observés des règles actuelles, non corrigés ici :
+« Grès vosgien … souvent conglomératique » (`t1b`) → `conglomerat` (règle 1 avant grès) ;
+« Calcaires oolithiques … marnes » (`j2b2`) → `marne_argile` (règle 11 avant calcaire).
+
+### 35.4 pH SoilGrids 2.0 (`phh2o`, 0-5 cm)
+
+| Point | État | Résultat |
+|---|---|---|
+| Source | **vérifié** (lu en 019, § 18 ; relu le 2026-11-19) | `https://files.isric.org/soilgrids/latest/data/phh2o/phh2o_0-5cm_mean.vrt` (3,5 Mo, `HTTP 200`), Homolosine, 250 m, `Int16`, pH × 10, `NoDataValue` −32768, CC BY 4.0 (ISRIC) à citer |
+| Lecture d'une fenêtre | **vérifié** (exécuté) | `terra::rast("/vsicurl/…")`, `crop` sur la fenêtre transformée, `project` bilinéaire vers Lambert-93 à 250 m : **9 s, 1,8 Mo** pour la GRECO D (772 × 621 cellules, 6,7 % sans valeur), pH de 4,15 à 7,3 |
+| Moyenne dans 700 m | fait | `soilgrids_disk_mean()` : fenêtre circulaire de 5 × 5 cellules de 250 m (coins exclus) ; `raster_at_points()` : interpolation bilinéaire, règle des 700 m appelée avant |
+| Exactitude sur la France | **non évaluée** | SoilGrids est modélisé avec le climat et le relief comme covariables (fiche ISRIC) : information partagée avec nos prédicteurs, non indépendante ; aucune confrontation à des mesures françaises ici |
+| Corrélation | mesurée | pH SoilGrids (moyenne 700 m) et indice trophique : **0,35** sur 2 893 placettes (0,06 à 0,09 sur les 96 placettes de la seule fenêtre du plan) |
+
+### 35.5 R² par blocs spatiaux
+
+| Jeu | Prédicteurs | R² (moyenne de 5) | Gain, IC 95 % (graine 1) |
+|---|---|---|---|
+| 2 894 placettes | climat bilinéaire (033) | **-0,127** [-0,199 ; -0,088] | |
+| 2 893 | climat | -0,129 | |
+| 2 893 | + lithologie provisoire, facteur | 0,146 | +0,288 [0,235 ; 0,347] |
+| 2 893 | + lithologie encodée (classe, hors pli) | 0,090 | +0,219 [0,160 ; 0,279] |
+| 2 893 | + lithologie encodée (classe, toute la partie d'apprentissage) | 0,151 | |
+| 2 021 (3 départements) | climat / + facteur / + encodée hors pli | -0,101 / 0,124 / 0,073 | +0,216 [0,164 ; 0,266] / +0,181 [0,113 ; 0,245] |
+| 2 893 | + classe encodée + pH SoilGrids | 0,170 | pH : +0,084 [0,049 ; 0,122] sur classe hors pli |
+| 2 893 | formation encodée (k = 10) | 0,196 [0,135 ; 0,243] | +0,121 [0,069 ; 0,168] sur la classe hors pli |
+| 2 893 | formation encodée (k = 30) | 0,193 | |
+| 2 893 | classe + formation | 0,212 | +0,134 [0,087 ; 0,178] |
+| 2 893 | **classe (toute la partie) + formation (hors pli) + pH** | **0,270** | **+0,405 [0,333 ; 0,480]** sur le climat seul ; R² [0,199 ; 0,311] (graine 1 : 0,259) |
+| 2 893 | idem, formation non hors pli | 0,242 | |
+| 2 893 | **sans aucun prédicteur climatique** (classe + formation + pH) | 0,265 | le climat apporte +0,005 (climat de la maille ou bilinéaire : 0,270 dans les deux cas) |
+| 2 893 | contrôle : roche observée IFN (`ROCHE`, encodée) | 0,056 | |
+| 2 893 | contrôle : `ROCHE` + classe | 0,129 | +0,035 [0,009 ; 0,058] sur la classe seule |
+| 2 893 | **contrôle : humus observé (`HUMUS`, encodé) + classe** | **0,406** | non utilisable pour la carte |
+
+Lecture : le climat seul n'a aucun pouvoir (R² < 0) ; la géologie (formation) et le pH de sol
+apportent presque tout ; la formation (`NOTATION`, 666 niveaux) bat la classe lithologique
+provisoire à 12 niveaux ; la carte géologique explique plus que la roche notée par l'IFN
+(0,196 contre 0,056). L'**humus**, relevé sur le terrain, explique le trophique (0,41) parce qu'il
+est lui-même une conséquence de la richesse du sol que reflète la flore : **contrôle de plafond,
+jamais prédicteur de carte**, circularité possible avec l'indice floristique. Le R² de 0,27 reste
+sous la référence de 0,36 (Vosges ; autre méthode, autres données).
+
+**Climat plus proche voisin contre bilinéaire (033)** : sur les mêmes 2 893 placettes, le climat
+seul donne +0,045 avec la valeur de la maille (166 valeurs distinctes de `t_moy`) et -0,129 avec
+l'interpolation bilinéaire (1 628 valeurs) ; avec la lithologie (classe hors pli) : 0,130 et
+0,090. L'interpolation bilinéaire, lissée à 8 km, n'ajoute pas d'information et dégrade la
+validation par blocs. Une fois la géologie et le pH dans le modèle, les deux climats donnent le
+même R² (0,270) et le modèle **sans climat** 0,265 : à l'échelle de la GRECO D, avec des mailles
+de 8 km, le climat SAFRAN n'apporte quasiment rien au modèle régional ; il reste utile comme
+variable explicite pour les scénarios (brief § 2). **À trancher avec la relecture de 033** (clé
+`safran_interpolation`).
+
+### 35.6 Réponse trophique : ancienne et nouvelle côte à côte
+
+Indice de Tichý (moyenne de `ph` et `azote` des espèces à valeur indicatrice) : **y0** historique ;
+**y1** sans les essences arborées (`espar-cdref13.csv`, 192 `CD_REF`) ; **y2** sans essences et
+pondéré par l'abondance-dominance `ABOND` (milieux de classes 2,5 ; 15 ; 37,5 ; 62,5 ; 87,5 % :
+**à vérifier**, non sourcés) ; **y3** pondéré seul.
+
+| Réponse | n | Corrélation avec y0 | R² climat | R² climat + classe (hors pli) | R² + humus encodé |
+|---|---|---|---|---|---|
+| y0 | 2 894 | 1 | -0,129 | 0,090 | 0,406 |
+| y1 | 2 854 | 0,962 | -0,122 | 0,118 | 0,436 |
+| y2 | 2 854 | 0,940 | -0,112 | 0,110 | 0,445 |
+| y3 | 2 894 | 0,956 | -0,117 | 0,090 | 0,403 |
+| y2, modèle final (classe + formation + pH) | 2 853 | | | **0,286** [0,218 ; 0,332] (y0 : 0,270) | |
+
+Retirer les essences perd 40 placettes (aucune autre espèce indicatrice) et change peu l'indice
+(corrélation 0,96) : le peuplement pèse peu dans l'indice de Tichý ici. Le R² de y1 et y2 est un
+peu plus haut (+0,02 à +0,03) sans que les IC se séparent. **Les R² de réponses différentes ne
+sont pas strictement comparables** (variances différentes). Non activée dans `_targets.R`
+(décision de Pascal : réponse historique conservée jusqu'à arbitrage) ; la variante est
+disponible (`compute_gradients(exclude_cd_ref = read_tree_cd_ref(), abundance_weights = TRUE)`).
+
+### 35.7 À vérifier
+
+- Mécanisme exact du « 187 » dans le run 018 (cache SAFRAN resservi) : relire par un `tar_make`
+  complet sur copie, non fait ici (coût LiDAR).
+- Règles de lithologie (008) : provisoires, non validées ; 170 formations sans règle ; défauts
+  `t1b`, `j2b2` ; règles à décider par Pascal avant tout usage hors comparaison.
+- Aucune correction de la table de lithologie appliquée aux départements 054, 057, 070, 090.
+- Exactitude de SoilGrids sur la France ; redondance avec le climat (covariables du modèle).
+- Poids d'abondance (milieux de classes `ABOND`) ; poids `litho_encoding_k = 10` (valeurs
+  provisoires, k = 30 donne 0,193 contre 0,196).
+- Codes `ROCHED0` (2005-2024) et `ROCHED2` (2025) : mêmes codes à trois exceptions (312, 316, 932
+  absents de `ROCHED2`, rares) : joints tels quels.
+- Placette `DEP` 52 : sans géologie (département 052 non lu).

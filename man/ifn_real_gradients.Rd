@@ -11,7 +11,9 @@ ifn_real_gradients(
   safran,
   ru_source = "euptf2",
   annees = NULL,
-  interpolation = "bilineaire"
+  interpolation = "bilineaire",
+  exclude_cd_ref = NULL,
+  abundance_weights = FALSE
 )
 }
 \arguments{
@@ -29,6 +31,9 @@ ifn_real_gradients(
 
 \item{interpolation}{Séries SAFRAN aux placettes : \code{"bilineaire"} (défaut, mission 033)
 ou \code{"proche"} (\code{\link[=hydric_stress]{hydric_stress()}}).}
+
+\item{exclude_cd_ref, abundance_weights}{Indice trophique sans les essences arborées et/ou
+pondéré par l'abondance (mission 035) : voir \code{\link[=compute_gradients]{compute_gradients()}}.}
 }
 \value{
 Un \code{sf} (une ligne par placette retenue avec flore) : \code{id_placette},
