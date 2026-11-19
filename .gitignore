@@ -11,3 +11,4 @@ _targets/
 .claude/worktrees/
 !inst/extdata/*.tif
 !inst/extdata/*.laz
+/site/

@@ -1,0 +1,176 @@
+url: https://pobsteta.github.io/sylvostation/
+# Le dossier docs/ du dépôt porte la documentation du projet (brief, ADR) : le site se construit ailleurs.
+destination: site
+template:
+  bootstrap: 5
+lang: fr
+
+# Site pkgdown de sylvostation (mission 023). Déployé par .github/workflows/pkgdown.yaml,
+# seulement depuis `main`. Les articles de vignettes/articles/ ne sont pas construits au
+# R CMD check (.Rbuildignore) ; l'article des résultats lit des figures précalculées
+# (inst/scripts/figures_article_vosges.R) et ne calcule rien.
+
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+  components:
+    articles:
+      text: Articles
+      menu:
+        - text: "Résultats sur le massif test vosgien (D11)"
+          href: articles/resultats-vosges-d11.html
+        - text: "Massif test : du code SER au catalogue (démo)"
+          href: articles/massif-test.html
+
+articles:
+  - title: Résultats
+    navbar: ~
+    contents:
+      - starts_with("articles/resultats")
+  - title: Prise en main
+    contents:
+      - starts_with("massif")
+
+reference:
+  - title: "Configuration, règles et garde-fous"
+    desc: "Lecture de config.yml, contrôle du système de coordonnées (EPSG:2154) et règle bloquante des 700 m."
+    contents:
+      - sylvostation-package
+      - read_config
+      - assert_crs_2154
+      - assert_no_fine_extract_on_ifn
+      - assert_not_synthetic
+      - mark_ifn
+      - COARSE_VARIABLES
+      - FINE_VARIABLES
+      - fetch_cached
+  - title: "1. Emprise, grille et dalles LiDAR"
+    contents:
+      - get_ser
+      - build_grid
+      - real_extent
+      - real_grid
+      - list_tiles
+      - local_tiles
+      - select_tiles
+      - tile_blocks
+      - run_lasr
+      - run_tile_block
+      - mosaic_tiles
+      - aggregate_dtm
+      - point_lidar_metrics
+  - title: "2. Terrain, hydrographie et masque forestier"
+    contents:
+      - derive_terrain
+      - real_terrain
+      - get_hydro_network
+      - height_above_network
+      - forest_mask
+      - solar_factor
+  - title: "3. Géologie et sols"
+    contents:
+      - read_geology
+      - read_lithology_rules
+      - recode_lithology
+      - dominant_lithology
+      - list_formations
+      - check_geol_joins
+      - geology_coverage
+      - rasterize_geol
+      - read_texture_dictionary
+      - texture_to_psd
+      - ru_from_texture
+      - ru_coefficients
+      - stack_soil_layers
+  - title: "4. Placettes IFN, relevés et flore"
+    contents:
+      - fetch_ifn
+      - load_ifn
+      - filter_greco
+      - filter_releves
+      - ifn_flora_matrix
+      - ifn_trees
+      - ifn_observables
+      - read_taxref
+      - unmatched_taxa
+      - read_tichy
+      - load_indicator_values
+      - indicator_match_rate
+      - indicator_species
+  - title: "5. Climat et gradients"
+    contents:
+      - fetch_safran
+      - read_safran
+      - safran_climate
+      - ru_by_safran_cell
+      - hydric_stress
+      - hydric_stress_grid
+      - write_hydric_grid
+      - bioclim_axis
+      - apply_bioclim
+      - compute_gradients
+      - ifn_real_gradients
+      - compare_gradients
+      - comparison_res
+  - title: "6. Points d'ancrage (GBIF, GNSS)"
+    contents:
+      - get_gbif
+      - IFN_GBIF_DATASET_KEYS
+      - clean_occ
+      - gbif_anchors
+      - grid_bioindication
+      - load_gnss
+      - gnss_field_gradients
+  - title: "7. Modèles, validation croisée et incertitude"
+    contents:
+      - coarse_predictors
+      - aggregate_to_km
+      - fit_gradient
+      - spatial_cv
+      - predict_raster
+  - title: "8. Typologie, caractérisation et clé"
+    contents:
+      - default_thresholds
+      - discretise
+      - merge_rare
+      - apply_merges
+      - type_raster
+      - real_type_legend
+      - cluster_check
+      - fertility_by_type
+      - real_fertility
+      - build_key
+  - title: "9. Validation, état de preuve et sorties"
+    contents:
+      - validate_maps
+      - validate_stats
+      - load_reference
+      - recode_3digits
+      - evidence_table
+      - evidence_table_real
+      - real_sources
+      - empty_layers
+      - write_outputs
+      - write_types_gpkg_real
+  - title: "10. Plan d'échantillonnage et fiches de terrain"
+    desc: "Plan de relevés terrain (cellules homogènes, accessibilité, temps de terrain) et lecture des fiches."
+    contents:
+      - sampling_frame
+      - homogeneous_cells
+      - get_access_network
+      - ACCESS_NATURES
+      - filter_access
+      - access_cost
+      - field_time
+      - sampling_plan
+      - sampling_coverage
+      - write_sampling_plan
+      - read_field_sheet
+      - read_station_sheet
+      - BRAUN_BLANQUET
+      - HUMUS_FORMS
+  - title: "Mode démonstration (données synthétiques)"
+    desc: "Jeux d'essai fabriqués (préfixe synth_, synthetic = TRUE) : ne valent rien sur données réelles."
+    contents:
+      - starts_with("synth_demo")
+      - demo_predictors
