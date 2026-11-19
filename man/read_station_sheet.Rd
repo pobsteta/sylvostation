@@ -4,12 +4,15 @@
 \alias{read_station_sheet}
 \title{Lire et valider la saisie des stations}
 \usage{
-read_station_sheet(path, max_precision_m = 25)
+read_station_sheet(path, max_precision_m = 25, epsg = 2154)
 }
 \arguments{
-\item{path}{Chemin du CSV (virgule, UTF-8).}
+\item{path}{Chemin du CSV (séparateur virgule, point décimal, UTF-8).}
 
 \item{max_precision_m}{Précision maximale admise (25 m).}
+
+\item{epsg}{Système des colonnes \code{x}/\code{y} : 2154 (défaut) ou 4326, reprojeté en 2154 dès la
+lecture (les colonnes \code{x}/\code{y} du résultat sont alors en Lambert-93).}
 }
 \value{
 \code{sf} de points en EPSG:2154, \code{source = "gnss"}.
@@ -17,7 +20,8 @@ read_station_sheet(path, max_precision_m = 25)
 \description{
 Contrôle le gabarit \code{inst/terrain/gabarit_station.csv} rempli (une ligne par relevé) :
 colonnes attendues, Lambert-93, précision au plus 25 m, \code{rang_utilise} dans 0, 1, 2,
-forme d'humus vide ou dans \link{HUMUS_FORMS}, \code{tariere_refus} vide, \code{oui} ou \code{non}.
+forme d'humus vide ou dans \link{HUMUS_FORMS}, \code{tariere_refus} vide, \code{oui} ou \code{non},
+recouvrements de strate (\verb{rec_strate_*}) vides ou compris entre 0 et 100 \%.
 }
 \examples{
 \dontrun{

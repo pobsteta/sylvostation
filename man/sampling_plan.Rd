@@ -14,7 +14,8 @@ sampling_plan(
   n_replace = 2,
   min_dist_m = 60,
   iter = 10000,
-  sd_ratio = .SD_RATIO_PROVISOIRE
+  sd_ratio = .SD_RATIO_PROVISOIRE,
+  scale_cost = TRUE
 )
 }
 \arguments{
@@ -34,11 +35,14 @@ restauré.}
 \item{n_replace}{Remplaçants par point (2).}
 
 \item{min_dist_m}{Distance minimale entre deux points du plan, remplaçants compris (60 m,
-provisoire).}
+provisoire) ; vaut aussi entre points principaux.}
 
 \item{iter}{Itérations du recuit de \code{clhs} (10 000).}
 
 \item{sd_ratio}{Seuil provisoire d'homogénéité (0,5).}
+
+\item{scale_cost}{Mettre le coût à l'échelle \code{cout_m / cost_max_m} (\code{TRUE} par défaut,
+décision du 2026-11-19) ; \code{FALSE} passe le coût en mètres.}
 }
 \value{
 \code{sf} de points en EPSG:2154 : \code{id} (\code{P01}, \code{P01-R1}...), \code{rang} (0 point, 1 et 2
@@ -49,9 +53,15 @@ remplaçants), \code{id_parent}, \code{cell}, \code{x}, \code{y}, les couches, \
 \description{
 Tire \code{n} cellules par hypercube latin conditionné à coût (cLHS, Minasny et McBratney
 2006 ; variante à coût de Roudier et al. 2012 ; paquet \code{clhs}, docs/referentiels.md,
-§ 28). La distribution de référence est l'ensemble des cellules forestières renseignées
+§ 30). La distribution de référence est l'ensemble des cellules forestières renseignées
 (\code{\link[=sampling_frame]{sampling_frame()}}) ; seules les cellules \code{candidat} peuvent être tirées
-(\code{can.include}) ; le coût est la distance au tronçon accessible (\code{cout_m}). Chaque point
+(\code{can.include}) ; le coût est la distance au tronçon accessible (\code{cout_m}), \strong{mise à
+l'échelle} (\code{cout_m / cost_max_m}, entre 0 et 1 sur les candidates) si \code{scale_cost = TRUE},
+pour que \code{clhs} privilégie la représentativité des couches plutôt que la proximité des
+routes. Les points principaux sont à au moins \code{min_dist_m} les uns des autres : un point
+trop proche d'un point déjà retenu est remplacé par la candidate de même classe
+catégorielle la plus proche dans l'espace des couches, sinon un avertissement est émis.
+Chaque point
 est le \strong{centre} de sa cellule. Pour chaque point, \code{n_replace} remplaçants : cellules
 candidates de même(s) classe(s) catégorielle(s) (géologie), les plus proches dans
 l'espace des couches continues centrées-réduites, à au moins \code{min_dist_m} de tout autre

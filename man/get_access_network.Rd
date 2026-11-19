@@ -28,7 +28,7 @@ Un \code{sf} de lignes en EPSG:2154.
 }
 \description{
 Lit la couche \code{BDTOPO_V3:troncon_de_route} de la Géoplateforme (WFS 2.0.0, GeoJSON,
-EPSG:2154 ; docs/referentiels.md, § 27), filtrée par l'emprise en Lambert-93
+EPSG:2154 ; docs/referentiels.md, § 29), filtrée par l'emprise en Lambert-93
 (\verb{BBOX=...,urn:ogc:def:crs:EPSG::2154}, x = est puis y = nord), par pages. Avec
 \code{source = "file"}, lit un extrait local (aucun réseau : mode des tests). Le résultat
 est ensuite filtré par \code{\link[=filter_access]{filter_access()}} si \code{filter = TRUE}.

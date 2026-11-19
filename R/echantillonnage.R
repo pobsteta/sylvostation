@@ -17,9 +17,12 @@ ACCESS_NATURES <- c("Route \u00e0 1 chauss\u00e9e", "Route \u00e0 2 chauss\u00e9
 
 #' Échelle de recouvrement de Braun-Blanquet
 #'
-#' Coefficients d'abondance-dominance de Braun-Blanquet : `r` (individu rare), `+` (peu
-#' abondant, recouvrement très faible), puis `1` à `5` (recouvrement croissant, 5 : plus de
-#' 75 %). Seuls codes admis dans le gabarit de saisie de la flore.
+#' Coefficients d'abondance-dominance de Braun-Blanquet : `r` (un ou très peu d'individus),
+#' `+` (peu abondant, recouvrement très faible), `1` (nombreux, recouvrement < 5 %), `2`
+#' (5 à 25 %), `3` (25 à 50 %), `4` (50 à 75 %), `5` (plus de 75 %). Seuls codes admis dans
+#' le gabarit de saisie de la flore. Source : Braun-Blanquet J., 1964, *Pflanzensoziologie*,
+#' 3e éd., Springer (échelle usuelle, **à vérifier** : l'ouvrage n'a pas été lu, voir
+#' docs/referentiels.md, § 31).
 #' @format Un vecteur de caractères.
 #' @export
 BRAUN_BLANQUET <- c("r", "+", "1", "2", "3", "4", "5")
@@ -38,15 +41,20 @@ HUMUS_FORMS <- c("Mull", "Moder", "Mor", "Amphi", "Tangel")
 .SD_RATIO_PROVISOIRE <- 0.5
 
 # Colonnes du gabarit de la flore (une ligne par couple releve-espece).
+# (especes vasculaires : la strate muscinale n'y figure pas, elle est au gabarit de station)
 .FLORE_COLS <- c("id", "x", "y", "loc_precision_m", "species", "cd_nom",
-                 "rec_arborescente", "rec_arbustive", "rec_herbacee", "rec_muscinale",
+                 "rec_arborescente", "rec_arbustive", "rec_herbacee",
                  "date", "observateur")
-.FLORE_REC <- c("rec_arborescente", "rec_arbustive", "rec_herbacee", "rec_muscinale")
+.FLORE_REC <- c("rec_arborescente", "rec_arbustive", "rec_herbacee")
+
+# Recouvrement (%) de chaque strate, par releve (la strate muscinale = bryophytes, global).
+.STATION_REC <- c("rec_strate_arborescente", "rec_strate_arbustive", "rec_strate_herbacee",
+                  "rec_strate_muscinale")
 
 # Colonnes du gabarit de station (une ligne par releve).
 .STATION_COLS <- c("id", "x", "y", "loc_precision_m", "n_mesures_gnss", "date",
-                   "observateur", "id_plan", "rang_utilise", "humus",
-                   "tariere_profondeur_cm", "tariere_refus", "photos", "remarque")
+                   "observateur", "id_plan", "rang_utilise", .STATION_REC, "humus",
+                   "tariere_profondeur_cm", "tariere_refus", "texture", "photos", "remarque")
 
 # Evalue `expr` avec la graine `seed` puis restaure l'etat du generateur (pas d'effet de bord).
 .with_seed <- function(seed, expr) {
@@ -186,6 +194,14 @@ filter_access <- function(x, natures = ACCESS_NATURES) {
 access_cost <- function(grid, access) {
   if (!inherits(grid, "SpatRaster")) stop("`grid` doit \u00eatre un SpatRaster.", call. = FALSE)
   if (!inherits(access, c("sf", "sfc"))) stop("`access` doit \u00eatre un sf de lignes.", call. = FALSE)
+  r <- .access_raster(grid, access)
+  out <- terra::distance(r)
+  names(out) <- "cout_m"
+  out
+}
+
+# Troncons rasterises sur la grille : 1 si un troncon touche la cellule, NA sinon.
+.access_raster <- function(grid, access) {
   assert_crs_2154(grid)
   assert_crs_2154(access)
   tpl <- terra::rast(grid, nlyrs = 1)
@@ -193,9 +209,7 @@ access_cost <- function(grid, access) {
   if (all(is.na(terra::values(r)))) {
     stop("Aucun tron\u00e7on d'acc\u00e8s ne touche la grille.", call. = FALSE)
   }
-  out <- terra::distance(r)
-  names(out) <- "cout_m"
-  out
+  r
 }
 
 #' Cellules à voisinage 3 × 3 homogène
@@ -261,7 +275,9 @@ homogeneous_cells <- function(layers, forest, sd_ratio = .SD_RATIO_PROVISOIRE) {
 #' Tableau des cellules forestières de la grille dont toutes les couches sont renseignées
 #' (la distribution de référence de l'hypercube), avec leur coût d'accès ([access_cost()])
 #' et la colonne `candidat` : cellule tirable, c'est-à-dire à au plus `cost_max_m` d'un
-#' tronçon accessible et à voisinage 3 × 3 homogène ([homogeneous_cells()]). Les couches
+#' tronçon accessible, à voisinage 3 × 3 homogène ([homogeneous_cells()]) et **sans tronçon
+#' retenu dans ce voisinage 3 × 3** (un relevé ne tombe ni sur la route ni sur son bord ;
+#' même critère de voisinage que l'homogénéité). Les couches
 #' entièrement vides (MRVBF non calculé, par exemple ; voir [empty_layers()]) sont
 #' **écartées avec un avertissement** de classe `sylvostation_non_calcule`, jamais
 #' remplacées. Les couches catégorielles (géologie) deviennent des facteurs.
@@ -296,7 +312,11 @@ sampling_frame <- function(layers, forest, access, cost_max_m = 300,
                              paste(vides, collapse = ", "), "."))
     layers <- layers[[setdiff(names(layers), vides)]]
   }
-  if (!terra::nlyr(layers)) stop("Aucune couche renseign\u00e9e.", call. = FALSE)
+  if (terra::nlyr(layers) < 2L) {
+    stop("Au moins deux couches renseign\u00e9es sont n\u00e9cessaires (l'hypercube latin ",
+         "conditionn\u00e9 ne tire pas sur une seule variable) ; couches restantes : ",
+         paste(names(layers), collapse = ", "), ".", call. = FALSE)
+  }
   vars <- names(layers)
   if (anyDuplicated(vars) || any(vars %in% c("cell", "x", "y", "cout_m", "candidat", "homogene"))) {
     stop("Noms de couches dupliqu\u00e9s ou r\u00e9serv\u00e9s.", call. = FALSE)
@@ -304,17 +324,21 @@ sampling_frame <- function(layers, forest, access, cost_max_m = 300,
   f <- .forest_layer(forest)
   cout <- access_cost(layers, access)
   homog <- homogeneous_cells(layers, forest, sd_ratio)
-  st <- c(layers, f, cout, homog)
-  names(st) <- c(vars, ".foret", "cout_m", "homogene")
+  # troncon dans le voisinage 3 x 3 (la cellule comprise) : 1, sinon 0
+  route <- terra::focal(terra::ifel(is.na(.access_raster(layers, access)), 0, 1), w = 3,
+                        fun = "max", na.rm = TRUE)
+  st <- c(layers, f, cout, homog, route)
+  names(st) <- c(vars, ".foret", "cout_m", "homogene", "route3")
   d <- terra::as.data.frame(st, cells = TRUE, xy = TRUE, na.rm = FALSE)
   # un raster categoriel peut nommer sa colonne d'apres sa categorie active : on renomme
-  names(d) <- c("cell", "x", "y", vars, ".foret", "cout_m", "homogene")
+  names(d) <- c("cell", "x", "y", vars, ".foret", "cout_m", "homogene", "route3")
   d <- d[!is.na(d$.foret) & stats::complete.cases(d[, vars, drop = FALSE]), , drop = FALSE]
   if (!nrow(d)) stop("Aucune cellule foresti\u00e8re renseign\u00e9e.", call. = FALSE)
   out <- data.frame(cell = d$cell, x = d$x, y = d$y, stringsAsFactors = FALSE)  # x = est, y = nord
   for (v in vars) out[[v]] <- if (is.factor(d[[v]])) droplevels(d[[v]]) else as.numeric(d[[v]])
   out$cout_m <- d$cout_m
-  out$candidat <- !is.na(d$homogene) & d$homogene == 1 & d$cout_m <= cost_max_m
+  out$candidat <- !is.na(d$homogene) & d$homogene == 1 &
+    !is.na(d$route3) & d$route3 == 0 & d$cout_m <= cost_max_m
   rownames(out) <- NULL
   attr(out, "vars") <- vars
   attr(out, "ecartees") <- vides
@@ -329,7 +353,13 @@ sampling_frame <- function(layers, forest, access, cost_max_m = 300,
 #' 2006 ; variante à coût de Roudier et al. 2012 ; paquet `clhs`, docs/referentiels.md,
 #' § 30). La distribution de référence est l'ensemble des cellules forestières renseignées
 #' ([sampling_frame()]) ; seules les cellules `candidat` peuvent être tirées
-#' (`can.include`) ; le coût est la distance au tronçon accessible (`cout_m`). Chaque point
+#' (`can.include`) ; le coût est la distance au tronçon accessible (`cout_m`), **mise à
+#' l'échelle** (`cout_m / cost_max_m`, entre 0 et 1 sur les candidates) si `scale_cost = TRUE`,
+#' pour que `clhs` privilégie la représentativité des couches plutôt que la proximité des
+#' routes. Les points principaux sont à au moins `min_dist_m` les uns des autres : un point
+#' trop proche d'un point déjà retenu est remplacé par la candidate de même classe
+#' catégorielle la plus proche dans l'espace des couches, sinon un avertissement est émis.
+#' Chaque point
 #' est le **centre** de sa cellule. Pour chaque point, `n_replace` remplaçants : cellules
 #' candidates de même(s) classe(s) catégorielle(s) (géologie), les plus proches dans
 #' l'espace des couches continues centrées-réduites, à au moins `min_dist_m` de tout autre
@@ -345,8 +375,10 @@ sampling_frame <- function(layers, forest, access, cost_max_m = 300,
 #'   restauré.
 #' @param n_replace Remplaçants par point (2).
 #' @param min_dist_m Distance minimale entre deux points du plan, remplaçants compris (60 m,
-#'   provisoire).
+#'   provisoire) ; vaut aussi entre points principaux.
 #' @param iter Itérations du recuit de `clhs` (10 000).
+#' @param scale_cost Mettre le coût à l'échelle `cout_m / cost_max_m` (`TRUE` par défaut,
+#'   décision du 2026-11-19) ; `FALSE` passe le coût en mètres.
 #' @param sd_ratio Seuil provisoire d'homogénéité (0,5).
 #' @return `sf` de points en EPSG:2154 : `id` (`P01`, `P01-R1`...), `rang` (0 point, 1 et 2
 #'   remplaçants), `id_parent`, `cell`, `x`, `y`, les couches, `cout_m`, `acces_restreint`,
@@ -359,7 +391,7 @@ sampling_frame <- function(layers, forest, access, cost_max_m = 300,
 #' @export
 sampling_plan <- function(grid_layers, forest, access, n = 50, cost_max_m = 300, seed,
                           n_replace = 2, min_dist_m = 60, iter = 10000,
-                          sd_ratio = .SD_RATIO_PROVISOIRE) {
+                          sd_ratio = .SD_RATIO_PROVISOIRE, scale_cost = TRUE) {
   if (!requireNamespace("clhs", quietly = TRUE)) {
     stop("Le paquet `clhs` est requis (install.packages(\"clhs\")).", call. = FALSE)
   }
@@ -381,16 +413,44 @@ sampling_plan <- function(grid_layers, forest, access, n = 50, cost_max_m = 300,
          n_replace, " rempla\u00e7ants chacun.", call. = FALSE)
   }
   x <- fr[, c(vars, "cout_m"), drop = FALSE]
+  if (isTRUE(scale_cost)) x$cout_m <- x$cout_m / cost_max_m
   idx <- .with_seed(seed, clhs::clhs(x, size = n, can.include = cand, cost = "cout_m",
                                      iter = iter, progress = FALSE, simple = TRUE))
-  idx <- sort(as.integer(idx))
+  idx <- as.integer(idx)
   if (!all(idx %in% cand)) stop("clhs a tir\u00e9 une cellule non candidate.", call. = FALSE)
 
-  # remplacants : meme(s) classe(s), plus proches en variables centrees-reduites
   num <- vars[!vapply(fr[vars], is.factor, logical(1))]
   fac <- setdiff(vars, num)
   z <- if (length(num)) scale(as.matrix(fr[, num, drop = FALSE])) else matrix(0, nrow(fr), 0)
   z[is.na(z)] <- 0
+  d2 <- function(a, b) (fr$x[a] - fr$x[b])^2 + (fr$y[a] - fr$y[b])^2
+
+  # espacement des points principaux : un point a moins de min_dist_m d'un point deja retenu
+  # est remplace par la candidate de meme classe la plus proche dans l'espace des couches
+  nr <- 0L
+  for (k in seq_along(idx)) {
+    autres <- idx[-k]
+    # conflit : seulement avec les points qui precedent (chaque paire est reglee une fois)
+    avant <- idx[seq_len(k - 1L)]
+    if (!length(avant) || all(vapply(avant, function(a) d2(a, idx[k]), 0) >= min_dist_m^2)) next
+    ok <- rep(TRUE, length(cand))
+    for (v in fac) ok <- ok & fr[[v]][cand] == fr[[v]][idx[k]]
+    for (a in autres) ok <- ok & d2(cand, a) >= min_dist_m^2
+    ok <- ok & !cand %in% idx
+    p <- cand[ok]
+    if (!length(p)) { nr <- nr + 1L; next }
+    dz <- if (ncol(z)) rowSums((z[p, , drop = FALSE] -
+                                 matrix(z[idx[k], ], length(p), ncol(z), byrow = TRUE))^2) else 0
+    idx[k] <- p[order(dz, fr$cout_m[p], fr$cell[p])[1]]
+  }
+  if (nr) {
+    warning(nr, " point(s) principal(aux) \u00e0 moins de ", min_dist_m, " m d'un autre, sans ",
+            "candidate de remplacement de m\u00eame classe : espacement non respect\u00e9.",
+            call. = FALSE)
+  }
+  idx <- sort(idx)
+
+  # remplacants : meme(s) classe(s), plus proches en variables centrees-reduites
   # dmin : carre de la distance de chaque candidate au point du plan le plus proche
   cx <- fr$x[cand]
   cy <- fr$y[cand]
@@ -612,17 +672,19 @@ write_sampling_plan <- function(plan, coverage, out_dir, access = NULL, forest =
 #' strate renseignée, pas d'espèce en double dans un relevé. Lit ensuite le fichier par
 #' [load_gnss()], le lecteur du pipeline (`gnss_path`).
 #'
-#' @param path Chemin du CSV (virgule, UTF-8).
+#' @param path Chemin du CSV (séparateur virgule, point décimal, UTF-8).
 #' @param max_precision_m Précision maximale admise (25 m).
+#' @param epsg Système des colonnes `x`/`y` : 2154 (défaut) ou 4326 (longitude, latitude),
+#'   reprojeté en 2154 dès la lecture ([load_gnss()]).
 #' @return Le `sf` de [load_gnss()].
 #' @examples
 #' \dontrun{
 #' read_field_sheet("releves_flore.csv")
 #' }
 #' @export
-read_field_sheet <- function(path, max_precision_m = 25) {
+read_field_sheet <- function(path, max_precision_m = 25, epsg = 2154) {
   d <- .read_sheet(path, .FLORE_COLS)
-  .check_location(d, max_precision_m)
+  .check_location(d, max_precision_m, epsg)
   for (v in .FLORE_REC) {
     a <- trimws(d[[v]])
     a[is.na(a)] <- ""
@@ -647,26 +709,29 @@ read_field_sheet <- function(path, max_precision_m = 25) {
          "colonnes) : ", paste(unique(paste(d$id[dup], d$species[dup])), collapse = "; "),
          ".", call. = FALSE)
   }
-  load_gnss(path)
+  load_gnss(path, epsg = epsg)
 }
 
 #' Lire et valider la saisie des stations
 #'
 #' Contrôle le gabarit `inst/terrain/gabarit_station.csv` rempli (une ligne par relevé) :
 #' colonnes attendues, Lambert-93, précision au plus 25 m, `rang_utilise` dans 0, 1, 2,
-#' forme d'humus vide ou dans [HUMUS_FORMS], `tariere_refus` vide, `oui` ou `non`.
+#' forme d'humus vide ou dans [HUMUS_FORMS], `tariere_refus` vide, `oui` ou `non`,
+#' recouvrements de strate (`rec_strate_*`) vides ou compris entre 0 et 100 %.
 #'
-#' @param path Chemin du CSV (virgule, UTF-8).
+#' @param path Chemin du CSV (séparateur virgule, point décimal, UTF-8).
 #' @param max_precision_m Précision maximale admise (25 m).
+#' @param epsg Système des colonnes `x`/`y` : 2154 (défaut) ou 4326, reprojeté en 2154 dès la
+#'   lecture (les colonnes `x`/`y` du résultat sont alors en Lambert-93).
 #' @return `sf` de points en EPSG:2154, `source = "gnss"`.
 #' @examples
 #' \dontrun{
 #' read_station_sheet("releves_station.csv")
 #' }
 #' @export
-read_station_sheet <- function(path, max_precision_m = 25) {
+read_station_sheet <- function(path, max_precision_m = 25, epsg = 2154) {
   d <- .read_sheet(path, .STATION_COLS)
-  .check_location(d, max_precision_m)
+  d <- .check_location(d, max_precision_m, epsg)
   if (anyDuplicated(d$id)) stop("Identifiant de relev\u00e9 en double.", call. = FALSE)
   if (!all(d$rang_utilise %in% 0:2)) stop("`rang_utilise` doit valoir 0, 1 ou 2.", call. = FALSE)
   h <- trimws(as.character(d$humus))
@@ -675,6 +740,13 @@ read_station_sheet <- function(path, max_precision_m = 25) {
     stop("Forme d'humus non admise : ", paste(unique(h[h != "" & !h %in% HUMUS_FORMS]),
                                               collapse = ", "),
          " (grandes formes seulement : ", paste(HUMUS_FORMS, collapse = ", "), ").", call. = FALSE)
+  }
+  for (v in .STATION_REC) {
+    r <- suppressWarnings(as.numeric(d[[v]]))
+    if (any(is.na(r) & !is.na(d[[v]])) || any(r < 0 | r > 100, na.rm = TRUE)) {
+      stop("`", v, "` doit \u00eatre un pourcentage entre 0 et 100.", call. = FALSE)
+    }
+    d[[v]] <- r
   }
   t <- trimws(as.character(d$tariere_refus))
   t[is.na(t)] <- ""
@@ -693,6 +765,11 @@ read_station_sheet <- function(path, max_precision_m = 25) {
                        colClasses = "character", na.strings = c("", "NA"))
   manque <- setdiff(cols, names(d))
   if (length(manque)) {
+    ent <- readLines(path, n = 1L, warn = FALSE, encoding = "UTF-8")
+    if (length(ent) && grepl(";", ent, fixed = TRUE) && !grepl(",", ent, fixed = TRUE)) {
+      stop("S\u00e9parateur \u00ab ; \u00bb d\u00e9tect\u00e9 : enregistrer le CSV avec la virgule ",
+           "comme s\u00e9parateur et le point comme s\u00e9parateur d\u00e9cimal.", call. = FALSE)
+    }
     stop("Colonnes manquantes : ", paste(manque, collapse = ", "), ".", call. = FALSE)
   }
   if (!nrow(d)) stop("Fichier de saisie vide.", call. = FALSE)
@@ -701,7 +778,9 @@ read_station_sheet <- function(path, max_precision_m = 25) {
   d
 }
 
-.check_location <- function(d, max_precision_m) {
+# Controle l'emplacement ; renvoie `d` avec x/y en Lambert-93 (reprojetes si epsg = 4326).
+.check_location <- function(d, max_precision_m, epsg = 2154) {
+  if (!epsg %in% c(2154, 4326)) stop("`epsg` doit valoir 2154 ou 4326.", call. = FALSE)
   if (anyNA(d$x) || anyNA(d$y)) stop("Coordonn\u00e9es x/y manquantes ou non num\u00e9riques.", call. = FALSE)
   p <- d$loc_precision_m
   if (anyNA(p) || any(p <= 0)) {
@@ -712,12 +791,19 @@ read_station_sheet <- function(path, max_precision_m = 25) {
          paste(unique(d$id[p > max_precision_m]), collapse = ", "),
          " (relev\u00e9 inutilisable pour les variables fines).", call. = FALSE)
   }
-  pts <- sf::st_as_sf(d[, c("x", "y")], coords = c("x", "y"), crs = 2154)
-  assert_crs_2154(pts)  # x = est, y = nord en Lambert-93
+  # x = est / longitude, y = nord / latitude
+  pts <- sf::st_as_sf(d[, c("x", "y")], coords = c("x", "y"), crs = epsg)
+  if (epsg != 2154) pts <- sf::st_transform(pts, 2154)
+  assert_crs_2154(pts)  # coordonnees plausibles en Lambert-93
   u <- unique(d[, c("id", "x", "y")])
   if (anyDuplicated(u$id)) {
     stop("Plusieurs emplacements pour un m\u00eame relev\u00e9 : ",
          paste(unique(u$id[duplicated(u$id)]), collapse = ", "), ".", call. = FALSE)
   }
-  invisible(TRUE)
+  if (epsg != 2154) {
+    xy <- sf::st_coordinates(pts)
+    d$x <- xy[, 1]
+    d$y <- xy[, 2]
+  }
+  d
 }

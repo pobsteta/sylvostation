@@ -10,7 +10,10 @@ Un vecteur de caractères.
 BRAUN_BLANQUET
 }
 \description{
-Coefficients d'abondance-dominance de Braun-Blanquet : \code{r} (individu rare), \code{+} (peu
-abondant, recouvrement très faible), puis \code{1} à \code{5} (recouvrement croissant, 5 : plus de
-75 \%). Seuls codes admis dans le gabarit de saisie de la flore.
+Coefficients d'abondance-dominance de Braun-Blanquet : \code{r} (un ou très peu d'individus),
+\code{+} (peu abondant, recouvrement très faible), \code{1} (nombreux, recouvrement < 5 \%), \code{2}
+(5 à 25 \%), \code{3} (25 à 50 \%), \code{4} (50 à 75 \%), \code{5} (plus de 75 \%). Seuls codes admis dans
+le gabarit de saisie de la flore. Source : Braun-Blanquet J., 1964, \emph{Pflanzensoziologie},
+3e éd., Springer (échelle usuelle, \strong{à vérifier} : l'ouvrage n'a pas été lu, voir
+docs/referentiels.md, § 31).
 }

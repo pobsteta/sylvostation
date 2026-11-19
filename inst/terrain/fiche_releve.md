@@ -34,26 +34,28 @@ Seuils de hauteur des strates : à confirmer par Pascal.
 | Forme d'humus (Mull, Moder, Mor, Amphi, Tangel ; à vérifier) | |
 | Tarière : profondeur atteinte (cm) | |
 | Refus de tarière (oui, non) | |
-| Texture et observations (en clair) | |
+| Texture (`texture`, en clair) et observations | |
 | Photos (noms de fichier) | |
 
 ## Flore : liste complète des espèces vasculaires
 
 Coefficient de Braun-Blanquet par strate : `r` rare ; `+` peu abondant, recouvrement très
-faible ; `1` abondant, recouvrement faible ; `2` 5 à 25 % ; `3` 25 à 50 % ; `4` 50 à 75 % ;
-`5` plus de 75 %. Une ligne par espèce ; case vide si absente de la strate.
+faible ; `1` nombreux, recouvrement < 5 % ; `2` 5 à 25 % ; `3` 25 à 50 % ; `4` 50 à 75 % ;
+`5` plus de 75 % (échelle usuelle de Braun-Blanquet, **à vérifier**). Une ligne par
+espèce vasculaire ; case vide si absente de la strate. Les bryophytes ne sont pas listées ici :
+leur recouvrement global est noté à la rubrique Placette (strate muscinale).
 
-| Espèce (nom latin) | CD_NOM | Arbo. | Arbu. | Herb. | Musc. |
-|---|---|---|---|---|---|
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| | | | | | |
+| Espèce (nom latin) | CD_NOM | Arbo. | Arbu. | Herb. |
+|---|---|---|---|---|
+| | | | | |
+| | | | | |
+| | | | | |
+| | | | | |
+| | | | | |
+| | | | | |
+| | | | | |
+| | | | | |
+| | | | | |
+| | | | | |
 
 Remarques :

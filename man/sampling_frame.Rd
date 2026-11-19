@@ -32,7 +32,9 @@ Attributs \code{vars}, \code{ecartees}, \code{cost_max_m}, \code{sd_ratio}.
 Tableau des cellules forestières de la grille dont toutes les couches sont renseignées
 (la distribution de référence de l'hypercube), avec leur coût d'accès (\code{\link[=access_cost]{access_cost()}})
 et la colonne \code{candidat} : cellule tirable, c'est-à-dire à au plus \code{cost_max_m} d'un
-tronçon accessible et à voisinage 3 × 3 homogène (\code{\link[=homogeneous_cells]{homogeneous_cells()}}). Les couches
+tronçon accessible, à voisinage 3 × 3 homogène (\code{\link[=homogeneous_cells]{homogeneous_cells()}}) et \strong{sans tronçon
+retenu dans ce voisinage 3 × 3} (un relevé ne tombe ni sur la route ni sur son bord ;
+même critère de voisinage que l'homogénéité). Les couches
 entièrement vides (MRVBF non calculé, par exemple ; voir \code{\link[=empty_layers]{empty_layers()}}) sont
 \strong{écartées avec un avertissement} de classe \code{sylvostation_non_calcule}, jamais
 remplacées. Les couches catégorielles (géologie) deviennent des facteurs.

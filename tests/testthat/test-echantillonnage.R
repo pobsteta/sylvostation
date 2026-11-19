@@ -115,6 +115,11 @@ test_that("sampling_frame : foret, couches vides ecartees avec avertissement, ca
   expect_true(all(f == 1))
   expect_true(all(fr$cout_m[fr$candidat] <= 300))
   expect_true(any(fr$cout_m > 300) && any(fr$candidat))
+  # aucune candidate sur la route ni sur son bord (troncon dans le voisinage 3 x 3) :
+  # la route passe a y = 6795110 ; ses cellules (cout 0) et leurs voisines (cout 20 m) sont exclues
+  expect_false(any(fr$candidat & fr$cout_m < 40))
+  expect_true(any(fr$cout_m == 0) && any(fr$cout_m == 20))
+  expect_true(any(fr$candidat & fr$cout_m == 40))
   expect_error(sampling_frame(s$layers, s$forest, s$access, cost_max_m = -1), "positif")
 })
 
@@ -166,6 +171,47 @@ test_that("sampling_plan : reproductible par seed, sans effet sur le generateur 
   c <- sampling_plan(s$layers, s$forest, s$access, n = 10, seed = 8, iter = 300)
   expect_identical(a$cell, b$cell)
   expect_false(identical(a$cell, c$cell))
+})
+
+test_that("sampling_plan : aucun point sur la route ni a son bord, coordonnees verifiees", {
+  skip_if_not_installed("clhs")
+  s <- synth_sampling()
+  p <- sampling_plan(s$layers, s$forest, s$access, n = 15, seed = 5, iter = 300)
+  # route a y = 6795110 (nord) : aucun point a moins de 40 m en y, quel que soit x
+  expect_true(all(abs(sf::st_coordinates(p)[, 2] - 6795110) >= 40))
+  expect_true(all(as.numeric(sf::st_distance(p, s$access)) >= 40))
+})
+
+test_that("sampling_plan : points principaux espaces d'au moins min_dist_m", {
+  skip_if_not_installed("clhs")
+  s <- synth_sampling()
+  mind <- function(md, seed) {
+    p <- sampling_plan(s$layers, s$forest, s$access, n = 25, seed = seed, iter = 300,
+                       min_dist_m = md, n_replace = 0)
+    d <- as.matrix(stats::dist(sf::st_coordinates(p)))
+    diag(d) <- Inf
+    min(d)
+  }
+  # sans contrainte (1 m), clhs rapproche des points a 28 m (graine 3) ; avec 60 m, non
+  expect_lt(mind(1, 3), 60)
+  expect_gte(mind(60, 3), 60)
+  expect_gte(mind(80, 1), 80)
+  # avertissement si l'espacement est impossible a tenir (700 m sur une grille de 800 m)
+  expect_warning(sampling_plan(s$layers, s$forest, s$access, n = 8, seed = 1, iter = 100,
+                               min_dist_m = 700, n_replace = 0), "espacement")
+})
+
+test_that("sampling_plan : cout mis a l'echelle ou non, deux couches au moins", {
+  skip_if_not_installed("clhs")
+  s <- synth_sampling()
+  a <- sampling_plan(s$layers, s$forest, s$access, n = 10, seed = 3, iter = 300)
+  b <- sampling_plan(s$layers, s$forest, s$access, n = 10, seed = 3, iter = 300,
+                     scale_cost = FALSE)
+  expect_equal(sum(a$rang == 0L), 10L)
+  expect_equal(sum(b$rang == 0L), 10L)
+  expect_error(sampling_plan(s$layers[[1]], s$forest, s$access, n = 5, seed = 1, iter = 100),
+               "deux couches")
+  expect_error(sampling_frame(s$layers[["altitude"]], s$forest, s$access), "deux couches")
 })
 
 test_that("sampling_plan : erreurs (seed, trop de points, crs)", {
@@ -229,7 +275,7 @@ synth_flore <- function(prec = 4) {
              y = c(6795410, 6795410, 6795250), loc_precision_m = prec,
              species = c("Synthia alpha", "Synthia beta", "Synthia alpha"),
              cd_nom = "", rec_arborescente = c("4", "", ""), rec_arbustive = c("", "+", ""),
-             rec_herbacee = c("1", "r", "2"), rec_muscinale = "", date = "2027-06-01",
+             rec_herbacee = c("1", "r", "2"), date = "2027-06-01",
              observateur = "synth", synthetic = TRUE, stringsAsFactors = FALSE)
 }
 
@@ -285,8 +331,11 @@ test_that("read_station_sheet : humus en grandes formes, rang, tariere", {
   d <- data.frame(id = c("P01", "P02"), x = c(1010110, 1010330), y = c(6795410, 6795250),
                   loc_precision_m = c(3, 4), n_mesures_gnss = 60, date = "2027-06-01",
                   observateur = "synth", id_plan = c("P01", "P02-R1"), rang_utilise = c(0, 1),
+                  rec_strate_arborescente = c(80, 70), rec_strate_arbustive = c(10, NA),
+                  rec_strate_herbacee = c(30, 40), rec_strate_muscinale = c(5, 0),
                   humus = c("Mull", ""), tariere_profondeur_cm = c(45, NA),
-                  tariere_refus = c("oui", ""), photos = "", remarque = "", synthetic = TRUE)
+                  tariere_refus = c("oui", ""), texture = c("limon sableux", ""), photos = "",
+                  remarque = "", synthetic = TRUE)
   w <- function(d) { f <- tempfile(fileext = ".csv"); utils::write.csv(d, f, row.names = FALSE); f }
   s <- read_station_sheet(w(d))
   expect_equal(nrow(s), 2L)
@@ -299,6 +348,39 @@ test_that("read_station_sheet : humus en grandes formes, rang, tariere", {
   expect_error(read_station_sheet(w(e)), "tariere_refus")
   e <- d; e$loc_precision_m[1] <- 26
   expect_error(read_station_sheet(w(e)), "25")
+  e <- d; e$rec_strate_herbacee[1] <- 130
+  expect_error(read_station_sheet(w(e)), "rec_strate_herbacee")
+  expect_equal(s$rec_strate_muscinale, c(5, 0))
+})
+
+test_that("saisie en WGS84 : reprojetee en Lambert-93 a la lecture", {
+  w <- function(d) { f <- tempfile(fileext = ".csv"); utils::write.csv(d, f, row.names = FALSE); f }
+  # point connu : x = est 1010110, y = nord 6795410 en Lambert-93, converti en lon/lat
+  ll <- sf::st_coordinates(sf::st_transform(
+    sf::st_sfc(sf::st_point(c(1010110, 6795410)), crs = 2154), 4326))
+  f <- synth_flore(); f$x <- ll[1, 1]; f$y <- ll[1, 2]; f$id <- "P01"
+  f$species <- c("Synthia alpha", "Synthia beta", "Synthia gamma")
+  g <- read_field_sheet(w(f), epsg = 4326)
+  expect_true(sf::st_crs(g) == sf::st_crs(2154))
+  expect_equal(unname(sf::st_coordinates(g)[1, ]), c(1010110, 6795410), tolerance = 1e-3)
+  # sans epsg = 4326, des degres sont refuses
+  expect_error(read_field_sheet(w(f)), "Lambert-93")
+  d <- data.frame(id = "P01", x = ll[1, 1], y = ll[1, 2], loc_precision_m = 3,
+                  n_mesures_gnss = 60, date = "2027-06-01", observateur = "synth",
+                  id_plan = "P01", rang_utilise = 0, rec_strate_arborescente = 80,
+                  rec_strate_arbustive = NA, rec_strate_herbacee = 30,
+                  rec_strate_muscinale = 5, humus = "", tariere_profondeur_cm = NA,
+                  tariere_refus = "", texture = "", photos = "", remarque = "")
+  st <- read_station_sheet(w(d), epsg = 4326)
+  expect_equal(unname(sf::st_coordinates(st)[1, ]), c(1010110, 6795410), tolerance = 1e-3)
+  expect_equal(st$x, 1010110, tolerance = 1e-3)
+  expect_error(read_station_sheet(w(d), epsg = 3857), "epsg")
+})
+
+test_that("saisie avec point-virgule : message qui suggere la virgule", {
+  f <- tempfile(fileext = ".csv")
+  writeLines(c("id;x;y;loc_precision_m;species", "P01;1010110;6795410;3;Synthia alpha"), f)
+  expect_error(read_field_sheet(f), "virgule")
 })
 
 test_that("plan_gnss.R : le script d'application se lit sans erreur", {

@@ -1283,3 +1283,9 @@ de « En service » et `acces_vehicule_leger` = « Physiquement impossible ». L
 | Facteurs | **vérifié** (exécuté, tests de la mission 029) | — | Une colonne `factor` (géologie) est traitée comme catégorielle (`weights$factor`). |
 | Reproductibilité | **vérifié** (exécuté) | `set.seed(2)` deux fois, puis `set.seed(3)` | Mêmes indices avec la même graine, indices différents avec une autre : le C++ suit le générateur de R. |
 | Références | Minasny et McBratney 2006, DOI `10.1016/j.cageo.2005.12.009` (fiche de mission) ; Roudier et al. 2012 (cité par l'aide, **non lu**). | | |
+
+## 31. Échelle de Braun-Blanquet : **à vérifier**
+
+| Point | État | Source | Résultat |
+|---|---|---|---|
+| Échelle d'abondance-dominance (`r`, `+`, `1` à `5`) | **à vérifier** (non lue) | Braun-Blanquet J., 1964, *Pflanzensoziologie*, 3e éd., Springer, Wien | Formule usuelle : `r` un ou très peu d'individus ; `+` peu abondant, recouvrement très faible ; `1` nombreux, recouvrement < 5 % ; `2` 5 à 25 % ; `3` 25 à 50 % ; `4` 50 à 75 % ; `5` > 75 %. Citée de mémoire, sans accès à l'ouvrage (mission 029). |

@@ -4,12 +4,15 @@
 \alias{read_field_sheet}
 \title{Lire et valider la saisie de la flore}
 \usage{
-read_field_sheet(path, max_precision_m = 25)
+read_field_sheet(path, max_precision_m = 25, epsg = 2154)
 }
 \arguments{
-\item{path}{Chemin du CSV (virgule, UTF-8).}
+\item{path}{Chemin du CSV (séparateur virgule, point décimal, UTF-8).}
 
 \item{max_precision_m}{Précision maximale admise (25 m).}
+
+\item{epsg}{Système des colonnes \code{x}/\code{y} : 2154 (défaut) ou 4326 (longitude, latitude),
+reprojeté en 2154 dès la lecture (\code{\link[=load_gnss]{load_gnss()}}).}
 }
 \value{
 Le \code{sf} de \code{\link[=load_gnss]{load_gnss()}}.

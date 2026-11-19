@@ -16,19 +16,24 @@
    (`loc_precision_m`) et le nombre de mesures. **Au-delà de 25 m, le relevé est refusé par
    le pipeline** : refaire la mesure plus loin des troncs ou à un autre moment.
    Coordonnées saisies en **Lambert-93 (EPSG:2154), x = est, y = nord**, en mètres ; si
-   l'appareil ne donne que du WGS84, convertir avant saisie (jamais de degrés dans x et y).
+   l'appareil ne donne que du WGS84, saisir longitude (x) et latitude (y) en degrés
+   décimaux et lire avec `epsg = 4326` (reprojeté en Lambert-93 dès la lecture) ; ne jamais
+   mélanger les deux systèmes dans un même fichier.
 5. **Placette.** Cercle de **400 m²**, rayon **11,28 m** (horizontal ; en pente, allonger
    la corde dans le sens de la pente).
 6. **Flore.** Liste **complète** des espèces vasculaires de la placette, nom latin (TAXREF ;
    `cd_nom` si connu). Pour chaque espèce, le coefficient de **Braun-Blanquet** (`r`, `+`,
-   `1` à `5`) dans chaque strate où elle est présente : arborescente, arbustive, herbacée,
-   muscinale (seuils de hauteur des strates : **à confirmer par Pascal**). Une seule ligne
+   `1` à `5`) dans chaque strate où elle est présente : arborescente, arbustive, herbacée (seuils de
+   hauteur des strates : **à confirmer par Pascal**). Les bryophytes ne sont pas listées :
+   leur recouvrement global est noté à l'étape 7. Une seule ligne
    par espèce ; une espèce douteuse est notée au genre et récoltée ou photographiée.
-7. **Station.** Recouvrement de chaque strate ; forme d'humus en **grande forme seulement**
+7. **Station.** Recouvrement (%) de chaque strate (arborescente, arbustive, herbacée,
+   muscinale = bryophytes) ; forme d'humus en **grande forme seulement**
    (Mull, Moder, Mor, Amphi, Tangel ; à vérifier) ; tarière au centre si possible
-   (profondeur atteinte, refus oui/non, texture en clair) ; photos (vers le nord, le sol,
+   (profondeur atteinte, refus oui/non, texture en clair dans `texture`) ; photos (vers le nord, le sol,
    l'humus) avec leurs noms de fichier.
-8. **Saisie** le soir même dans `gabarit_flore.csv` et `gabarit_station.csv`, contrôlés par
+8. **Saisie** le soir même dans `gabarit_flore.csv` et `gabarit_station.csv` (**séparateur
+   virgule, point décimal**, UTF-8 ; pas de point-virgule), contrôlés par
    `read_field_sheet()` et `read_station_sheet()`. Le fichier de flore est l'entrée
    `gnss_path` du pipeline.
 

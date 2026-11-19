@@ -28,8 +28,10 @@ layers <- c(terrain[[c("pente", "altitude", "mrvbf", "hauteur_reseau")]],
             hydric[[c("k_sv", "is_topo")]], geol)
 
 # --- troncons accessibles BD TOPO (WFS Geoplateforme, cache hors depot) ---------------
-cache <- file.path(cfg$cache_dir, "bdtopo", "troncon_de_route.gpkg")
+# le cache porte l'emprise dans son nom : une autre emprise donne un autre fichier
 b <- sf::st_bbox(terra::ext(layers) + 1000, crs = sf::st_crs(2154))
+cache <- file.path(cfg$cache_dir, "bdtopo", sprintf("troncon_de_route_%d_%d_%d_%d.gpkg",
+                   round(b[["xmin"]]), round(b[["ymin"]]), round(b[["xmax"]]), round(b[["ymax"]])))
 if (!file.exists(cache)) {
   dir.create(dirname(cache), recursive = TRUE, showWarnings = FALSE)
   brut <- get_access_network(b, source = "wfs", filter = FALSE)
@@ -41,8 +43,13 @@ cat("Troncons accessibles :", nrow(access), "dont acces restreint :", sum(access
 # --- tirage, diagnostic, durees ------------------------------------------------------
 plan <- sampling_plan(layers, forest, access, n = n, cost_max_m = cost_max_m, seed = seed)
 fr <- attr(plan, "frame")
-cat("Cellules forestieres :", nrow(fr), "; candidates :", sum(fr$candidat),
-    "; couches ecartees :", paste(attr(fr, "ecartees"), collapse = ", "), "\n")
+part <- 100 * mean(fr$candidat)
+cat(sprintf("Cellules forestieres : %d ; candidates : %d (%.1f %%) ; couches ecartees : %s\n",
+            nrow(fr), sum(fr$candidat), part, paste(attr(fr, "ecartees"), collapse = ", ")))
+if (sum(fr$candidat) < 20 * n || part < 5) {
+  cat("ATTENTION : peu de candidates (seuil d'homogeneite 0,5 sur", length(attr(fr, "vars")),
+      "couches, acces, bord des routes) ; lire docs/echantillonnage.md avant de continuer.\n")
+}
 cv <- sampling_coverage(plan)
 ft <- field_time(plan)
 f <- write_sampling_plan(plan, cv, out, access = access, forest = forest)
