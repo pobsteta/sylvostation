@@ -18,7 +18,6 @@
 
 - [032-cache-lidar](missions/032-cache-lidar.md) · depuis le cycle 5 · dev
 
-- [023-page-pkgdown-vosges](missions/023-page-pkgdown-vosges.md) · depuis le cycle 5 · dev
 
 
 
@@ -34,6 +33,8 @@
 
 
 ## Terminé
+
+- [023-page-pkgdown-vosges](missions/023-page-pkgdown-vosges.md) · cycle 5 · dev · site pkgdown, article D11 (à refaire après 033 et 034)
 
 - [031-comparaison-carhab](missions/031-comparaison-carhab.md) · cycle 5 · dev · aucune concordance avec CarHab 68
 
