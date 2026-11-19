@@ -4,7 +4,13 @@
 \alias{ru_by_safran_cell}
 \title{Réserve utile uniforme par maille SAFRAN (médiane des placettes IFN)}
 \usage{
-ru_by_safran_cell(points, safran, emprise = NULL, ru_col = "ru_mm")
+ru_by_safran_cell(
+  points,
+  safran,
+  emprise = NULL,
+  ru_col = "ru_mm",
+  min_placettes = 1
+)
 }
 \arguments{
 \item{points}{\code{sf} de points (EPSG:2154), par exemple les placettes IFN, avec la
@@ -17,6 +23,9 @@ EPSG:2154) : mailles dont le centre est à moins d'une demi-diagonale (5,7 km).
 \code{NULL} : toutes les mailles de \code{safran}.}
 
 \item{ru_col}{Colonne de réserve utile (mm).}
+
+\item{min_placettes}{Effectif minimal de placettes pour garder la médiane de la maille
+(1 : toute maille avec au moins une placette).}
 }
 \value{
 \code{data.frame} : \code{maille}, \code{ru_mm}, \code{n_placettes}, \code{origine}, \code{statut}.
@@ -26,10 +35,12 @@ Réserve utile \strong{provisoire} de la carte hydrique (mission 021) : aucune
 source ne donne la réserve utile à cette échelle (\code{docs/referentiels.md} § 25.3), et aucune
 modulation topographique publiée n'a été trouvée (§ 25.2) ; la réserve utile est donc
 \strong{uniforme dans chaque maille SAFRAN de 8 km}, égale à la médiane des réserves utiles
-(euptf2, \code{\link[=ru_from_texture]{ru_from_texture()}}) des placettes IFN de la maille. Une maille sans placette
-prend la médiane des placettes des mailles de l'emprise, sinon celle de toutes les
-placettes fournies (GRECO), et la colonne \code{origine} le dit. Jamais de modulation par la
-topographie.
+(euptf2, \code{\link[=ru_from_texture]{ru_from_texture()}}) des placettes IFN de la maille. Une maille sans placette,
+ou avec moins de \code{min_placettes} placettes (mission 033, valeur \strong{provisoire},
+\code{ru_min_placettes} de \code{config.yml}), prend la médiane des placettes des mailles de
+l'emprise, sinon celle de toutes les placettes fournies (GRECO), et la colonne
+\code{origine} le dit (\code{n_placettes} garde l'effectif de la maille). Jamais de modulation par
+la topographie.
 }
 \details{
 Le rattachement d'une placette à sa maille de 8 km est une opération à maille large,

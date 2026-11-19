@@ -63,6 +63,14 @@ solar_albedo: 0.2
 solar_step_h: 0.5
 hydric_pas_k: 0.02
 hydric_n_controle: 30
+# Descente d'échelle du climat SAFRAN (mission 033), valeurs provisoires, à vérifier :
+# séries journalières interpolées bilinéairement entre les centres des mailles de 8 km
+# (« proche » = maille la plus proche, avant 033), sur un réseau de hydric_node_res_m m
+# pour BILJOU ; aucune correction d'altitude. RU de maille : médiane de l'emprise si la
+# maille compte moins de ru_min_placettes placettes IFN.
+safran_interpolation: bilineaire
+hydric_node_res_m: 1000
+ru_min_placettes: 5
 # Téléchargements (SER, dalles LiDAR, WFS, TOPAGE, SAFRAN, IFN) : nombre total de tentatives
 # avant arrêt (attentes 5, 20, 60 s). Provisoire (mission 026).
 download_retries: 3

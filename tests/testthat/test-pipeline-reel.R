@@ -466,7 +466,9 @@ test_that("fetch_safran : téléchargement simulé, filtrage aux mailles de l'em
 
 test_that("safran_climate : couches p_sv, etp_sv, t_moy à maille kilométrique en Lambert-93", {
   s <- read_safran(ex("safran_sim2_12mailles_extrait.csv"))
-  cl <- safran_climate(s)
+  # plus proche voisin : valeurs de la maille (l'interpolation bilineaire, defaut depuis la
+  # mission 033, est testee dans test-climat.R)
+  cl <- safran_climate(s, interpolation = "proche")
   expect_identical(names(cl), c("p_sv", "etp_sv", "t_moy"))
   expect_equal(terra::res(cl), c(1000, 1000))
   expect_error(assert_crs_2154(cl), NA)

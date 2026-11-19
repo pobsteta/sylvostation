@@ -10,7 +10,8 @@ ifn_real_gradients(
   climat,
   safran,
   ru_source = "euptf2",
-  annees = NULL
+  annees = NULL,
+  interpolation = "bilineaire"
 )
 }
 \arguments{
@@ -25,6 +26,9 @@ ifn_real_gradients(
 \item{ru_source}{Source de la réserve utile (\code{"euptf2"}, défaut ADR 0006).}
 
 \item{annees}{Années SAFRAN gardées (\code{NULL} : toutes).}
+
+\item{interpolation}{Séries SAFRAN aux placettes : \code{"bilineaire"} (défaut, mission 033)
+ou \code{"proche"} (\code{\link[=hydric_stress]{hydric_stress()}}).}
 }
 \value{
 Un \code{sf} (une ligne par placette retenue avec flore) : \code{id_placette},

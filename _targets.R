@@ -363,10 +363,13 @@ if (!isTRUE(cfg$demo)) {
                                        sf::st_as_sfc(sf::st_bbox(emprise)))))
         sylvostation::fetch_safran(annees, b, file.path(cache, "safran"))
       })),
-    tar_target(climat, sylvostation::safran_climate(safran, months = mois_sv)),
+    # climat kilometrique : interpolation bilineaire entre centres de mailles (mission 033)
+    tar_target(climat, sylvostation::safran_climate(safran, months = mois_sv,
+                                                    interpolation = cfg$safran_interpolation)),
     # gradients des placettes : maille large seulement (regle des 700 m)
     tar_target(ifn_gradients, sylvostation::ifn_real_gradients(
-      ifn, indicateurs, climat, safran, ru_source = cfg$ru_source, annees = annees)),
+      ifn, indicateurs, climat, safran, ru_source = cfg$ru_source, annees = annees,
+      interpolation = cfg$safran_interpolation)),
 
     # --- carte hydrique (mission 021) : k r.sun, RU par maille, BILJOU --------
     # k = rayonnement r.sun (ciel clair) de la pente / plat ; variable fine, grille seule
@@ -376,13 +379,16 @@ if (!isTRUE(cfg$demo)) {
                                       nprocs = cfg$lidar_ncores)
       list(k = k, methode = attr(k, "methode"), repli = attr(k, "repli"))
     }),
-    # RU uniforme par maille SAFRAN (provisoire) : mediane euptf2 des placettes IFN
+    # RU uniforme par maille SAFRAN (provisoire) : mediane euptf2 des placettes IFN ;
+    # mediane de l'emprise sous ru_min_placettes placettes (mission 033)
     tar_target(ru_mailles, sylvostation::ru_by_safran_cell(
-      ifn_gradients, safran, emprise = sf::st_bbox(terra::ext(grid), crs = sf::st_crs(2154)))),
+      ifn_gradients, safran, emprise = sf::st_bbox(terra::ext(grid), crs = sf::st_crs(2154)),
+      min_placettes = cfg$ru_min_placettes)),
     tar_target(hydric_grid, {
       h <- sylvostation::hydric_stress_grid(
         solar_k$k, ru_mailles, safran, altitude = terrain[["altitude"]], annees = annees,
-        pas_k = cfg$hydric_pas_k, n_controle = cfg$hydric_n_controle, k_methode = solar_k$methode)
+        pas_k = cfg$hydric_pas_k, n_controle = cfg$hydric_n_controle, k_methode = solar_k$methode,
+        interpolation = cfg$safran_interpolation, node_res = cfg$hydric_node_res_m)
       list(r = h, methode = attr(h, "methode"), ecart = attr(h, "ecart"),
            mailles = attr(h, "mailles"), repli = attr(h, "repli"))
     }),
