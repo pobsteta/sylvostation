@@ -14,6 +14,8 @@
 
 ## Validé
 
+- [032-cache-lidar](missions/032-cache-lidar.md) · depuis le cycle 5 · dev
+
 - [023-page-pkgdown-vosges](missions/023-page-pkgdown-vosges.md) · depuis le cycle 5 · dev
 - [031-comparaison-carhab](missions/031-comparaison-carhab.md) · depuis le cycle 5 · dev
 
@@ -28,7 +30,7 @@
 
 
 
-- [032-cfg-lidar](à créer) · dépendances de lidar_files à cfg · dev
+
 
 ## Terminé
 
