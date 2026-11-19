@@ -3,6 +3,8 @@
 # de 8 km : c'est un climat kilometrique (variable large), croisable avec les placettes IFN
 # (CLAUDE.md, regle des 700 m). Aucune correction d'altitude (option A differee, journal
 # du 2026-11-19).
+# A VERIFIER : l'interpolation bilineaire (aucune reference publiee lue) et le pas de 1 km
+# sont des choix de la mission 033, provisoires (docs/referentiels.md section 32).
 
 #' Poids d'interpolation bilinéaire entre les centres des mailles SAFRAN
 #'
@@ -13,6 +15,8 @@
 #' valeur est celle du bord (extrapolation constante). Un point à plus d'une
 #' demi-diagonale (5,66 km) de toute maille fournie n'a pas de poids (ligne de `NA`),
 #' comme pour la maille la plus proche. Au centre d'une maille, son poids vaut 1.
+#' L'interpolation bilinéaire est un choix de la mission 033, aucune référence publiée
+#' lue : à vérifier.
 #'
 #' @param x,y Coordonnées en Lambert-93 (EPSG:2154), x = est, y = nord (m).
 #' @param safran `data.frame` SIM2 (colonnes `LAMBX`, `LAMBY`).

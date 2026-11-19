@@ -23,6 +23,8 @@ poids nul et les autres poids sont renormalisés : hors de l'enveloppe des centr
 valeur est celle du bord (extrapolation constante). Un point à plus d'une
 demi-diagonale (5,66 km) de toute maille fournie n'a pas de poids (ligne de \code{NA}),
 comme pour la maille la plus proche. Au centre d'une maille, son poids vaut 1.
+L'interpolation bilinéaire est un choix de la mission 033, aucune référence publiée
+lue : à vérifier.
 }
 \examples{
 s <- read_safran(system.file("extdata", "safran_sim2_12mailles_extrait.csv",

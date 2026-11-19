@@ -731,7 +731,8 @@ hydric_stress <- function(x, safran = NULL, ru_col = "ru_mm", annees = NULL,
 #'   `NULL` : toutes les mailles de `safran`.
 #' @param ru_col Colonne de réserve utile (mm).
 #' @param min_placettes Effectif minimal de placettes pour garder la médiane de la maille
-#'   (1 : toute maille avec au moins une placette).
+#'   (1 : toute maille avec au moins une placette). Le seuil de 5 retenu par la
+#'   mission 033 est provisoire, non sourcé : à vérifier.
 #' @return `data.frame` : `maille`, `ru_mm`, `n_placettes`, `origine`, `statut`.
 #' @examples
 #' s <- read_safran(system.file("extdata", "safran_sim2_12mailles_extrait.csv",
@@ -899,6 +900,8 @@ ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm",
 #' @param k_methode Méthode de `k` (`attr(k, "methode")` par défaut).
 #' @param interpolation `"bilineaire"` (défaut, mission 033) ou `"proche"`.
 #' @param node_res Pas (m) du réseau des nœuds de calcul de la météo interpolée (1000).
+#'   L'interpolation bilinéaire (aucune référence publiée lue) et ce pas de 1 km sont
+#'   provisoires : à vérifier.
 #' @return Grille : `SpatRaster` `is_topo`, `nj_topo`, `is_plat`, `k_sv`, `ru_maille`,
 #'   `grad_hydrique_carte` (= `-is_topo`, plus haut = plus humide). Points : `points` avec ces
 #'   colonnes et `maille_safran`. Attributs `methode`, `k_methode`, `ecart`, `mailles`,

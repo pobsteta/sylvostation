@@ -53,7 +53,9 @@ ou \code{SpatRaster} (mm) sur la grille de \code{k}.}
 
 \item{interpolation}{\code{"bilineaire"} (défaut, mission 033) ou \code{"proche"}.}
 
-\item{node_res}{Pas (m) du réseau des nœuds de calcul de la météo interpolée (1000).}
+\item{node_res}{Pas (m) du réseau des nœuds de calcul de la météo interpolée (1000).
+L'interpolation bilinéaire (aucune référence publiée lue) et ce pas de 1 km sont
+provisoires : à vérifier.}
 }
 \value{
 Grille : \code{SpatRaster} \code{is_topo}, \code{nj_topo}, \code{is_plat}, \code{k_sv}, \code{ru_maille},

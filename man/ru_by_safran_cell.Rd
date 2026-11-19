@@ -25,7 +25,8 @@ EPSG:2154) : mailles dont le centre est à moins d'une demi-diagonale (5,7 km).
 \item{ru_col}{Colonne de réserve utile (mm).}
 
 \item{min_placettes}{Effectif minimal de placettes pour garder la médiane de la maille
-(1 : toute maille avec au moins une placette).}
+(1 : toute maille avec au moins une placette). Le seuil de 5 retenu par la
+mission 033 est provisoire, non sourcé : à vérifier.}
 }
 \value{
 \code{data.frame} : \code{maille}, \code{ru_mm}, \code{n_placettes}, \code{origine}, \code{statut}.
