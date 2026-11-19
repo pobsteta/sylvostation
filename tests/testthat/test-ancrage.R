@@ -328,28 +328,38 @@ test_that("grid_bioindication : cd_ref prime sur le nom, repli par nom marque", 
   expect_equal(nrow(attr(g3, "especes_non_appariees")), 7L)
 })
 
-test_that("clean_occ : licences non commerciales et Pl@ntNet ecartees, motifs comptes", {
-  o <- synth_occ()[1:6, ]
-  o$license <- c("http://creativecommons.org/licenses/by/4.0/legalcode",   # CC BY, URL
-                 "CC_BY_NC_4_0", "CC_BY_NC_SA_4_0",                        # variantes NC
-                 "http://creativecommons.org/publicdomain/zero/1.0/legalcode",  # CC0
-                 "CC_BY_4_0", NA)                                          # Pl@ntNet, inconnue
-  o$datasetKey[5] <- PLANTNET_GBIF_DATASET_KEYS[1]
-  o$datasetKey[1:4] <- "synth-dataset-1"
-  o$datasetKey[6] <- "synth-dataset-1"
+test_that("clean_occ : licences NC, Pl@ntNet et licences inconnues ecartees, motifs comptes", {
+  o <- synth_occ()[1:9, ]
+  o$license <- c("http://creativecommons.org/licenses/by/4.0/legalcode",  # 1 CC BY, URL : gardee
+                 "CC_BY_NC_4_0", "CC_BY_NC_SA_4_0",                       # 2-3 NC : ecartees
+                 "http://creativecommons.org/publicdomain/zero/1.0/legalcode",  # 4 CC0 : gardee
+                 "CC_BY_4_0",                                             # 5 Pl@ntNet : ecartee
+                 NA,                                                      # 6 vide : inconnue
+                 "UNSPECIFIED",                                           # 7 inconnue
+                 "CC BY-NC 4.0",                                          # 8 NC en toutes lettres
+                 "UNSUPPORTED")                                           # 9 inconnue
+  o$datasetKey <- "synth-dataset-1"
+  o$datasetKey[5] <- PLANTNET_GBIF_DATASET_KEYS[2]
   o$synthetic <- TRUE
-  expect_message(p <- clean_occ(o), "2 occurrence\\(s\\) ecartee\\(s\\) pour licence non")
-  expect_setequal(p$gbif_id, c("S001", "S004", "S006"))
+  expect_message(p <- clean_occ(o), "3 occurrence\\(s\\) ecartee\\(s\\) pour licence non")
+  expect_setequal(p$gbif_id, c("S001", "S004"))
   e <- attr(p, "ecartees")
   expect_equal(stats::setNames(e$n, e$motif),
-               c(licence_non_commerciale = 2L, plantnet = 1L, licence_inconnue = 1L))
+               c(licence_non_commerciale = 3L, plantnet = 1L, licence_inconnue = 3L))
   n <- attr(p, "clean_log")
   n <- stats::setNames(n$n, n$etape)
-  expect_equal(unname(n[c("hors_jeux_exclus", "hors_licence_nc", "hors_plantnet")]), c(6L, 4L, 3L))
-  # options : tout garder
-  p2 <- suppressMessages(clean_occ(o, exclude_noncommercial = FALSE, exclude_plantnet = character(0)))
-  expect_equal(nrow(p2), 6L)
-  # la licence NC se reconnait aussi en URL
-  o$license[2] <- "http://creativecommons.org/licenses/by-nc/4.0/legalcode"
-  expect_false("S002" %in% suppressMessages(clean_occ(o))$gbif_id)
+  expect_equal(unname(n[c("hors_jeux_exclus", "hors_licence_nc", "hors_plantnet",
+                          "hors_licence_inconnue")]), c(9L, 6L, 5L, 2L))
+  # chaque occurrence n'est comptee que par le premier motif : une NC dans Pl@ntNet = licence
+  o2 <- o; o2$datasetKey[2] <- PLANTNET_GBIF_DATASET_KEYS[1]
+  e2 <- attr(suppressMessages(clean_occ(o2)), "ecartees")
+  expect_equal(e2$n, c(3L, 1L, 3L))
+  # options : garder les inconnues, puis tout garder
+  p2 <- suppressMessages(clean_occ(o, exclude_unknown_licence = FALSE))
+  expect_setequal(p2$gbif_id, c("S001", "S004", "S006", "S007", "S009"))
+  p3 <- suppressMessages(clean_occ(o, exclude_noncommercial = FALSE, exclude_plantnet = character(0),
+                                   exclude_unknown_licence = FALSE))
+  expect_equal(nrow(p3), 9L)
+  # l'ecriture en toutes lettres est normalisee comme les autres formes
+  expect_equal(p3$license[p3$gbif_id == "S008"], "CC_BY_NC_4_0")
 })

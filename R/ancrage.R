@@ -194,6 +194,9 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
       paste0("CC_", toupper(gsub("-", "_", m[[i]][2])), "_", gsub("\\.", "_", m[[i]][3]))
     } else if (!is.na(x[i]) && grepl("publicdomain/zero", x[i])) {
       "CC0_1_0"
+    } else if (!is.na(x[i]) && grepl("^\\s*CC[ _-]*(BY|0)", x[i], ignore.case = TRUE)) {
+      # ecriture en toutes lettres (« CC BY-NC 4.0 ») : meme code que les autres formes
+      gsub("^_+|_+$", "", gsub("[^A-Z0-9]+", "_", toupper(x[i])))
     } else x[i]
   }, character(1))
   out
@@ -219,13 +222,14 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
 #'    [IFN_GBIF_DATASET_KEYS]) : leur incertitude déclarée (1 m) est fausse. Si on les
 #'    garde (`exclude_datasets = character(0)`), ils sont marqués `source = "ifn"` et
 #'    `loc_precision_m = 700` (comme [mark_ifn()]) ;
-#' 2 bis. licence et Pl@ntNet : les occurrences sous licence non commerciale (tout code
-#'    `CC_BY_NC*`, quelle que soit la variante) sont écartées si `exclude_noncommercial`
-#'    (défaut `TRUE`), et celles des jeux de `exclude_plantnet` (défaut
-#'    [PLANTNET_GBIF_DATASET_KEYS]) aussi. Une occurrence en est écartée par un seul motif,
-#'    dans l'ordre : licence, puis Pl@ntNet. Les effectifs par motif sont rendus dans
-#'    l'attribut `ecartees` et dans le message émis (jamais de suppression silencieuse) ;
-#'    les licences absentes ou non reconnues sont **gardées** et comptées (`licence_inconnue`) ;
+#' 2 bis. licence et Pl@ntNet, **dans cet ordre**, chaque occurrence n'étant comptée que
+#'    par le premier motif qui l'écarte : (i) licence non commerciale (code `CC_BY_NC*`,
+#'    toute variante, URL, code ou écriture en toutes lettres) si `exclude_noncommercial`
+#'    (défaut `TRUE`) ; (ii) jeux de `exclude_plantnet` (défaut [PLANTNET_GBIF_DATASET_KEYS]) ;
+#'    (iii) licence absente, `UNSPECIFIED`, `UNSUPPORTED` ou autre qu'un code `CC_BY_<n>` (variantes comprises : la variante NC dépend de `exclude_noncommercial`) ou `CC0_1_0`
+#'    (motif `licence_inconnue`) si `exclude_unknown_licence` (défaut `TRUE` : la fiche 037
+#'    veut du CC BY seulement). Les effectifs par motif sont rendus dans l'attribut
+#'    `ecartees` et dans le message émis (jamais de suppression silencieuse) ;
 #' 3. précision : `loc_precision_m` = `coordinateUncertaintyInMeters` ; elle vaut `NA`
 #'    si l'incertitude est absente **ou** si `dataGeneralizations` / `informationWithheld`
 #'    est renseigné (donnée généralisée). Sont gardés les points de précision
@@ -248,6 +252,8 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
 #' @param max_uncertainty Précision maximale gardée, en mètres (25).
 #' @param exclude_datasets `datasetKey` à écarter.
 #' @param exclude_noncommercial Écarter les licences `CC_BY_NC*` (`TRUE`).
+#' @param exclude_unknown_licence Écarter les licences absentes ou autres que la famille CC BY et CC0
+#'   (`TRUE`).
 #' @param exclude_plantnet `datasetKey` Pl@ntNet à écarter (défaut
 #'   [PLANTNET_GBIF_DATASET_KEYS] ; `character(0)` pour les garder).
 #' @param keep_unknown Garder les points de précision inconnue (`FALSE`).
@@ -257,7 +263,7 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
 #' @return Un objet `sf` (points, EPSG:2154) avec `gbif_id`, `species`, `species_key`,
 #'   `dataset_key`, `license`, `year`, `loc_precision_m`, `source`, et les attributs
 #'   `clean_log` et `ecartees` (`data.frame` `motif`, `n` : `licence_non_commerciale`,
-#'   `plantnet`, `licence_inconnue` (gardées)).
+#'   `plantnet`, `licence_inconnue`).
 #' @examples
 #' f <- system.file("extdata", "synth_occ.csv", package = "sylvostation")
 #' if (nzchar(f)) {
@@ -268,6 +274,7 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
 clean_occ <- function(occ, max_uncertainty = 25, exclude_datasets = IFN_GBIF_DATASET_KEYS,
                       exclude_noncommercial = TRUE,
                       exclude_plantnet = PLANTNET_GBIF_DATASET_KEYS,
+                      exclude_unknown_licence = TRUE,
                       keep_unknown = FALSE, forest = NULL, canopy = NULL, min_canopy = 5) {
   if (!is.data.frame(occ)) stop("`occ` doit \u00eatre un data.frame.", call. = FALSE)
   manque <- setdiff(c("decimalLongitude", "decimalLatitude", "species"), names(occ))
@@ -313,23 +320,30 @@ clean_occ <- function(occ, max_uncertainty = 25, exclude_datasets = IFN_GBIF_DAT
   }
   log <- .log_step(log, "hors_jeux_exclus", nrow(pts))
 
-  # 2 bis. licence non commerciale, puis Pl@ntNet (motifs comptes, jamais en silence)
-  nc <- if (isTRUE(exclude_noncommercial)) {
-    !is.na(pts$license) & grepl("^CC_BY_NC", pts$license)
-  } else rep(FALSE, nrow(pts))
+  # 2 bis. licence non commerciale, Pl@ntNet, licence inconnue : dans cet ordre, chaque
+  # motif compte les occurrences qu'il ecarte lui-meme (jamais en silence)
+  lic <- gsub("^_+|_+$", "", gsub("[^A-Z0-9]+", "_", toupper(as.character(pts$license))))
+  nc <- if (isTRUE(exclude_noncommercial)) !is.na(pts$license) & grepl("^CC_BY_NC", lic) else
+    rep(FALSE, nrow(pts))
   pts <- pts[!nc, ]
+  lic <- lic[!nc]
   log <- .log_step(log, "hors_licence_nc", nrow(pts))
   pn <- if (length(exclude_plantnet)) {
     !is.na(pts$dataset_key) & pts$dataset_key %in% exclude_plantnet
   } else rep(FALSE, nrow(pts))
   pts <- pts[!pn, ]
+  lic <- lic[!pn]
   log <- .log_step(log, "hors_plantnet", nrow(pts))
-  lic_ok <- !is.na(pts$license) & grepl("^(CC_BY_[0-9]|CC0_1_0)", pts$license)
+  inconnue <- if (isTRUE(exclude_unknown_licence)) {
+    is.na(pts$license) | !grepl("^(CC_BY(_[A-Z]+)*_[0-9]|CC0_1_0)", lic)
+  } else rep(FALSE, nrow(pts))
+  pts <- pts[!inconnue, ]
+  log <- .log_step(log, "hors_licence_inconnue", nrow(pts))
   ecartees <- data.frame(motif = c("licence_non_commerciale", "plantnet", "licence_inconnue"),
-                         n = c(sum(nc), sum(pn), sum(!lic_ok)), stringsAsFactors = FALSE)
+                         n = c(sum(nc), sum(pn), sum(inconnue)), stringsAsFactors = FALSE)
   message("clean_occ : ", ecartees$n[1], " occurrence(s) ecartee(s) pour licence non ",
-          "commerciale, ", ecartees$n[2], " pour Pl@ntNet ; ", ecartees$n[3],
-          " a licence absente ou non reconnue (gardee(s)).")
+          "commerciale, ", ecartees$n[2], " pour Pl@ntNet, ", ecartees$n[3],
+          " pour licence absente ou non reconnue.")
 
   # 3. precision de localisation
   pts$source <- "gbif"
