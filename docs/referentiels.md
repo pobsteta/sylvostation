@@ -1494,3 +1494,135 @@ nécessaire : lire `Location_uncertainty`, `Country` et les coordonnées dans l'
 **Question de contrôle :** quelle décision cette donnée va-t-elle éclairer ? Si la calibration
 relief-gradient se fait sur des occurrences GBIF à 25 m (espèce par espèce) faute de relevés
 ouverts, ou s'il faut attendre le jeu de Dietz et al. ou l'accès fermé.
+
+## 34. Richesse chimique continue du substrat : données géochimiques ouvertes en D11 et GRECO D (mission 038)
+
+- **Décision éclairée :** retient-on, comme prédicteur à maille large du niveau trophique, une
+  richesse chimique continue du substrat (équivalent du rapport Si/(Ca+Mg+Fe) de Piedallu et al.
+  2006, brief § 2.4) tirée de données ouvertes, ou garde-t-on la lithologie de la BD Charm-50
+  (§ 5) classée par rang.
+- **Propriétaire :** Pascal (délégué à l'orchestrateur). **Rédigé par :** agent `acquereur`,
+  mission 038, le 2026-11-19. **Outils :** `WebSearch`, `WebFetch` (pages résumées par un petit
+  modèle), lecture en image de PDF enregistrés par l'outil (R 39979, RP-57133-FR, plaquette IRM,
+  avis BOAMP 25-44109). **Pas de `curl`, pas de R** : aucun fichier de données téléchargé, aucun
+  décompte de points en D11 (pas de croisement avec `ser_l93.shp`), rien dans `inst/extdata`,
+  aucun compte, aucune demande d'accès. **Liste de contrôle** : non jointe à la consigne.
+- **Surfaces de référence (§ 1) :** D11 5 319,0 km² ; D12 4 017,9 km² ; GRECO D 9 336,9 km².
+  Les « points attendus » ci-dessous sont **la densité publiée multipliée par la surface** :
+  ordres de grandeur, pas des décomptes.
+- **URL et documents consultés le 2026-11-19 :**
+  `https://infoterre.brgm.fr/rapports/RP-57133-FR.pdf` (Cary, Maton, Piantone, BRGM, déc. 2008,
+  188 p. ; pages 5-6, 19-28 lues en image), `http://infoterre.brgm.fr/rapports//RR-39979-FR.pdf`
+  (BRGM R 39979, déc. 1997, 21 p. + figures en volume séparé ; pages 1-8, 13-16 lues),
+  `https://www.horbourg-wihr.fr/wp-content/uploads/2025/05/Plaquette-BRGM-inventaire-national-ressources-minerales.pdf`
+  (BRGM, 2025, 6 p.), `https://www.boamp.fr/telechargements/FILES/PDF/2025/04/25-44109.pdf`
+  (avis BRGM Explore n° 25-44109, 17/04/2025, pages 1-6 lues),
+  `https://www.bgs.ac.uk/geology-projects/applied-geochemistry/international-geochemistry/foregs/`,
+  `https://dev.s3webdav.containers.wur.nl/projects/wosis/repository/not_imported/ZZ-FOREGS/ForegsData.php.htm`
+  et `…/disclaimer.php` (**copie** de la page du GTK, pas l'original), `https://gemas.eurogeosurveys.org/`,
+  recherche web sur Nédeltcheva et al. 2006 (*Chem. Geol.* 231 : 1-15, DOI
+  10.1016/j.chemgeo.2005.12.012, résumé seulement).
+  **Inaccessibles ou sans résultat :** `weppi.gtk.fi` (certificat expiré, deux essais),
+  `sigminesfrance.brgm.fr` (hôte introuvable), `infoterre.brgm.fr/page/geoservices-ogc` (404),
+  `geoservices.brgm.fr/geologie` (erreur MapServer), `core.ac.uk/download/9697177.pdf` (403),
+  API `data.gouv.fr` pour « géochimie sédiments » (0 jeu ; une seule requête), `RP-61745-FR.pdf`
+  (9 Mo, texte non extrait : **non lu**).
+
+### 34.1 Les sources, classées (CQQCOQP condensé)
+
+| Source | Pourquoi / Qui | Quoi, éléments | Où, densité | Quand, précision | Licence, accès | Verdict |
+|---|---|---|---|---|---|---|
+| **A. BRGM, Inventaire minier : sédiments de ruisseau et sols** (base géochimique, ex-SIG Mines France) | Prospection de gîtes métalliques par le BRGM (service public), pas de la fertilité. | ICP-AES multi-éléments ; en Vosges, R 39979 p. 13-14 cartographie Ag, As, Ba, Cd, Cr, Cu, **Fe₂O₃** (0,1 %), Mo, **MnO**, Ni, **P₂O₅**, Pb, Sb, Sn, W, Zn : **ni Si, ni Ca, ni Mg, ni K** dans cette étude. La liste des couches d'InfoTerre (capture p. 24 de RP-57133, lisibilité moyenne) montre aussi **Calcium, Magnésium, Fer, Lithium, Phosphore**… ; la fiche d'échantillon (p. 25) porte des colonnes d'oxydes **illisibles** à cette résolution. | **Vosges couvertes** (RP-57133 p. 22 : massifs hercyniens « Massifs central et armoricain, Vosges » ; figure 7 p. 23 : carrés noirs sur le massif vosgien). Base nationale : > 280 000 échantillons + ≈ 60 000 SNEAP (2008) ; **0,5 à 3 échantillons par km²**, couverture < 20 % du territoire. Si cette densité vaut pour D11 : **≈ 2 700 à 16 000 points** (à mesurer). Cours d'eau de 2ᵉ ordre ≤ 1 km, bassin de quelques km² (R 39979 p. 13). | Campagnes 1975-1991 (RP-57133 p. 21) ; « plus de 15 ans » (R 39979) ; la plaquette de 2025 dit « 1970 et 1995 ». Limites de détection 10-20 ppm « élevées ». Localisation : « système de géoréférencement variable suivant les zones » (p. 21-22) : **précision non publiée**. Échantillon = **un point de cours d'eau intégrant un bassin**, pas une placette. | **Sans licence nommée** dans ce qui a été lu. RP-57133 : « Document public » ; « les données brutes […] visualisables sur InfoTerre ou **librement téléchargeables** sur sigminesfrance » (p. 24, texte de 2008). Rapports « © BRGM, ne peut être reproduit […] sans l'autorisation expresse du BRGM ». **Aucun téléchargement ouvert vérifié aujourd'hui** : InfoTerre fermé depuis le 21 oct. 2026 (§ 5), `sigminesfrance` introuvable, `data.gouv.fr` : 0 jeu. | **Seule source avec la densité et Ca, Mg, Fe. Accès et licence à établir par un humain avant tout usage.** |
+| **B. BRGM, nouvel Inventaire des ressources minérales (IRM)** | Actualisation pour les métaux critiques (France 2030, ANR). | Sédiments de ruisseau + géophysique héliportée ; cibles Sn, W, Sb, Ba, F, Mo, Au, Pb-Zn. Éléments majeurs non précisés. | **Vosges = 1 des 5 zones** (plaquette p. 4, carte : un secteur au nord-est, étendue exacte non lue). Avis 25-44109 : lots Cévennes, Morvan-Brévenne, Massif central, Guyane ; **pas de lot Vosges** dans cet avis (autre avis non trouvé). | Départ fin 2024, 5 ans ; 18 mois de prélèvements pour les lots de 2025. Densité non publiée. | « La publication régulière de résultats tout au long du processus » (plaquette p. 4) ; licence et dates **inconnues**. | **À surveiller, pas utilisable aujourd'hui.** |
+| **C. FOREGS (Atlas géochimique de l'Europe, 2005)** | Fond géochimique européen, EuroGeoSurveys, publié par le GTK. | Sédiment de ruisseau, eau, sol de surface (0-25 cm), sous-sol, humus, plaine d'inondation ; XRF (majeurs, dont probablement Si, Ca, Mg, Fe : **liste d'éléments non lue**), ICP-MS, ICP-AES. | **≈ 1 station pour 4 700 km²** (BGS) : **≈ 1 station en D11, ≈ 2 en GRECO D** (non comptées). | Coordonnées converties de systèmes nationaux en coordonnées géographiques (page « disclaimer ») ; précision non publiée. Fichiers de 2006-2007. | Fichiers zip (Excel) gratuits, un fichier par milieu, pays extractible par un champ de code. **Pas de licence nommée** ; copyright EuroGeoSurveys/GTK ; citation de Salminen (2005) et mention de l'atlas imposées. | **Contrôle seulement** : trop clairsemé pour une carte en D11. |
+| **D. GEMAS (sols agricoles et prairies, 2014)** | EuroGeoSurveys + Eurometaux. | 39-42 éléments par XRF (totaux), 52-53 après eau régale. | **1 site pour 2 500 km²** (≈ 2 en D11) ; 2 211 + 2 118 échantillons. **France dans le jeu : non confirmé** (un code « FRA » vu dans une légende de brochure). | 2008-2009 (non lu à la source). Sols **cultivés** : peu de forêt. | **Pas d'accès libre vérifié** : contrat avec le président du groupe d'experts, résultats « librement » disponibles deux ans après le rapport qualité (date non lue). Le CC BY 4.0 de data.gov.ie ne vaut **que** pour la copie irlandaise. | **Écartée** (densité, sols cultivés, accès). |
+| **E. Analyses de roches (CRPG Nancy, GEOROC, thèses)** | Pétrologie ; base citée par le brief pour Piedallu et al. 2006. | Roches totales, majeurs (SiO₂, CaO, MgO, Fe₂O₃). | Points isolés par faciès. | — | **Aucune base ouverte vosgienne trouvée** (CRPG : page historique de 1989-1990 seulement ; GEOROC : rien de vosgien dans les résultats). **Absence non prouvée** : GEOROC et les annexes de thèses (HAL, ex. tel-00755354) n'ont pas été interrogés à la source. | **Non retenue**, piste à fouiller par recherche directe. |
+| **F. Eaux de ruisseaux** (Nédeltcheva et al. 2006) | Étude INRAE/AgroParisTech de 95 bassins forestiers sur granite. | Ca, Mg, K, Na, Si, SO₄, ANC, pH à l'étiage. | 95 bassins, granite vosgien seul. | Jeu **non trouvé en accès ouvert**. | — | **Pas une source de données ; une validation** (34.3). |
+
+**Aucune source ouverte et téléchargeable n'a été vérifiée aujourd'hui qui donne Si, Ca, Mg et Fe à
+une densité utile en D11.** Le rapport Si/(Ca+Mg+Fe) de Piedallu et al. **n'est pas reproductible**
+avec le jeu de l'étude vosgienne de 1997 (pas de Si, Ca, Mg).
+
+### 34.2 Règle des 700 m et système de coordonnées
+
+- Compatible **à une condition** : un échantillon de sédiment de ruisseau représente un bassin de
+  quelques km², pas un point de 25 m. Il ne doit donc jamais être extrait aux coordonnées d'une
+  placette comme variable fine ; il se traite comme un prédicteur à maille large (valeur moyenne
+  par bassin ou par formation de la BD Charm-50), croisable avec l'IFN comme la « géologie
+  dominante dans un rayon de 700 m ». `loc_precision_m` : **valeur inconnue** pour A, C, D ;
+  ne pas la renseigner par défaut, la poser à `NA` tant qu'elle n'est pas lue (la règle refuse
+  alors l'extraction fine, ce qui est voulu).
+- Coordonnées : A et B en système national de l'époque (Lambert II étendu visible p. 24 de
+  RP-57133, capture d'écran) à reprojeter en EPSG:2154 à l'import ; C en géographique (système non
+  nommé, supposé WGS84 : **à vérifier**).
+
+### 34.3 Deux sources par point : ce qui concorde, ce qui diverge
+
+1. **Le substrat règle la chimie du ruisseau.** Nédeltcheva et al. 2006 (95 bassins, granites
+   vosgiens) : le calcium s'explique par la teneur en hornblende, le magnésium par celle de la
+   biotite et de la hornblende, Si suit Na ; Ca, Mg et le pH baissent avec les précipitations.
+   RP-57133 p. 23 : les signaux des sédiments de ruisseau et des sols sont « relativement
+   comparables à l'échelle locale ». Deux sources d'origine différente (eaux d'étiage, sédiments)
+   disent la même chose : **le ruisseau lit la roche**. Concordance : on peut avancer.
+2. **Le Fer des sédiments n'est pas la richesse du substrat.** R 39979 p. 3 : les fortes
+   teneurs en Pb, Zn, Cu, Ag, As se concentrent dans les districts de **Sainte-Marie-aux-Mines**,
+   **La Croix-aux-Mines**, **Plancher-les-Mines**, **Auxelles**, **Giromagny** ; p. 15 : le fer
+   se trouve en pyrite et en oxydes autant que dans les minéraux ferromagnésiens. Un Fe de
+   sédiment élevé peut venir d'une minéralisation, pas de biotite. **Écart de sens** : à traiter en
+   ne gardant que Ca et Mg (non confirmés en Vosges), ou en excluant les bassins miniers.
+3. **Le rapport de Piedallu n'a pas été retrouvé.** La recherche web n'a trouvé ni Si/(Ca+Mg+Fe)
+   ni Stussi 1995 ni la base du CRPG ; ce que dit le brief à ce sujet reste **non vérifié par
+   l'acquéreur**.
+
+### 34.4 Écarts relevés entre sources (§ 34)
+
+1. Période de l'inventaire minier : 1975-1991 (RP-57133) ; « plus de 15 ans » (R 39979) ;
+   1970-1995 (plaquette 2025).
+2. Taille de la base : > 280 000 échantillons (RP-57133, 2008, lu) contre 343 067 échantillons de
+   sédiments de ruisseau + 96 924 de géochimie (résumé de moteur de recherche d'un rapport
+   BRGM, **RP-61745-FR non lu**).
+3. GEMAS : 2 211 + 2 118 échantillons (site du projet) contre 2 108 + 2 023 (résumés EGU 2014) ;
+   39 contre 41-42 éléments en XRF ; 53 contre 52 après eau régale.
+4. FOREGS : 1 station pour 4 700 km² (BGS, GEUS) contre 1 pour 5 000 km² (cible du réseau de
+   référence mondial).
+5. Fiche d'échantillon de l'inventaire : la capture de RP-57133 (fig. 9) cite « Arnault (88) » ;
+   commune non vérifiée (lecture d'une capture d'écran, à confirmer sur l'original).
+6. Le CC BY 4.0 de la copie irlandaise de GEMAS ne s'étend pas à l'original (aucune licence
+   nommée sur le site du projet).
+
+### 34.5 Recommandation classée
+
+1. **Ne pas bâtir de raster de richesse chimique continue à partir de données ouvertes
+   aujourd'hui** : rien de téléchargeable et libre n'a été vérifié pour Si, Ca, Mg, Fe en D11.
+2. **Garder la lithologie de la BD Charm-50 (§ 5) comme prédicteur de substrat**, classée
+   par rang de richesse (ordinal, avec l'incertitude affichée). Appui publié : Nédeltcheva et al.
+   2006 (hornblende → Ca, biotite → Mg). Le classement par minéraux est **une proposition à
+   valider**, non une nomenclature.
+3. **Piste à ouvrir par un humain (Pascal) : l'Inventaire minier du BRGM** (source A) : seule
+   source avec ≈ 0,5 à 3 points par km² et Ca, Mg, Fe. Vérifier : (a) un téléchargement existe-t-il
+   encore après la refonte d'InfoTerre (bêta annoncée fin décembre 2026) ; (b) la licence ; (c) les
+   colonnes Ca, Mg, Si, K ; (d) la précision des coordonnées. Si oui : **moyenne par formation
+   BD Charm-50**, sans extraction aux coordonnées des placettes ; un extrait dans `inst/extdata`
+   seulement avec licence nommée.
+4. **IRM (source B)** : relancer la recherche quand les premiers résultats Vosges seront publiés.
+5. **FOREGS** : un contrôle de sens (1 station en D11) ; **GEMAS, F, E** : écartées pour l'instant.
+
+### 34.6 Trois points au sol (à vérifier par Pascal)
+
+Aucune coordonnée n'est donnée : le référentiel ne permet pas de les établir sans inventer.
+
+1. **Granite de Kaysersberg (`h3M2Ka`) contre gneiss à sillimanite (`Smæsill`)**, emprise test
+   (§ 5, 21,45 et 27,16 km²) : deux roches cristallines voisines, l'une riche en biotite,
+   l'autre en sillimanite. Le sol et le sous-bois diffèrent-ils (humus, pH, espèces acidiphiles) ?
+   C'est le test de ce que le substrat cristallin apporte au-delà de « cristallin ».
+2. **Grès vosgien contre granite de Kagenfels**, sites d'essais de fertilisation de l'INRAE (§ 33.4 :
+   Vologne et Mortagne sur grès ; Grendelbruch et Russ sur granite) : le sol sur granite est-il
+   franchement plus riche que sur grès ? Si la différence est faible, une échelle ordinale à
+   deux classes suffit.
+3. **Districts miniers de Sainte-Marie-aux-Mines et La Croix-aux-Mines** (R 39979) : y a-t-il, à
+   l'échelle du versant, des teneurs en fer et en métaux sans lien avec la richesse du sol
+   forestier ? Si oui, le Fe des sédiments ne doit pas servir de proxy de richesse.
+
+**Question de contrôle :** quelle décision cette donnée va-t-elle éclairer ? Si le trophique à
+maille large s'appuie sur une richesse chimique mesurée, ce qui exige l'accès à l'Inventaire minier
+du BRGM, ou sur la lithologie de la BD Charm-50 classée par rang.

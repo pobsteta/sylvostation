@@ -18,7 +18,6 @@
 - [034-predicteurs-piedallu](missions/034-predicteurs-piedallu.md) · depuis le cycle 5 · dev (opus, plan d'abord, code après 033)
 - [035-calibration-greco](missions/035-calibration-greco.md) · depuis le cycle 5 · dev (opus, plan d'abord, code après 033 ; absorbe le code de 034 ; plan validé)
 - [037-ancrages-gbif-bdforet](missions/037-ancrages-gbif-bdforet.md) · depuis le cycle 5 · dev (opus, plan d'abord)
-- [038-geochimie-brgm](missions/038-geochimie-brgm.md) · depuis le cycle 5 · acquereur
 
 
 
@@ -36,6 +35,8 @@
 
 
 ## Terminé
+
+- [038-geochimie-brgm](missions/038-geochimie-brgm.md) · cycle 5 · acquereur · aucune géochimie ouverte téléchargeable en D11
 
 - [036-placettes-ouvertes-precises](missions/036-placettes-ouvertes-precises.md) · cycle 5 · acquereur · aucun relevé ouvert à ≤ 25 m en D11
 
