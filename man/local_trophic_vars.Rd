@@ -2,28 +2,25 @@
 % Please edit documentation in R/ancrage.R
 \name{local_trophic_vars}
 \alias{local_trophic_vars}
-\title{Variables du modèle trophique local : celles du régional pour le climat de maille large}
+\title{Variables du modèle trophique local : les mêmes variables larges que le régional, plus des fines}
 \usage{
-local_trophic_vars(predictors, climate, regional)
+local_trophic_vars(regional, fines)
 }
 \arguments{
-\item{predictors}{Noms de toutes les couches de prédicteurs.}
-
-\item{climate}{Noms des couches climatiques de maille large (\code{predictors_climat}).}
-
 \item{regional}{Variables du modèle trophique régional (\code{vars_modele$trophic}).}
+
+\item{fines}{Noms des variables fines ajoutées (couches de terrain fin non vides, sols).}
 }
 \value{
-Vecteur de noms de variables du modèle local.
+Vecteur de noms de variables du modèle local (sans doublon), les larges d'abord.
 }
 \description{
-Le modèle local (ancrages GBIF) reprend tous les prédicteurs, \strong{sauf} les variables climatiques de
-maille large que le modèle régional trophique n'utilise pas : avec \code{trophique_climat = "sans"},
-aucune ; \code{coarse_t_corr_700m} n'y entre que si le régional l'a. Les deux modèles ne diffèrent
-ainsi que par la finesse des données (terrain fin, lithologie), jamais par un climat que l'un
-voit et l'autre non.
+Le modèle local (ancrages GBIF) prend \strong{exactement les variables larges du modèle régional}
+(\code{vars_modele$trophic} : climat selon \code{trophique_climat}, lithologie, formation, pH) auxquelles
+s'ajoutent des variables \strong{fines nommées} (terrain fin non vide, sols) : seule la finesse des
+données les distingue, jamais un climat que l'un verrait et l'autre non. Le local suit donc
+\code{trophique_climat} de lui-même.
 }
 \examples{
-local_trophic_vars(c("coarse_t_moy", "coarse_t_corr_700m", "pente", "coarse_litho_enc"),
-                   c("coarse_t_moy", "coarse_t_corr_700m"), "coarse_litho_enc")
+local_trophic_vars(c("coarse_litho_enc", "coarse_formation_enc"), c("pente", "twi"))
 }

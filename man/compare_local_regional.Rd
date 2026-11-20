@@ -43,7 +43,8 @@ ou une liste portant \code{n_complets} (effectif après exclusion des incomplets
 Une liste : \code{resume} (une ligne : \code{n_ancrages}, \code{n_blocs}, \code{k_plis}, \code{n_tirages} (tirages valides du
 bootstrap), \code{r2_local},
 \code{r2_regional}, \code{r2_regional_recalibre} (information), \code{gain}, \code{ic_bas}, \code{ic_haut}, \code{niveau_ic}, \code{seuil_gain},
-\code{rmse_local}, \code{rmse_regional}, \code{biais_regional}, \code{aoa_part_carte}, \code{decision}, \code{motif},
+\code{rmse_local}, \code{rmse_regional}, \code{biais_regional}, \code{aoa_part_carte}, \code{variables_locales} (variables du
+modèle local, lues dans \code{local_trophic$variables}), \code{decision}, \code{motif},
 \code{statut_seuils}), \code{par_pli}, \code{remplace} (logique) et \code{publiee} (\code{"locale"} ou \code{"regionale"}).
 }
 \description{

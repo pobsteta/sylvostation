@@ -667,6 +667,9 @@ if (is.null(cl)) {
       "impossible, la carte régionale est gardée. L'intervalle est conditionnel aux prédictions hors pli ",
       "figées (une répartition en plis, un ajustement) : il rend compte du choix des blocs d'ancrages, pas ",
       "de la variabilité de l'ajustement du modèle local.\n\n", sep = "")
+  cat("**Variables du modèle local** : les mêmes variables larges que le modèle régional, plus des variables ",
+      "fines nommées (terrain fin, sols) : ", if (is.na(cl$variables_locales[1])) "aucun modèle local ajusté"
+      else paste0("`", cl$variables_locales[1], "`"), ".\n\n", sep = "")
   cat("**Trois asymétries à lire avec ce verdict.** (a) *Décalage de domaine* : le régional apprend des ",
       "placettes IFN (flore sur 700 m) tandis que les ancrages sont des listes d'espèces de 50 m ; un ",
       "décalage de niveau compte dans le R² du régional, ce qui le défavorise (le R² du régional ",

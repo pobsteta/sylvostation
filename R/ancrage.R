@@ -602,7 +602,8 @@ load_gnss <- function(path, epsg = 2154) {
 #' @return Une liste : `resume` (une ligne : `n_ancrages`, `n_blocs`, `k_plis`, `n_tirages` (tirages valides du
 #'   bootstrap), `r2_local`,
 #'   `r2_regional`, `r2_regional_recalibre` (information), `gain`, `ic_bas`, `ic_haut`, `niveau_ic`, `seuil_gain`,
-#'   `rmse_local`, `rmse_regional`, `biais_regional`, `aoa_part_carte`, `decision`, `motif`,
+#'   `rmse_local`, `rmse_regional`, `biais_regional`, `aoa_part_carte`, `variables_locales` (variables du
+#'   modèle local, lues dans `local_trophic$variables`), `decision`, `motif`,
 #'   `statut_seuils`), `par_pli`, `remplace` (logique) et `publiee` (`"locale"` ou `"regionale"`).
 #' @examples
 #' set.seed(1)
@@ -637,12 +638,14 @@ compare_local_regional <- function(local_trophic, regional_map, n_anchors = NA_i
   }
   cols <- c("n_ancrages", "n_blocs", "k_plis", "n_tirages", "r2_local", "r2_regional", "r2_regional_recalibre",
             "gain", "ic_bas", "ic_haut", "niveau_ic", "rmse_local", "rmse_regional", "biais_regional")
+  vars_loc <- if (is.null(local_trophic$variables)) NA_character_ else
+    paste(local_trophic$variables, collapse = ", ")
   vide <- function(motif, n = n_anchors, nb = NA_integer_, k = NA_integer_) {
     warning("Comparaison local / r\u00e9gional impossible : ", motif,
             " ; carte trophique r\u00e9gionale gard\u00e9e.", call. = FALSE)
     r <- as.data.frame(stats::setNames(as.list(rep(NA_real_, length(cols))), cols))
     r$n_ancrages <- as.integer(n); r$n_blocs <- as.integer(nb); r$k_plis <- as.integer(k)
-    r$seuil_gain <- gain_min; r$aoa_part_carte <- aoa_part
+    r$seuil_gain <- gain_min; r$aoa_part_carte <- aoa_part; r$variables_locales <- vars_loc
     r$decision <- "r\u00e9gionale (comparaison impossible)"; r$motif <- motif
     r$statut_seuils <- "valeur provisoire, sans source, \u00e0 v\u00e9rifier"
     list(resume = r, par_pli = data.frame(), remplace = FALSE, publiee = "regionale")
@@ -728,6 +731,7 @@ compare_local_regional <- function(local_trophic, regional_map, n_anchors = NA_i
                     rmse_local = sqrt(mean((obs[ok] - loc[ok])^2)),
                     rmse_regional = sqrt(mean((obs[ok] - reg[ok])^2)),
                     biais_regional = mean(reg[ok] - obs[ok]), aoa_part_carte = aoa_part,
+                    variables_locales = vars_loc,
                     decision = if (remplace) "locale" else "r\u00e9gionale", motif = motif,
                     statut_seuils = "valeur provisoire, sans source, \u00e0 v\u00e9rifier",
                     stringsAsFactors = FALSE)
@@ -770,22 +774,20 @@ select_trophic_map <- function(maps_regional, local_map = NULL, comparison = NUL
   list(maps = maps_regional, publiee = "regionale", motif = comparison$resume$motif)
 }
 
-#' Variables du modèle trophique local : celles du régional pour le climat de maille large
+#' Variables du modèle trophique local : les mêmes variables larges que le régional, plus des fines
 #'
-#' Le modèle local (ancrages GBIF) reprend tous les prédicteurs, **sauf** les variables climatiques de
-#' maille large que le modèle régional trophique n'utilise pas : avec `trophique_climat = "sans"`,
-#' aucune ; `coarse_t_corr_700m` n'y entre que si le régional l'a. Les deux modèles ne diffèrent
-#' ainsi que par la finesse des données (terrain fin, lithologie), jamais par un climat que l'un
-#' voit et l'autre non.
+#' Le modèle local (ancrages GBIF) prend **exactement les variables larges du modèle régional**
+#' (`vars_modele$trophic` : climat selon `trophique_climat`, lithologie, formation, pH) auxquelles
+#' s'ajoutent des variables **fines nommées** (terrain fin non vide, sols) : seule la finesse des
+#' données les distingue, jamais un climat que l'un verrait et l'autre non. Le local suit donc
+#' `trophique_climat` de lui-même.
 #'
-#' @param predictors Noms de toutes les couches de prédicteurs.
-#' @param climate Noms des couches climatiques de maille large (`predictors_climat`).
 #' @param regional Variables du modèle trophique régional (`vars_modele$trophic`).
-#' @return Vecteur de noms de variables du modèle local.
+#' @param fines Noms des variables fines ajoutées (couches de terrain fin non vides, sols).
+#' @return Vecteur de noms de variables du modèle local (sans doublon), les larges d'abord.
 #' @examples
-#' local_trophic_vars(c("coarse_t_moy", "coarse_t_corr_700m", "pente", "coarse_litho_enc"),
-#'                    c("coarse_t_moy", "coarse_t_corr_700m"), "coarse_litho_enc")
+#' local_trophic_vars(c("coarse_litho_enc", "coarse_formation_enc"), c("pente", "twi"))
 #' @export
-local_trophic_vars <- function(predictors, climate, regional) {
-  setdiff(predictors, setdiff(climate, regional))
+local_trophic_vars <- function(regional, fines) {
+  unique(c(regional, fines))
 }

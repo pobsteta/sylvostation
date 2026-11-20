@@ -2175,9 +2175,9 @@ sont pas remplacés (le run réel n'a pas été relancé).
 - **Portée de l'IC :** il est **conditionnel aux prédictions hors pli figées** (une seule répartition en
   plis, un seul ajustement) : il rend compte du choix des blocs d'ancrages, pas de la variabilité de
   l'ajustement du local. `n_tirages` donne le nombre de tirages valides.
-- **Variables égales :** le local reprend les prédicteurs, sauf les variables climatiques de maille large que
-  le régional trophique n'utilise pas (`local_trophic_vars()` ; `trophique_climat: sans` : aucune, donc
-  pas de `coarse_t_corr_700m`).
+- **Variables égales :** le local prend les mêmes variables larges que le régional (`vars_modele$trophic`,
+  donc il suit `trophique_climat` ; avec `sans`, aucun climat, pas de `coarse_t_corr_700m`) plus des variables fines
+  nommées (`vars_fines` : terrain fin non vide, sols), écrites dans `variables_locales` (`local_trophic_vars()`).
 - **Asymétries :** (a) décalage de domaine (flore IFN sur 700 m contre listes de 50 m) : défavorise le
   régional ; un régional recalibré hors pli est rendu pour information, **jamais comme critère** ; (b) fuite
   possible en faveur du régional (placettes IFN d'apprentissage voisines des ancrages) : règle plus dure pour

@@ -221,19 +221,30 @@ test_that("_targets.R : le local n'entre dans maps que par select_trophic_map", 
   expect_match(bloc("comparaison_locale"), "maps_regional", fixed = TRUE)   # le regional, jamais maps
 })
 
-test_that("local_trophic_vars : jamais de climat que le regional n'a pas (trophique_climat = sans)", {
-  pred <- c("coarse_p_etp_sv", "coarse_t_moy", "coarse_t_corr_700m", "coarse_litho_enc",
-            "coarse_formation_enc", "pente", "twi")
-  clim <- c("coarse_p_etp_sv", "coarse_t_moy", "coarse_t_corr_700m")
+test_that("local_trophic_vars : memes variables larges que le regional, plus des fines nommees", {
+  fines <- c("pente", "twi", "tpi_100")
   reg_sans <- c("coarse_litho_enc", "coarse_formation_enc")           # trophique_climat = sans
-  v <- local_trophic_vars(pred, clim, reg_sans)
-  expect_setequal(v, c("coarse_litho_enc", "coarse_formation_enc", "pente", "twi"))
-  expect_false(any(clim %in% v))
-  expect_false("coarse_t_corr_700m" %in% v)
-  # le regional a la T corrigee : le local l'a aussi, et seulement elle
-  v2 <- local_trophic_vars(pred, clim, c("coarse_p_etp_sv", "coarse_t_corr_700m", reg_sans))
-  expect_true(all(c("coarse_p_etp_sv", "coarse_t_corr_700m") %in% v2))
+  v <- local_trophic_vars(reg_sans, fines)
+  expect_equal(setdiff(v, fines), reg_sans)                            # variables larges = regional
+  expect_false(any(grepl("^coarse_(t_|p_etp)", v)))                    # aucun climat, pas de T corrigee
+  expect_setequal(v, c(reg_sans, fines))
+  # le regional a la T corrigee : le local suit de lui-meme
+  reg2 <- c("coarse_p_etp_sv", "coarse_t_corr_700m", reg_sans)
+  v2 <- local_trophic_vars(reg2, fines)
+  expect_equal(setdiff(v2, fines), reg2)
   expect_false("coarse_t_moy" %in% v2)
+  expect_false(anyDuplicated(local_trophic_vars(reg2, c(fines, "pente"))) > 0)
+})
+
+test_that("variables_locales : ecrites dans la table de comparaison", {
+  skip_if_not_installed("ranger")
+  d <- fabrique_ancrages(signal = "a")
+  l <- local_de(d)
+  l$variables <- c("a", "pente")
+  r <- carte(function(x, y) rep(mean(d$trophic), length(x)))
+  expect_equal(compare_local_regional(l, r, n_boot = 100)$resume$variables_locales, "a, pente")
+  expect_warning(v <- compare_local_regional(list(n_complets = 3L), r), "effectif")
+  expect_true(is.na(v$resume$variables_locales))
 })
 
 test_that("_targets.R : local_trophic prend ses variables de local_trophic_vars et vars_modele", {
@@ -243,9 +254,13 @@ test_that("_targets.R : local_trophic prend ses variables de local_trophic_vars 
   debuts <- grep("^\\s*tar_target\\(", l)
   nom <- sub("^\\s*tar_target\\(([A-Za-z_0-9.]+).*$", "\\1", l[debuts])
   skip_if(!"maps_regional" %in% nom, "cibles reelles absentes de _targets.R")
-  i <- which(nom == "local_trophic")
-  b <- paste(l[debuts[i]:(c(debuts, length(l) + 1L)[i + 1L] - 1L)], collapse = "\n")
-  expect_match(b, "local_trophic_vars(names(predictors), names(predictors_climat)", fixed = TRUE)
-  expect_match(b, "vars_modele$trophic", fixed = TRUE)
+  bloc_cible <- function(n) {
+    i <- which(nom == n)
+    paste(l[debuts[i]:(c(debuts, length(l) + 1L)[i + 1L] - 1L)], collapse = "\n")
+  }
+  b <- bloc_cible("local_trophic")
+  expect_match(b, "local_trophic_vars(vars_modele$trophic, vars_fines)", fixed = TRUE)
+  expect_false(grepl("names(predictors)", b, fixed = TRUE))     # jamais tous les predicteurs
+  expect_match(bloc_cible("vars_fines"), "terrain", fixed = TRUE)
   expect_false(grepl("coarse_t_corr", b))                       # jamais nomme en dur
 })

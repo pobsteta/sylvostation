@@ -453,6 +453,7 @@ comparaison, carte régionale. `select_trophic_map()` est le seul passage du loc
 régional recalibré hors pli est une **information**, jamais un critère) et
 `comparaison_trophique_locale_par_pli.csv` ; le rapport écrit quelle carte est publiée et pourquoi, avec
 les trois asymétries (décalage de domaine, fuite possible en faveur du régional, représentativité).
-L'IC est conditionnel aux prédictions hors pli figées. Le local reprend les prédicteurs sauf le climat de maille
-large que le régional n'utilise pas (`local_trophic_vars()`, donc aucun climat avec `trophique_climat: sans`). Seuils :
+L'IC est conditionnel aux prédictions hors pli figées. Le local prend les mêmes variables larges que le régional (`vars_modele$trophic`, donc il suit
+`trophique_climat`) plus des variables fines nommées (cible `vars_fines` : terrain fin non vide, sols), écrites dans
+`variables_locales` (`local_trophic_vars()`). Seuils :
 valeur provisoire, sans source, à vérifier (`config.yml`) ; justification : `docs/referentiels.md` § 41.

@@ -667,15 +667,16 @@ if (!isTRUE(cfg$demo)) {
       m
     }),
     # composante locale (en ligne seulement) : trophique sur les ancrages GBIF
-    # Variables du local : celles des predicteurs SAUF les variables climatiques de maille large que le
-    # modele regional n'utilise pas (trophique_climat = sans : aucune ; coarse_t_corr_700m n'y entre
-    # que si le regional l'a), pour que les deux modeles ne different que par la finesse des donnees.
+    # Variables du local : les MEMES variables larges que le regional (vars_modele$trophic : il suit
+    # trophique_climat de lui-meme, coarse_t_corr_700m n'y entre que si le regional l'a) plus des
+    # variables FINES nommees (terrain fin non vide, sols) ; jamais names(predictors).
+    tar_target(vars_fines, c(setdiff(names(terrain), sylvostation::empty_layers(terrain)),
+                             if (!is.null(soils)) names(soils))),
     # Toujours une liste quand des ancrages ont ete cherches : `model`/`cv`/`data`, ou `n_complets`
     # (effectif insuffisant) ou `erreur` (echec de l'ajustement, message d'origine).
     tar_target(local_trophic, {
       if (is.null(anchors)) return(NULL)
-      v <- sylvostation::local_trophic_vars(names(predictors), names(predictors_climat),
-                                            vars_modele$trophic)
+      v <- sylvostation::local_trophic_vars(vars_modele$trophic, vars_fines)
       d <- anchors[stats::complete.cases(sf::st_drop_geometry(anchors)[, c("trophic", v)]), ]
       if (nrow(d) < cfg$local_min_ancrages) return(list(n_complets = nrow(d)))
       # un echec (trop peu de blocs pour 5 plis, par exemple) : avertissement avec sa raison, pas de
