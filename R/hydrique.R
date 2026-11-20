@@ -805,6 +805,18 @@ ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm",
                            compute_pet = TRUE, latitude = lat, altitude = alt)
 }
 
+# Decalage de la temperature journaliere d'une serie SAFRAN de `dT` degC (mission 039) ;
+# humidite relative recalculee a pression de vapeur constante (pression de vapeur saturante
+# de FAO-56, eq. 11), bornee a [0, 100].
+.t_shift <- function(sm, dT) {
+  if (!is.finite(dT) || dT == 0) return(sm)
+  es <- function(t) 0.6108 * exp(17.27 * t / (t + 237.3))
+  t0 <- sm$T
+  sm$T <- t0 + dT
+  if ("HU" %in% names(sm)) sm$HU <- pmin(100, pmax(0, sm$HU * es(t0) / es(sm$T)))
+  sm
+}
+
 # Interpolation lineaire a une dimension, constante hors des noeuds.
 .interp1 <- function(x, y, xout) {
   ok <- is.finite(x) & is.finite(y)
@@ -899,6 +911,15 @@ ru_by_safran_cell <- function(points, safran, emprise = NULL, ru_col = "ru_mm",
 #' @param seed Graine du tirage des cellules de contrôle.
 #' @param k_methode Méthode de `k` (`attr(k, "methode")` par défaut).
 #' @param interpolation `"bilineaire"` (défaut, mission 033) ou `"proche"`.
+#' @param t_lapse `NULL` (aucune correction, comportement d'avant 039) ou gradient
+#'   altitudinal de la température (°C/m, ou liste de [safran_lapse_rate()]). Mission 039 :
+#'   la température journalière de chaque nœud (ou point) est décalée de
+#'   `t_lapse × (z_nœud − z_bilinéaire)` (`z_nœud` = altitude moyenne de ses cellules dans
+#'   `altitude`, `z_bilinéaire` = altitude des mailles `alt_mailles` interpolée avec les mêmes
+#'   poids), l'humidité relative recalculée à pression de vapeur constante (FAO-56, éq. 11), et
+#'   l'altitude de Penman est `z_nœud`. Gradient constant chaque jour : inversions hivernales
+#'   ignorées (à vérifier). Exige `interpolation = "bilineaire"` et `altitude`.
+#' @param alt_mailles `data.frame` de [safran_cell_altitude()] (si `t_lapse`).
 #' @param node_res Pas (m) du réseau des nœuds de calcul de la météo interpolée (1000).
 #'   L'interpolation bilinéaire (aucune référence publiée lue) et ce pas de 1 km sont
 #'   provisoires : à vérifier.
@@ -923,8 +944,23 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
                                annees = NULL, lai_max = 6, forest_type = "broadleaved",
                                budburst = 110, leaf_fall = 300, pas_k = 0.02, pas_ru = 10,
                                n_controle = 30, seed = 1, k_methode = attr(k, "methode"),
-                               interpolation = c("bilineaire", "proche"), node_res = 1000) {
+                               interpolation = c("bilineaire", "proche"), node_res = 1000,
+                               t_lapse = NULL, alt_mailles = NULL) {
   interpolation <- match.arg(interpolation)
+  corr_t <- !is.null(t_lapse)
+  if (corr_t) {
+    if (is.list(t_lapse)) t_lapse <- t_lapse$gradient
+    if (!is.numeric(t_lapse) || length(t_lapse) != 1L || !is.finite(t_lapse)) {
+      stop("`t_lapse` doit \u00eatre un gradient (\u00b0C/m) ou le r\u00e9sultat de safran_lapse_rate().",
+           call. = FALSE)
+    }
+    .check_alt_mailles(alt_mailles)
+    if (is.null(altitude)) stop("`altitude` est requise pour corriger la temp\u00e9rature.", call. = FALSE)
+    if (interpolation != "bilineaire") {
+      stop("La correction de temp\u00e9rature (`t_lapse`) exige `interpolation = \"bilineaire\"`.",
+           call. = FALSE)
+    }
+  }
   if (!is.numeric(node_res) || length(node_res) != 1L || !(node_res > 0)) {
     stop("`node_res` doit \u00eatre un nombre positif (m).", call. = FALSE)
   }
@@ -961,6 +997,7 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
                 rg = "SSI x 0,01 x k (SSI en J/cm2, v\u00e9rifi\u00e9 2026-11-18)",
                 etp = "Penman biljouR (penman_pet, vent ramen\u00e9 \u00e0 2 m depuis 10 m)",
                 interpolation = interpolation, node_res = node_res,
+                t_lapse = if (corr_t) t_lapse else NA_real_,
                 statut = "provisoire (r\u00e9f\u00e9rentiels \u00a7 25.5, mission 021)")
 
   # cellules ou points : coordonnees (x = est, y = nord), facteurs, RU
@@ -1126,6 +1163,18 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
     }
     Wn <- .safran_poids(gx, gy, mailles)
     large <- .safran_large(s, vars_s, mailles)
+    # temperature corrigee du relief (mission 039) : altitude moyenne des cellules du noeud
+    # (ou du point) contre altitude des mailles interpolee avec les memes poids
+    if (corr_t) {
+      ext_z <- function() {
+        v <- terra::extract(altitude[[1]], xy[, 1:2, drop = FALSE])
+        v[[ncol(v)]]
+      }
+      z_cel <- if (!pts && terra::compareGeom(altitude, k, stopOnError = FALSE)) {
+        terra::values(altitude[[1]], mat = FALSE)
+      } else ext_z()
+      zm_s <- alt_mailles$z_moy[match(mailles$maille, alt_mailles$maille)]
+    }
     alt_ok <- if (is.null(altitude)) rep(TRUE, nrow(mailles)) else mailles$maille %in% alt_connue
     pondere <- function(w, v, ok = rep(TRUE, length(v))) {
       w <- w * ok
@@ -1134,8 +1183,19 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
     unites <- lapply(seq_along(gx), function(u) {
       i <- cand[grp_u == u]
       w <- Wn[u, ]
-      list(i = i, sm = .safran_point(large, w), lat = pondere(w, lat_m),
-           alt = pondere(w, unname(alt_m[mailles$maille]), alt_ok),
+      sm <- .safran_point(large, w)
+      alt <- pondere(w, unname(alt_m[mailles$maille]), alt_ok)
+      dT <- NA_real_
+      if (corr_t) {
+        zn <- mean(z_cel[i], na.rm = TRUE)
+        zb <- if (any(w > 0 & is.na(zm_s))) NA_real_ else sum(w * zm_s, na.rm = TRUE)
+        if (is.finite(zn) && is.finite(zb)) {
+          dT <- t_lapse * (zn - zb)
+          sm <- .t_shift(sm, dT)
+          alt <- zn
+        }
+      }
+      list(i = i, sm = sm, lat = pondere(w, lat_m), alt = alt, dT = dT,
            ctl = if (pts) i else intersect(i, ctl_tous),
            maille = .maille_proche_vec(gx[u], gy[u], mailles))
     })
@@ -1161,7 +1221,7 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
       U <- seq(pas_ru * floor(min(U) / pas_ru), pas_ru * ceiling(max(U) / pas_ru), by = pas_ru)
       U <- U[U > 0]
     }
-    o <- list(i = i, k_sv = kc, maille = un$maille)
+    o <- list(i = i, k_sv = kc, maille = un$maille, dT = if (is.null(un$dT)) NA_real_ else un$dT)
     ctl <- un$ctl
     # profils mensuels de k a passer dans Penman : plat, puis classes, puis controles/points
     if (!pts) {
@@ -1235,7 +1295,7 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
       ctl_tab <- c(ctl_tab, o$table)
     }
     infos_u[[length(infos_u) + 1L]] <- data.frame(maille = o$maille, n_noeuds_k = o$n_noeuds_k,
-                                                  n_noeuds_ru = o$n_noeuds_ru)
+                                                  n_noeuds_ru = o$n_noeuds_ru, dT = o$dT)
   }
   # ecart table / calcul direct, par maille SAFRAN (cellules de controle tirees par maille)
   ecarts <- list()
@@ -1257,7 +1317,10 @@ hydric_stress_grid <- function(k, ru, safran = NULL, points = NULL, altitude = N
                n_cellules = sum(ma == m & utile),
                n_noeuds_k = if (pts || !NROW(u)) NA_integer_ else as.integer(sum(u$n_noeuds_k)),
                n_noeuds_ru = if (NROW(u)) as.integer(max(u$n_noeuds_ru)) else NA_integer_,
-               n_unites = NROW(u))
+               n_unites = NROW(u),
+               dT_moyen = if (corr_t && NROW(u) && any(is.finite(u$dT))) mean(u$dT, na.rm = TRUE) else NA_real_,
+               dT_min = if (corr_t && NROW(u) && any(is.finite(u$dT))) min(u$dT, na.rm = TRUE) else NA_real_,
+               dT_max = if (corr_t && NROW(u) && any(is.finite(u$dT))) max(u$dT, na.rm = TRUE) else NA_real_)
   })
   res[, "grad_hydrique_carte"] <- -res[, "is_topo"]
   methode <- if (identical(k_methode, "climatique")) "biljou_climatique" else "biljou_topo"
@@ -1318,4 +1381,85 @@ write_hydric_grid <- function(r, out_dir, ser_code, forest = NULL, synthetic = F
   f <- file.path(dir, paste0(if (isTRUE(synthetic)) "synth_" else "", "hydrique.tif"))
   fmt <- .write_raster_cog(h, f, cog)
   invisible(data.frame(fichier = f, format = fmt, stringsAsFactors = FALSE))
+}
+
+#' Écrire les couches de la mission 039 (température corrigée, RU de carte, bilan latéral)
+#'
+#' Écrit chaque `SpatRaster` non `NULL` de `layers` dans `out_dir/<ser_code>/<nom>.tif`, en
+#' COG si possible (comme [write_hydric_grid()]), préfixé `synth_` si `synthetic = TRUE`.
+#'
+#' @param layers Liste nommée de `SpatRaster` (EPSG:2154) ou `NULL`.
+#' @param out_dir Dossier racine des sorties.
+#' @param ser_code Code SER (sous-dossier).
+#' @param synthetic `TRUE` pour préfixer les fichiers par `synth_`.
+#' @param cog Demander un COG.
+#' @return Un `data.frame` (`fichier`, `format`), de façon invisible.
+#' @examples
+#' r <- terra::rast(xmin = 1015500, xmax = 1015550, ymin = 6793500, ymax = 6793550,
+#'                  resolution = 25, crs = "EPSG:2154", vals = 9)
+#' names(r) <- "t_corr"
+#' basename(write_layers(list(temperature_corrigee = r, vide = NULL), tempdir(), "D11",
+#'                       synthetic = TRUE)$fichier)
+#' @export
+write_layers <- function(layers, out_dir, ser_code, synthetic = FALSE, cog = TRUE) {
+  if (!is.list(layers) || is.null(names(layers)) || any(!nzchar(names(layers)))) {
+    stop("`layers` doit être une liste nommée de SpatRaster.", call. = FALSE)
+  }
+  if (!is.character(out_dir) || length(out_dir) != 1L || !nzchar(out_dir)) {
+    stop("`out_dir` doit être un chemin.", call. = FALSE)
+  }
+  if (!is.character(ser_code) || length(ser_code) != 1L || !nzchar(ser_code)) {
+    stop("`ser_code` doit être un code SER.", call. = FALSE)
+  }
+  layers <- Filter(Negate(is.null), layers)
+  dir <- file.path(out_dir, ser_code)
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  out <- lapply(names(layers), function(n) {
+    r <- layers[[n]]
+    if (!inherits(r, "SpatRaster")) stop("`layers$", n, "` n'est pas un SpatRaster.", call. = FALSE)
+    assert_crs_2154(r)
+    f <- file.path(dir, paste0(if (isTRUE(synthetic)) "synth_" else "", n, ".tif"))
+    data.frame(fichier = f, format = .write_raster_cog(r, f, cog), stringsAsFactors = FALSE)
+  })
+  invisible(if (length(out)) do.call(rbind, out) else
+    data.frame(fichier = character(), format = character()))
+}
+
+#' Compléter une RU de carte par la RU de la maille SAFRAN
+#'
+#' Les cellules sans RU apprise (géologie ou SoilGrids absents dans le disque de 700 m)
+#' reçoivent la RU uniforme de leur maille ([ru_by_safran_cell()]) : la carte hydrique
+#' n'a pas de trou là où elle en avait avant la mission 039. La part complétée est rendue
+#' en attribut `part_completee` (perdu dans un store `targets` : la lire aussitôt).
+#'
+#' @param ru `SpatRaster` de RU (mm), EPSG:2154.
+#' @param ru_mailles `data.frame` (`maille`, `ru_mm`) de [ru_by_safran_cell()].
+#' @param safran `data.frame` SIM2 (colonnes `LAMBX`, `LAMBY`).
+#' @return `SpatRaster` `ru_carte` (mm).
+#' @examples
+#' s <- read_safran(system.file("extdata", "safran_sim2_12mailles_extrait.csv",
+#'                               package = "sylvostation"))
+#' m <- sylvostation:::.mailles_safran(s)[1, ]
+#' r <- terra::rast(xmin = m$x - 50, xmax = m$x + 50, ymin = m$y - 50, ymax = m$y + 50,
+#'                  resolution = 50, crs = "EPSG:2154", vals = c(NA, 120, 130, NA))
+#' terra::values(ru_fill_by_cell(r, data.frame(maille = m$maille, ru_mm = 90), s))[, 1]
+#' @export
+ru_fill_by_cell <- function(ru, ru_mailles, safran) {
+  if (!inherits(ru, "SpatRaster")) stop("`ru` doit être un SpatRaster.", call. = FALSE)
+  assert_crs_2154(ru)
+  if (!is.data.frame(ru_mailles) || !all(c("maille", "ru_mm") %in% names(ru_mailles))) {
+    stop("`ru_mailles` doit avoir les colonnes maille et ru_mm.", call. = FALSE)
+  }
+  v <- terra::values(ru[[1]], mat = FALSE)
+  manque <- which(!is.finite(v))
+  if (length(manque)) {
+    xy <- terra::xyFromCell(ru, manque)            # x = est, y = nord
+    ma <- .maille_proche_vec(xy[, 1], xy[, 2], .mailles_safran(.safran_norm(safran)))
+    v[manque] <- ru_mailles$ru_mm[match(ma, ru_mailles$maille)]
+  }
+  out <- terra::rast(ru[[1]])
+  terra::values(out) <- v
+  names(out) <- "ru_carte"
+  attr(out, "part_completee") <- length(manque) / max(1, length(v))
+  out
 }

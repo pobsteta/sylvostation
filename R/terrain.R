@@ -667,3 +667,178 @@ solar_factor <- function(dtm, days = .JOURS_TYPES, linke = 3, albedo = 0.2, step
   attr(out, "parametres") <- param
   out
 }
+
+# ---- MNT de 250 m sur la GRECO (mission 039) ------------------------------------------------
+# BD ALTI (IGN, Licence Ouverte Etalab), servie par le WMS raster de la Geoplateforme, couche
+# ELEVATION.ELEVATIONGRIDCOVERAGE (titre « MNT BDAlti V1 », « BDAlti V1 au pas de 25m »),
+# GeoTIFF Float32 ; verifie le 2026-11-20 (docs/referentiels.md section 37). Le flux de
+# telechargement BDALTI ne propose que le pas de 25 m par departement : le pas de 250 m est
+# obtenu par le service (reechantillonnage non documente, a verifier) a 125 m, puis moyenne 2 x 2.
+.URL_BDALTI_WMS <- paste0(
+  "https://data.geopf.fr/wms-r/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap",
+  "&LAYERS=ELEVATION.ELEVATIONGRIDCOVERAGE&STYLES=&CRS=EPSG:2154",
+  "&BBOX=%.0f,%.0f,%.0f,%.0f&WIDTH=%d&HEIGHT=%d&FORMAT=image/geotiff")
+
+#' MNT de 250 m (BD ALTI) sur une emprise, en cache
+#'
+#' Lit la BD ALTI de l'IGN (Licence Ouverte Etalab 2.0, fiche `IGNF_BD-ALTI`) par le WMS
+#' raster de la Géoplateforme (couche `ELEVATION.ELEVATIONGRIDCOVERAGE`, GeoTIFF Float32 ;
+#' source vérifiée le 2026-11-20), par tuiles d'au plus 4 000 pixels de côté, à `res / 2` m,
+#' puis agrège par moyenne 2 × 2 à `res` m (Lambert-93). Le rééchantillonnage du service est
+#' non documenté (à vérifier). Les valeurs inférieures à −500 m (absence de donnée, mer) sont
+#' mises à `NA`. Sert à l'altitude des mailles SAFRAN et à la température corrigée moyennée
+#' dans 700 m (couche large) ; jamais extrait tel quel aux placettes IFN (couche `mnt_250`,
+#' variable fine par son préfixe).
+#'
+#' @param bbox Emprise `c(xmin, ymin, xmax, ymax)` ou `bbox` en Lambert-93 (EPSG:2154).
+#' @param cache_dir Dossier de cache.
+#' @param res Maille rendue (m), 250 par défaut.
+#' @param margin_m Marge autour de `bbox` (m).
+#' @param offline `TRUE` : aucun accès au réseau (seul le cache sert).
+#' @param downloader Fonction `function(url, destfile)` (par défaut `utils::download.file`
+#'   en binaire ; remplaçable dans les tests).
+#' @return Le chemin du GeoTIFF (`mnt_250`, m, EPSG:2154).
+#' @examples
+#' \dontrun{
+#' fetch_mnt_large(c(909550, 6723356, 1060558, 6912236), "data/cache/bdalti")
+#' }
+#' @export
+fetch_mnt_large <- function(bbox, cache_dir, res = 250, margin_m = 2000, offline = FALSE,
+                            downloader = NULL) {
+  b <- .as_bbox(bbox)
+  if (!is.numeric(res) || length(res) != 1L || !is.finite(res) || res < 50) {
+    stop("`res` doit être un nombre >= 50 (m).", call. = FALSE)
+  }
+  x0 <- floor((b[["xmin"]] - margin_m) / res) * res
+  x1 <- ceiling((b[["xmax"]] + margin_m) / res) * res
+  y0 <- floor((b[["ymin"]] - margin_m) / res) * res
+  y1 <- ceiling((b[["ymax"]] + margin_m) / res) * res
+  out <- file.path(cache_dir, sprintf("bdalti_%dm_x%s.tif", round(res),
+                                      paste(round(c(x0, y0, x1, y1)), collapse = "_")))
+  if (file.exists(out)) return(out)
+  if (offline) {
+    stop("Mode hors ligne : MNT BD ALTI absent du cache (", basename(out), ").", call. = FALSE)
+  }
+  if (is.null(downloader)) {
+    downloader <- function(url, destfile) utils::download.file(url, destfile, mode = "wb",
+                                                               quiet = TRUE)
+  }
+  fin <- res / 2
+  pas <- 4000 * fin
+  dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
+  tuiles <- list()
+  for (tx in seq(x0, x1 - 1e-6, by = pas)) for (ty in seq(y0, y1 - 1e-6, by = pas)) {
+    ex <- c(tx, ty, min(tx + pas, x1), min(ty + pas, y1))
+    w <- as.integer(round((ex[3] - ex[1]) / fin))
+    h <- as.integer(round((ex[4] - ex[2]) / fin))
+    f <- tempfile("bdalti_", tmpdir = cache_dir, fileext = ".tif")
+    downloader(sprintf(.URL_BDALTI_WMS, ex[1], ex[2], ex[3], ex[4], w, h), f)
+    r <- terra::rast(f)
+    if (terra::nrow(r) != h || terra::ncol(r) != w) {
+      stop("MNT BD ALTI : tuile de taille inattendue (", terra::ncol(r), " x ", terra::nrow(r),
+           " au lieu de ", w, " x ", h, ").", call. = FALSE)
+    }
+    r <- terra::rast(r)                        # georeference imposee (EPSG:2154, x = est)
+    terra::ext(r) <- terra::ext(ex[1], ex[3], ex[2], ex[4])
+    terra::crs(r) <- "EPSG:2154"
+    terra::values(r) <- terra::values(terra::rast(f), mat = FALSE)
+    tuiles[[length(tuiles) + 1L]] <- r
+    unlink(f)
+  }
+  m <- if (length(tuiles) == 1L) tuiles[[1]] else do.call(terra::merge, tuiles)
+  m <- terra::ifel(m < -500, NA, m)
+  m <- terra::aggregate(m, fact = 2, fun = "mean", na.rm = TRUE)
+  names(m) <- "mnt_250"
+  terra::metags(m) <- c(source = "BD ALTI IGN (Licence Ouverte), WMS-R ELEVATION.ELEVATIONGRIDCOVERAGE")
+  tmp <- paste0(out, ".part.tif")
+  terra::writeRaster(m, tmp, overwrite = TRUE, datatype = "FLT4S")
+  file.rename(tmp, out)
+  out
+}
+
+# ---- Bilan lateral en eau (Piedallu et al. 2006, tableau 20 ; mission 039, option C) -----------
+# Coefficients du logit multinomial (reference : apports), N = 1 200 releves EcoPlant vosgiens,
+# pseudo-R2 de McFadden 0,112, 57,4 % bien reclasses (tableau 21). A VERIFIER : unites de la
+# courbure, calcul de l'indice de Moore et MNT de 50 m non donnes par le texte.
+.PIEDALLU_T20 <- list(
+  depart = c(constante = -0.926, curv150 = 2.659, idr_1500 = 3.410, moore = -0.395),
+  equilibre = c(constante = 0.459, curv150 = 1.327, idr_1500 = 1.379, moore = -0.176))
+
+#' Bilan latéral en eau (Piedallu et al. 2006, tableau 20) : carte de contrôle
+#'
+#' Classe de bilan latéral (1 départ, 2 équilibre, 3 apports) par le logit multinomial du
+#' tableau 20 de Piedallu et al. (2006, HAL hal-00835906, p. 53 imprimée) sur trois variables
+#' du MNT : courbure à 150 m (`curv150`, Zevenbergen et Thorne, signe ESRI, 1/m), indice de
+#' dénivelé relatif dans 1 500 m (`idr_1500` = (z − min) / (max − min), carte 6F du rapport) et indice de
+#' Moore (`moore`, lu comme le TWI ln(a / tan β), à vérifier), à 50 m. Équivalent en réserve
+#' utile `offsets` (−30, 0, +60 mm, synthèse bibliographique de la p. 54, non reproduite).
+#'
+#' **Désactivé par défaut** (`bilan_lateral: false`, arbitrage du 2026-11-20, option C) et
+#' jamais ajouté à la RU de BILJOU : appliqué tel quel à l'emprise test (mesure de la mission
+#' 034), il donne 53 % d'apports et presque aucun départ (0 à 0,1 %), contre 27,6 % d'apports
+#' et 25,9 % de départs observés en calibration (tableau 21). Coefficients **à vérifier**,
+#' modifiables dans `config.yml` (`bilan_lateral_coef`). Toutes les couches sont fines
+#' (`FINE_VARIABLES`).
+#'
+#' @param dtm `SpatRaster` d'altitude (m), EPSG:2154, maille <= 50 m.
+#' @param coef Coefficients (liste `depart`, `equilibre` : `constante`, `curv150`,
+#'   `idr_1500`, `moore`).
+#' @param offsets Équivalent en RU (mm) des classes départ, équilibre, apports.
+#' @return `SpatRaster` à 50 m : `curv150`, `idr_1500`, `moore`, `p_depart`, `p_equilibre`,
+#'   `p_apports`, `bilan_lateral` (classe 1 à 3), `ru_bilan_lateral` (mm). Attribut `parts`
+#'   (part des cellules par classe).
+#' @examples
+#' f <- system.file("extdata", "synth_dtm.tif", package = "sylvostation")
+#' if (nzchar(f)) {
+#'   b <- lateral_balance(terra::rast(f))
+#'   attr(b, "parts")
+#' }
+#' @export
+lateral_balance <- function(dtm, coef = .PIEDALLU_T20, offsets = c(-30, 0, 60)) {
+  .check_dtm(dtm)
+  if (is.null(coef)) coef <- .PIEDALLU_T20
+  for (cl in c("depart", "equilibre")) {
+    if (is.null(coef[[cl]]) || !all(c("constante", "curv150", "idr_1500", "moore") %in%
+                                    names(coef[[cl]]))) {
+      stop("`coef` doit donner constante, curv150, idr_1500, moore pour depart et equilibre.",
+           call. = FALSE)
+    }
+  }
+  if (!is.numeric(offsets) || length(offsets) != 3L || anyNA(offsets)) {
+    stop("`offsets` doit donner trois valeurs (mm).", call. = FALSE)
+  }
+  L <- terra::res(dtm)[1]
+  if (L > 50 + 1e-6) stop("`dtm` doit avoir une maille <= 50 m.", call. = FALSE)
+  z50 <- if (abs(L - 50) < 1e-6) dtm else terra::aggregate(dtm, fact = round(50 / L), fun = "mean")
+  names(z50) <- "z"
+  f150 <- max(1L, round(150 / L))
+  z150 <- terra::aggregate(dtm, fact = f150, fun = "mean")
+  curv <- terra::resample(.curvatures(z150)[["courbure"]], z50, method = "bilinear")
+  n <- floor(1500 / 50)
+  off <- -n:n
+  w <- outer(off, off, function(i, j) sqrt(i^2 + j^2) * 50 <= 1500) * 1
+  w[w == 0] <- NA
+  zmin <- terra::focal(z50, w = w, fun = "min", na.rm = TRUE)
+  zmax <- terra::focal(z50, w = w, fun = "max", na.rm = TRUE)
+  idr <- terra::ifel(zmax - zmin > 0, (z50 - zmin) / (zmax - zmin), 0.5)
+  slope <- terra::terrain(z50, "slope", unit = "degrees", neighbors = 8)
+  acc <- .flow_accumulation(z50)
+  moore <- log((acc * 50) / tan(terra::clamp(slope, lower = 0.1, values = TRUE) * pi / 180))
+  u <- function(cf) exp(cf[["constante"]] + cf[["curv150"]] * curv + cf[["idr_1500"]] * idr +
+                          cf[["moore"]] * moore)
+  ud <- u(coef$depart)
+  ue <- u(coef$equilibre)
+  s <- 1 + ud + ue
+  p <- c(ud / s, ue / s, 1 / s)
+  cl <- terra::which.max(p)
+  ru <- terra::classify(cl, cbind(1:3, offsets))
+  out <- c(curv, idr, moore, p, cl, ru)
+  names(out) <- c("curv150", "idr_1500", "moore", "p_depart", "p_equilibre", "p_apports",
+                  "bilan_lateral", "ru_bilan_lateral")
+  v <- terra::values(cl, mat = FALSE)
+  v <- v[!is.na(v)]
+  attr(out, "parts") <- stats::setNames(as.numeric(table(factor(v, 1:3))) / max(1, length(v)),
+                                        c("depart", "equilibre", "apports"))
+  attr(out, "statut") <- "carte de contrôle, coefficients à vérifier (mission 039)"
+  out
+}

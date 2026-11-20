@@ -21,7 +21,9 @@ hydric_stress_grid(
   seed = 1,
   k_methode = attr(k, "methode"),
   interpolation = c("bilineaire", "proche"),
-  node_res = 1000
+  node_res = 1000,
+  t_lapse = NULL,
+  alt_mailles = NULL
 )
 }
 \arguments{
@@ -56,6 +58,17 @@ ou \code{SpatRaster} (mm) sur la grille de \code{k}.}
 \item{node_res}{Pas (m) du réseau des nœuds de calcul de la météo interpolée (1000).
 L'interpolation bilinéaire (aucune référence publiée lue) et ce pas de 1 km sont
 provisoires : à vérifier.}
+
+\item{t_lapse}{\code{NULL} (aucune correction, comportement d'avant 039) ou gradient
+altitudinal de la température (°C/m, ou liste de \code{\link[=safran_lapse_rate]{safran_lapse_rate()}}). Mission 039 :
+la température journalière de chaque nœud (ou point) est décalée de
+\verb{t_lapse × (z_nœud − z_bilinéaire)} (\code{z_nœud} = altitude moyenne de ses cellules dans
+\code{altitude}, \code{z_bilinéaire} = altitude des mailles \code{alt_mailles} interpolée avec les mêmes
+poids), l'humidité relative recalculée à pression de vapeur constante (FAO-56, éq. 11), et
+l'altitude de Penman est \code{z_nœud}. Gradient constant chaque jour : inversions hivernales
+ignorées (à vérifier). Exige \code{interpolation = "bilineaire"} et \code{altitude}.}
+
+\item{alt_mailles}{\code{data.frame} de \code{\link[=safran_cell_altitude]{safran_cell_altitude()}} (si \code{t_lapse}).}
 }
 \value{
 Grille : \code{SpatRaster} \code{is_topo}, \code{nj_topo}, \code{is_plat}, \code{k_sv}, \code{ru_maille},

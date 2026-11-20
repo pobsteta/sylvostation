@@ -17,7 +17,13 @@ FINE_VARIABLES <- c(
   # resolution depuis la mission 025 (ancien nom : grad_hydrique_25m). Ce n'est pas
   # `grad_hydrique`, colonne des placettes IFN (pas une variable fine).
   sprintf("k_%02d", 1:12), "k_sv", "is_topo", "nj_topo", "is_plat",
-  "grad_hydrique_carte"
+  "grad_hydrique_carte",
+  # mission 039 : temperature corrigee du relief a la cellule (MNT fin), et sa version sur le
+  # MNT de 250 m avant moyenne dans 700 m ; bilan lateral de Piedallu (tableau 20). Le MNT de
+  # 250 m lui-meme (`mnt_250`) est fin par le prefixe `mnt_`.
+  "t_corr", "t_corr_sv", "t_corr_250",
+  "curv150", "idr_1500", "moore", "p_depart", "p_equilibre", "p_apports",
+  "bilan_lateral", "ru_bilan_lateral"
 )
 
 #' Variables à maille large (autorisées aux placettes IFN)

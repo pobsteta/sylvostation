@@ -4,10 +4,12 @@
 \alias{bioclim_axis}
 \title{Axe bioclimatique des placettes}
 \usage{
-bioclim_axis(data)
+bioclim_axis(data, t_var = "coarse_t_moy")
 }
 \arguments{
-\item{data}{Tableau avec \code{coarse_p_etp_sv} et, si possible, \code{coarse_t_moy}.}
+\item{data}{Tableau avec \code{coarse_p_etp_sv} et, si possible, la température \code{t_var}.}
+
+\item{t_var}{Colonne de température (\code{"coarse_t_moy"} par défaut).}
 }
 \value{
 Une liste : \code{vars}, \code{center}, \code{scale}, \code{loadings}, \code{sens}, \code{variance_expliquee}.
@@ -19,6 +21,12 @@ sont centrées-réduites sur les placettes, puis résumées par leur \strong{pre
 principal} (choix provisoire, mission 016), orienté pour que la valeur croisse avec
 la température (« plus haut = plus chaud ») ; sans température, l'axe est
 \code{-(P - ETP)} réduit (« plus haut = plus sec »).
+}
+\details{
+Depuis la mission 039, la température peut être la température corrigée du relief
+moyennée dans 700 m (\code{t_var = "coarse_t_corr_700m"}, \code{\link[=coarse_t_corr_layer]{coarse_t_corr_layer()}}) ; l'axe
+s'applique alors à la carte sur la température de la cellule (\code{t_corr}, variable fine)
+par l'argument \code{layers} de \code{\link[=apply_bioclim]{apply_bioclim()}}.
 }
 \examples{
 d <- data.frame(coarse_p_etp_sv = c(100, 300, 500), coarse_t_moy = c(10, 8, 6))

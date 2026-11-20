@@ -18,7 +18,9 @@ fetch_soilgrids_ph(
 
 \item{cache_dir}{Dossier de cache.}
 
-\item{layer}{Couche (\code{"phh2o_0-5cm_mean"} par défaut : 0-5 cm, moyenne).}
+\item{layer}{Couche (\code{"phh2o_0-5cm_mean"} par défaut : 0-5 cm, moyenne). Depuis la
+mission 039, aussi \code{clay}, \code{sand}, \code{silt} (g/kg, rendus en \%) et \code{cfvo} (cm³/dm³,
+rendu en \% du volume) : toutes ces couches sont stockées × 10 par SoilGrids.}
 
 \item{margin_m}{Marge autour de \code{bbox} (m), pour que la moyenne dans 700 m des placettes du
 bord soit complète.}

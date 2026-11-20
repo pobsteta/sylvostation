@@ -71,10 +71,14 @@ hydrique ».
 | `ifn` | `load_ifn()`, `filter_greco()`, `filter_releves()` | `fetch_ifn()` | extrait |
 | `taxref`, `indicateurs` | `read_taxref()`, `load_indicator_values("tichy")` | `taxref_url`, `tichy_path` | extraits |
 | `safran`, `climat` | `fetch_safran()`, `read_safran()`, `safran_climate()` (avril-septembre, interpolation bilinéaire entre centres de mailles, `safran_interpolation`, mission 033). **Emprise lue = boîte de toutes les placettes de la GRECO ∪ emprise de la carte** (497 mailles pour la GRECO D) ; le fichier filtré `emprise_<année>_<emprise>.csv` porte son emprise dans son nom, jamais resservi pour une autre (mission 035) | SIM2 | 12 mailles |
-| `ifn_gradients` | `ifn_real_gradients()` : Tichý, `ru_from_texture()`, `hydric_stress()` (ADR 0006), `bioclim_axis()` | | |
+| `mnt_large_file`, `alt_mailles`, `t_lapse`, `t_validation`, `t_coarse` | mission 039 : `fetch_mnt_large()` (BD ALTI 250 m, WMS de l'IGN, Licence Ouverte), `safran_cell_altitude()` (altitude moyenne des mailles), `safran_lapse_rate()` (gradient T ~ z + x + y entre mailles), `t_correction_validation()` (maille laissée de côté), `coarse_t_corr_layer()` (T corrigée moyennée dans 700 m, couche large) ; `climat_temperature: corrigee` | WMS BD ALTI | `mnt_large_path`, sinon **absent** : T bilinéaire, avertissement |
+| `ifn_gradients` | `ifn_real_gradients()` : Tichý, `ru_from_texture()`, `hydric_stress()` (ADR 0006), `bioclim_axis()` ; axe appris sur `coarse_t_corr_700m` si la T corrigée existe (mission 039) | | |
 | `solar_k` | `solar_factor()` : k mensuel de GRASS `r.sun` (ciel clair) sur l'altitude de la grille ; repli k = 1 sans GRASS | | |
 | `ru_mailles` | `ru_by_safran_cell()` : RU uniforme par maille SAFRAN (médiane euptf2 des placettes IFN ; médiane de l'emprise sous `ru_min_placettes` = 5 placettes, provisoire) | | |
-| `hydric_grid` | `hydric_stress_grid()` : Istress à `resolution_m` (BILJOU, ETP Penman biljouR sur SSI × k), plat de référence, écart table / calcul direct ; météo interpolée sur un réseau de `hydric_node_res_m` = 1 000 m (mission 033) | | |
+| `hydric_grid` | `hydric_stress_grid()` : Istress à `resolution_m` (BILJOU, ETP Penman biljouR sur SSI × k), plat de référence, écart table / calcul direct ; météo interpolée sur un réseau de `hydric_node_res_m` = 1 000 m (mission 033) ; mission 039 : RU apprise (`ru_map`, complétée par la RU de la maille, `ru_fill_by_cell()`) et T journalière corrigée du relief par nœud (`t_lapse`, `alt_mailles`) si elles existent | | |
+| `predictors_climat`, `clim_vars`, `coarse_vars`, `t_corr_grid` | `coarse_predictors()` + `coarse_t_corr_700m` ; `model_climate_vars()` : variables climatiques selon `climat_temperature` et `trophique_climat` ; `t_corrected()` : T corrigée à la cellule (`t_corr`, **variable fine**, bioclimat de la carte par `apply_bioclim(layers = c(coarse_t_corr_700m = "t_corr"))`) | | |
+| `soilgrids_texture_files`, `cu700`, `ru_learn`, `ru_model`, `ru_cv`, `ru_map`, `ru_sg_diagnostic` | mission 039, `ru_carte: apprise` : `fetch_soilgrids_texture()` (24 couches, CC BY 4.0), `soilgrids_cu()` (euptf2 par horizon, cailloux), `coarse_cu_layers()` (700 m), `ru_learned_data()` + `fit_gradient()` : RU des placettes apprise sur la géologie encodée et les capacités SoilGrids ; `spatial_cv()` aux deux tailles de blocs (`ru_apprise_validation.csv`) ; `ru_soilgrids_diagnostic()` : RU SoilGrids brute contre RU IFN (diagnostic, jamais la carte) | files.isric.org | **absent** : RU par maille |
+| `lateral` | `lateral_balance()` : bilan latéral de Piedallu et al. (2006, tableau 20), carte de contrôle, `bilan_lateral: false` par défaut, jamais ajouté à la RU | | |
 | `anchors`, `local_trophic` | `get_gbif()`, `clean_occ()` (écarte les licences CC BY-NC, les jeux Pl@ntNet et les licences inconnues, effectifs par motif dans l'attribut `ecartees`, mission 037), `grid_bioindication()`, `gbif_anchors()` | `occ_search` ou `occ_download` | **absent** |
 | `geol_placettes`, `geol_classes_placettes`, `litho_placettes` | `read_geology()` sur tous les départements de `bdcharm_departements` (7 pour la GRECO D) recoupés à la boîte des placettes ; `lithology_at_points()` : classe et formation (`NOTATION`) dominantes dans 700 m, disque couvert à moins de `litho_min_cover` = pas de lithologie (placette retirée et comptée) ; formations sans règle listées (`formations_non_classees`) | BD Charm-50 | extrait |
 | `soilgrids_file`, `ph_layer` | `fetch_soilgrids_ph()` : pH SoilGrids 2.0 0-5 cm (250 m, CC BY 4.0), fenêtre de la GRECO, cache par emprise ; `soilgrids_disk_mean()` : moyenne dans 700 m (`soilgrids_ph: true`) | files.isric.org | **absent** (jamais remplacé) |
@@ -336,6 +340,22 @@ Penman de `biljouR` à la place de Turc, Linke 3,0, albédo 0,2, jours de Klein,
 0,5 h, RU uniforme par maille, altitude moyenne de la maille, pas des classes de k. Couches de terrain vides (MRVBF sans GRASS, TPI dont
 la fenêtre dépasse l'emprise, hauteur au réseau sans cours d'eau) : retirées des
 prédicteurs et nommées dans l'état de preuve (`empty_layers()`).
+
+### Bioclimat et RU plus fins (mission 039)
+
+Choix et mesures : `docs/referentiels.md` § 37. En bref : température SAFRAN corrigée du relief
+par le gradient lu entre les mailles (−0,49 °C/100 m sur la GRECO D ; RMSE de la validation croisée
+0,11 °C contre 0,22 en bilinéaire), apprise sur sa moyenne dans 700 m (`coarse_t_corr_700m`) et
+appliquée à la cellule (`t_corr`, fine) ; RU de la carte apprise (géologie et SoilGrids dans 700 m),
+la RU SoilGrids brute restant un diagnostic (biais +137 mm à 1 m) ; bilan latéral câblé et
+désactivé ; **climat retiré du modèle trophique** (`trophique_climat: sans`, décision de Pascal du
+2026-11-20), les variantes `actuel` (P − ETP et T bilinéaire, état d'avant 039) et `corrige`
+(P − ETP et T corrigée) restant des options ; table `variables_modeles`. Clés de `config.yml` : `climat_temperature`, `trophique_climat`, `ru_carte`,
+`mnt_large_res_m`, `mnt_large_path`, `bilan_lateral`, `bilan_lateral_ru_mm`, `bilan_lateral_coef`.
+Sorties ajoutées : `temperature_corrigee.tif`, `ru_apprise.tif`, `bilan_lateral.tif` (si activé),
+tables `temperature_gradient`, `temperature_validation`, `ru_apprise_validation`,
+`ru_soilgrids_diagnostic`, `bilan_lateral_parts`. Hors ligne (extraits du dépôt), sans MNT de 250 m
+ni SoilGrids : état d'avant 039, avec un avertissement.
 
 ## À vérifier
 
