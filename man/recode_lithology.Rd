@@ -7,7 +7,9 @@
 recode_lithology(
   formations,
   rules = read_lithology_rules(),
-  overrides = read_lithology_notations()
+  overrides = read_lithology_notations(),
+  rules_gele = read_lithology_rules(system.file("extdata",
+    "lithologie_regles_avant040.csv", package = "sylvostation"))
 )
 }
 \arguments{
@@ -16,10 +18,14 @@ recode_lithology(
 \item{rules}{\code{data.frame} de règles, voir \code{\link[=read_lithology_rules]{read_lithology_rules()}}.}
 
 \item{overrides}{\code{data.frame} notation -> classe prioritaire sur les règles
-(\code{\link[=read_lithology_notations]{read_lithology_notations()}} par défaut) ; \code{NULL} pour n'appliquer que les règles.}
+(\code{\link[=read_lithology_notations]{read_lithology_notations()}} par défaut) ; \code{NULL} pour n'appliquer que les règles.
+Si \code{formations} porte une colonne \code{dep} (\code{\link[=list_formations]{list_formations()}}), une ligne ne vaut que
+dans les départements de sa colonne \code{dep} ; sans \code{dep}, elle vaut partout.}
+
+\item{rules_gele}{Règles d'avant la mission 040, appliquées aux lignes \code{gele}.}
 }
 \value{
-\code{formations} avec les colonnes \code{classe}, \code{statut} (\code{regle}, \code{table} ou
+\code{formations} avec les colonnes \code{classe}, \code{statut} (\code{regle}, \code{table}, \code{gele} ou
 \code{non_classe}) et \code{validated} (\code{FALSE}).
 }
 \description{

@@ -265,3 +265,7 @@ respecter : aucune donnee reelle. Ne dit rien sur la vraie carte.
   **écart à vérifier** ; sans conséquence ici, puisque le fichier ne reprend que des codes de
   notation et des classes, pas de texte du BRGM. Citation : « BRGM, BD Charm-50, cartes
   géologiques départementales à 1/50 000 harmonisées, https://infoterre.brgm.fr ».
+- **Départements :** la colonne `dep` de `lithologie_notations.csv` limite les lignes `table` et
+  `gele` aux départements où la classe a été établie (GRECO D : 54, 57, 67, 68, 70, 88, 90).
+- **`lithologie_regles_avant040.csv` :** copie du jeu de règles en vigueur avant la mission 040
+  (13 règles de mots-clés, aucune donnée BRGM), appliquée aux lignes `gele`.

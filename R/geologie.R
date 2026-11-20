@@ -11,18 +11,20 @@
 #'
 #' @param geol Objet `sf` polygonal en Lambert-93 (EPSG:2154) portant les champs
 #'   `NOTATION`, `DESCR` et `CODE` (nom des champs réglable ci-dessous).
-#' @param notation,description,code Noms des champs.
+#' @param notation,description,code,dep Noms des champs (`dep` : facultatif).
 #' @return Un `data.frame` trié par surface décroissante : `notation`, `code` (les
 #'   `CODE` distincts, séparés par `/`), `description` (celle du plus grand polygone
 #'   de la notation), `n_poly`, `area_km2` (surface des polygones **dans
-#'   l'emprise de la couche**, calculée sur la géométrie fournie).
+#'   l'emprise de la couche**, calculée sur la géométrie fournie) et, si la couche porte
+#'   le champ `dep`, `dep` : département du plus grand polygone (celui dont vient la
+#'   description), sans zéro de tête (`"67"`).
 #' @examples
 #' g <- sf::st_read(system.file("extdata/bdcharm50_emprise_test.gpkg",
 #'                              package = "sylvostation"), quiet = TRUE)
 #' head(list_formations(g), 3)
 #' @export
 list_formations <- function(geol, notation = "NOTATION", description = "DESCR",
-                            code = "CODE") {
+                            code = "CODE", dep = "dep") {
   if (!inherits(geol, "sf")) stop("`geol` doit \u00eatre un objet sf.", call. = FALSE)
   assert_crs_2154(geol)
   manq <- setdiff(c(notation, description, code), names(geol))
@@ -34,7 +36,7 @@ list_formations <- function(geol, notation = "NOTATION", description = "DESCR",
   d$.nota <- as.character(d[[notation]])
   out <- lapply(split(d, d$.nota), function(s) {
     s <- s[order(-s$.area), , drop = FALSE]
-    data.frame(
+    r <- data.frame(
       notation = s$.nota[1],
       code = paste(unique(as.character(s[[code]])), collapse = "/"),
       description = as.character(s[[description]][1]),
@@ -42,12 +44,17 @@ list_formations <- function(geol, notation = "NOTATION", description = "DESCR",
       area_km2 = sum(s$.area),
       stringsAsFactors = FALSE
     )
+    if (dep %in% names(s)) r$dep <- .norm_dep(s[[dep]][1])
+    r
   })
   out <- do.call(rbind, unname(out))
   out <- out[order(-out$area_km2), , drop = FALSE]
   rownames(out) <- NULL
   out
 }
+
+# Département sans zéro de tête ("067" -> "67") : les extraits portent « 067 », le pipeline « 67 ».
+.norm_dep <- function(x) sub("^0+", "", trimws(as.character(x)))
 
 # Normalise un texte pour la recherche de mots-clés : minuscules, sans accents.
 .norm_texte <- function(x) {
@@ -87,27 +94,31 @@ read_lithology_rules <- function(path = system.file("extdata", "lithologie_regle
 #' Lire la table notation -> classe de la mission 040
 #'
 #' Table de classes lithologiques acceptée par Pascal le 2026-11-20 (option b) pour les
-#' formations de la GRECO D que les règles seules ne classent pas ou classent mal. Elle ne
+#' formations de la GRECO D que les règles seules ne classent pas ou classent mal. Elle est
+#' propre aux départements de la colonne `dep` : ailleurs, seules les règles s'appliquent. Elle ne
 #' contient que des **codes de notation et des classes** (BD Charm-50, BRGM, Licence
 #' Ouverte ; aucune description). La colonne `origine` distingue : `table` (classe imposée,
 #' prioritaire sur les règles : homonymies, descriptions sans mot-clé, décisions de Pascal),
 #' `gele` (formation dont les règles changeraient la classe sans que la proposition l'ait
-#' annoncé : classe d'avant conservée, classe que donnerait la règle dans `classe_regle`,
-#' candidate soumise à Pascal ; supprimer la ligne pour accepter le changement),
+#' annoncé : on lui applique le jeu de règles d'avant la mission 040,
+#' `inst/extdata/lithologie_regles_avant040.csv`, **sur sa propre description** ; la classe de
+#' la colonne `classe` n'est qu'indicative, `classe_regle` donne ce que dirait la règle
+#' actuelle ; candidate soumise à Pascal, supprimer la ligne pour accepter le changement),
 #' `regle` (classe que les règles retrouvent ; ligne de contrôle) et `laisse` (formation
 #' laissée `non_classe`, listée et jamais supprimée).
 #'
 #' @param path Chemin du CSV. Par défaut `inst/extdata/lithologie_notations.csv`.
-#' @return Un `data.frame` : `notation`, `classe`, `origine`, `regle`, `confiance`,
-#'   `source`, `decision_pascal`, `classe_regle`, `surface_km2` (ces deux dernières pour les
-#'   lignes `gele`).
+#' @return Un `data.frame` : `notation`, `dep` (départements, séparés par `/` et sans zéro de
+#'   tête, où la classe a été établie ; vide = partout), `classe`, `origine`, `regle`,
+#'   `confiance`, `source`, `decision_pascal`, `classe_regle` (classe que donnerait la règle,
+#'   lignes `gele`) et `surface_km2` (numérique, `NA` hors lignes `gele`).
 #' @examples
 #' table(read_lithology_notations()$origine)
 #' @export
 read_lithology_notations <- function(path = system.file("extdata", "lithologie_notations.csv",
                                                         package = "sylvostation")) {
   if (!nzchar(path) || !file.exists(path)) stop("Fichier de notations introuvable.", call. = FALSE)
-  t <- utils::read.csv(path, stringsAsFactors = FALSE, encoding = "UTF-8", na.strings = character(0))
+  t <- utils::read.csv(path, stringsAsFactors = FALSE, encoding = "UTF-8", na.strings = "")
   if (!all(c("notation", "classe", "origine") %in% names(t))) {
     stop("La table de notations doit avoir les colonnes notation, classe, origine.", call. = FALSE)
   }
@@ -115,6 +126,11 @@ read_lithology_notations <- function(path = system.file("extdata", "lithologie_n
     stop("`origine` doit valoir table, gele, regle ou laisse.", call. = FALSE)
   }
   if (anyDuplicated(t$notation)) stop("Notation en double dans la table.", call. = FALSE)
+  for (j in setdiff(names(t), "surface_km2")) {
+    if (is.character(t[[j]])) t[[j]][is.na(t[[j]])] <- ""
+  }
+  if ("surface_km2" %in% names(t)) t$surface_km2 <- suppressWarnings(as.numeric(t$surface_km2))
+  if (!"dep" %in% names(t)) t$dep <- ""
   t
 }
 
@@ -133,31 +149,63 @@ read_lithology_notations <- function(path = system.file("extdata", "lithologie_n
 #' @param rules `data.frame` de règles, voir [read_lithology_rules()].
 #' @param overrides `data.frame` notation -> classe prioritaire sur les règles
 #'   ([read_lithology_notations()] par défaut) ; `NULL` pour n'appliquer que les règles.
-#' @return `formations` avec les colonnes `classe`, `statut` (`regle`, `table` ou
+#'   Si `formations` porte une colonne `dep` ([list_formations()]), une ligne ne vaut que
+#'   dans les départements de sa colonne `dep` ; sans `dep`, elle vaut partout.
+#' @param rules_gele Règles d'avant la mission 040, appliquées aux lignes `gele`.
+#' @return `formations` avec les colonnes `classe`, `statut` (`regle`, `table`, `gele` ou
 #'   `non_classe`) et `validated` (`FALSE`).
 #' @examples
 #' f <- data.frame(notation = c("a", "b"), description = c("Granite de X", "Remblais"))
 #' suppressWarnings(recode_lithology(f, read_lithology_rules()))
 #' @export
 recode_lithology <- function(formations, rules = read_lithology_rules(),
-                             overrides = read_lithology_notations()) {
+                             overrides = read_lithology_notations(),
+                             rules_gele = read_lithology_rules(
+                               system.file("extdata", "lithologie_regles_avant040.csv",
+                                           package = "sylvostation"))) {
   if (!is.data.frame(formations) || !"description" %in% names(formations)) {
     stop("`formations` doit avoir une colonne `description`.", call. = FALSE)
   }
   .check_rules(rules)
-  rules <- rules[order(rules$priorite), , drop = FALSE]
   txt <- .norm_texte(formations$description)
+  .appliquer <- function(rg, i = seq_along(txt)) {
+    rg <- rg[order(rg$priorite), , drop = FALSE]
+    cl <- rep(NA_character_, length(i))
+    for (k in seq_len(nrow(rg))) {
+      hit <- is.na(cl) & grepl(rg$motif[k], txt[i], perl = TRUE)
+      cl[hit] <- rg$classe[k]
+    }
+    cl
+  }
   classe <- rep(NA_character_, length(txt))
   statut <- rep("regle", length(txt))
   fixe <- rep(FALSE, length(txt))
   if (!is.null(overrides) && "notation" %in% names(formations)) {
     ov <- overrides[overrides$origine %in% c("table", "gele"), , drop = FALSE]
+    ov_dep <- if ("dep" %in% names(ov)) ov$dep else rep("", nrow(ov))
+    fdep <- if ("dep" %in% names(formations)) .norm_dep(formations$dep) else
+      rep(NA_character_, length(txt))
     j <- match(as.character(formations$notation), ov$notation)
-    fixe <- !is.na(j)
-    cl <- ov$classe[j[fixe]]
-    classe[fixe] <- ifelse(cl == "non_classe", NA_character_, cl)
-    statut[fixe] <- "table"
+    # la ligne ne vaut que dans ses departements ; departement inconnu : elle vaut
+    dans <- vapply(seq_along(j), function(i) {
+      if (is.na(j[i])) return(FALSE)
+      is.na(fdep[i]) || !nzchar(ov_dep[j[i]]) || fdep[i] %in% strsplit(ov_dep[j[i]], "/", fixed = TRUE)[[1]]
+    }, logical(1))
+    fixe <- dans
+    # table : classe imposee ; gele : regles d'avant la mission 040 sur CETTE description
+    est_table <- dans & ov$origine[pmax(j, 1L)] == "table"
+    est_gele <- dans & ov$origine[pmax(j, 1L)] == "gele"
+    classe[est_table] <- ov$classe[j[est_table]]
+    statut[est_table] <- "table"
+    if (any(est_gele)) {
+      if (is.null(rules_gele)) stop("`rules_gele` requis pour les lignes `gele`.", call. = FALSE)
+      .check_rules(rules_gele)
+      classe[est_gele] <- .appliquer(rules_gele, which(est_gele))
+      statut[est_gele] <- "gele"
+    }
+    classe[fixe & !is.na(classe) & classe == "non_classe"] <- NA_character_
   }
+  rules <- rules[order(rules$priorite), , drop = FALSE]
   for (i in seq_len(nrow(rules))) {
     hit <- is.na(classe) & !fixe & grepl(rules$motif[i], txt, perl = TRUE)
     classe[hit] <- rules$classe[i]
