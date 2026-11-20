@@ -1902,7 +1902,11 @@ et al. (2006) ne sont que citées. Les classes marquées « à vérifier » (not
 aucun gain mesuré à coder département + `NOTATION`) ; **les lignes `table` et `gele` ne valent que dans
 les départements de leur colonne `dep`** (54, 57, 67, 68, 70, 88, 90 selon la notation ; `list_formations()`
 porte le département du plus grand polygone, sans zéro de tête) : hors de ces départements,
-ou si le département est inconnu et la ligne vaut partout, seules les règles s'appliquent. Les 156 notations
+seules les règles s'appliquent ; si le département de la formation est inconnu (pas de colonne `dep`,
+ou `NA`), la ligne vaut quand même. **Limite :** le département retenu est celui du plus grand
+polygone de la notation (celui dont vient la description), pas l'ensemble de ses départements : une
+notation dont le plus grand polygone est hors de la colonne `dep` n'est pas touchée par la ligne, même si
+elle a des polygones dans ces départements. Les 156 notations
 sont propres à la GRECO D (`dep` fourni par `read_geology()`, champ `dep` de la BD Charm-50).
 
 **Décompte final par origine (198 lignes) : table 8 ; regle 138 ; gele 42 ; laisse 10.**
