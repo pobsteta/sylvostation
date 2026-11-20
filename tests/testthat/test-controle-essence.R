@@ -249,6 +249,17 @@ test_that("essence_sensitivity : regle des 700 m et entrees", {
                "sf")
 })
 
+test_that("essence_tables : le controle est publie meme sans la sensibilite, et inversement", {
+  ctl <- list(global = data.frame(pente_amplitude = 0.3, bloc_m = 1), par_essence = data.frame(a = 1))
+  sens <- list(resume = data.frame(bloc_m = 1, variante = "base", r2 = 0.2, rmse = 1, gain_r2 = 0,
+                                   gain_rmse = 0, avertissement = "x"),
+               par_pli = data.frame(bloc_m = 1, variante = "tfv", pli = 1L, n = 10L, r2 = 0.2,
+                                    gain_r2 = 0.05, avertissement = "x"))
+  expect_equal(names(essence_tables(ctl, NULL)), c("controle_essence", "controle_essence_par_essence"))
+  expect_equal(names(essence_tables(NULL, sens)), "sensibilite_essence")
+  expect_equal(length(essence_tables(NULL, NULL)), 0L)
+})
+
 test_that("essence_tables : trois tables, defaut d'amplitude en tete, mention de sensibilite", {
   skip_if_not_installed("ranger")
   f <- fabrique_controle()
@@ -335,8 +346,9 @@ test_that("ADR 0008 : l'essence n'entre dans aucune cible de la carte, des types
               "gradient_map", "uncertainty", "type_map", "cell_types", "merged", "thresholds")
   present <- intersect(cibles, nom)
   skip_if(length(present) < 5L, "cibles reelles absentes de _targets.R")
-  motif <- "essence_dominante|coarse_essence|cv_essence|controle_essence|essence_sensitivity|dominant_species"
-  for (n in present) expect_false(grepl(motif, bloc(n)), info = n)
+  motif <- paste0("essence_dominante|coarse_essence|cv_essence|controle_essence|essence_sensitivity|",
+                  "dominant_species|espar_cdref|arbres_cd_ref|espar_codes|(?<![$.A-Za-z_])ifn_dir")
+  for (n in present) expect_false(grepl(motif, bloc(n), perl = TRUE), info = n)
   expect_false("essence" %in% unlist(strsplit(bloc("vars_modele"), "[^A-Za-z_]")))
 })
 

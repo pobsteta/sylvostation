@@ -4,12 +4,13 @@
 \alias{essence_tables}
 \title{Tables publiables du contrôle par essence et de la sensibilité}
 \usage{
-essence_tables(controle, sensibilite)
+essence_tables(controle = NULL, sensibilite = NULL)
 }
 \arguments{
-\item{controle}{Résultat de \code{\link[=essence_control]{essence_control()}}.}
+\item{controle}{Résultat de \code{\link[=essence_control]{essence_control()}}, ou \code{NULL} (table omise).}
 
-\item{sensibilite}{Résultat de \code{\link[=essence_sensitivity]{essence_sensitivity()}}.}
+\item{sensibilite}{Résultat de \code{\link[=essence_sensitivity]{essence_sensitivity()}}, ou \code{NULL} (table omise) : le contrôle
+est publié même sans la sensibilité.}
 }
 \value{
 Une liste nommée de \code{data.frame} : \code{controle_essence}, \code{controle_essence_par_essence},
