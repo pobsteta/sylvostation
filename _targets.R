@@ -718,9 +718,8 @@ if (!isTRUE(cfg$demo)) {
                    encodage_formations = trophic_enc$encoding_formation,
                    formations_non_classees = attr(litho_placettes, "formations_non_classees"))
       # controle par essence et sensibilite (mission 037) : a part, jamais la carte
-      if (!is.null(controle_essence) && !is.null(cv_essence)) {
-        tabs <- c(tabs, sylvostation::essence_tables(controle_essence, cv_essence))
-      }
+      # chaque table est publiee si son resultat existe (un NULL est deja signale par un avertissement)
+      tabs <- c(tabs, sylvostation::essence_tables(controle_essence, cv_essence))
       if (!is.null(controle_bdforet)) tabs$controle_bdforet_classes <- controle_bdforet
       if (!is.null(gnss_validation)) tabs$validation_gnss <- gnss_validation
       if (!is.null(comparison_table)) {

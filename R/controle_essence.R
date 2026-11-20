@@ -514,8 +514,9 @@ essence_sensitivity <- function(train, predictors, encode = NULL, dominant, bloc
 #' (`controle_essence`) place **en tête le défaut d'amplitude** (pente prévu contre observé par
 #' essence : les prédictions hors pli sont écrasées vers la moyenne).
 #'
-#' @param controle Résultat de [essence_control()].
-#' @param sensibilite Résultat de [essence_sensitivity()].
+#' @param controle Résultat de [essence_control()], ou `NULL` (table omise).
+#' @param sensibilite Résultat de [essence_sensitivity()], ou `NULL` (table omise) : le contrôle
+#'   est publié même sans la sensibilité.
 #' @return Une liste nommée de `data.frame` : `controle_essence`, `controle_essence_par_essence`,
 #'   `sensibilite_essence`.
 #' @examples
@@ -526,20 +527,27 @@ essence_sensitivity <- function(train, predictors, encode = NULL, dominant, bloc
 #' ctl <- list(global = data.frame(pente_amplitude = 0.3, bloc_m = 1), par_essence = data.frame(a = 1))
 #' names(essence_tables(ctl, sens))
 #' @export
-essence_tables <- function(controle, sensibilite) {
-  g <- controle$global
-  tete <- c("bloc_m", "pente_amplitude", "alerte_amplitude")
-  g <- g[, c(intersect(tete, names(g)), setdiff(names(g), tete)), drop = FALSE]
-  s <- sensibilite$resume
-  p <- sensibilite$par_pli
-  s$pli <- NA_integer_
-  s$n <- NA_integer_
-  p$rmse <- NA_real_
-  p$gain_rmse <- NA_real_
-  cols <- c("bloc_m", "variante", "pli", "n", "r2", "rmse", "gain_r2", "gain_rmse",
-            "avertissement")
-  list(controle_essence = g, controle_essence_par_essence = controle$par_essence,
-       sensibilite_essence = rbind(s[, cols], p[, cols]))
+essence_tables <- function(controle = NULL, sensibilite = NULL) {
+  out <- list()
+  if (!is.null(controle)) {
+    g <- controle$global
+    tete <- c("bloc_m", "pente_amplitude", "alerte_amplitude")
+    g <- g[, c(intersect(tete, names(g)), setdiff(names(g), tete)), drop = FALSE]
+    out$controle_essence <- g
+    out$controle_essence_par_essence <- controle$par_essence
+  }
+  if (!is.null(sensibilite)) {
+    s <- sensibilite$resume
+    p <- sensibilite$par_pli
+    s$pli <- NA_integer_
+    s$n <- NA_integer_
+    p$rmse <- NA_real_
+    p$gain_rmse <- NA_real_
+    cols <- c("bloc_m", "variante", "pli", "n", "r2", "rmse", "gain_r2", "gain_rmse",
+              "avertissement")
+    out$sensibilite_essence <- rbind(s[, cols], p[, cols])
+  }
+  out
 }
 
 #' Télécharger la BD Forêt v2 (formation végétale) sur une emprise
