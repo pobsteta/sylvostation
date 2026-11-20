@@ -51,3 +51,12 @@ le gain chiffré.
 
 La justesse statistique immédiate du trophique, au profit de l'indépendance de la station
 vis-à-vis de la gestion passée.
+
+## Addendum (mission 037, partie 2, 2026-11-20) : gain mesuré
+
+Le modèle de sensibilité mesuré sur le run réel 035 donne +0,061 de R² (blocs de 22 121 m) et +0,058
+(8 358 m) quand on ajoute l'essence dominante ; le placebo (essences mélangées) donne +0,010 et +0,007,
+soit un gain net de l'ordre de 0,05. La « perte possible de ≈ 0,1 à 0,25 » du crible était une
+surestimation : la lithologie, le pH et le climat captent déjà une partie du signal d'essence. Le contrôle
+par essence relève trois alertes (pin sylvestre prédit trop riche, aulne et érable trop pauvres) et un
+défaut d'amplitude (pente 0,31). Voir `docs/referentiels.md` § 36.

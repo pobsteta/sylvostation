@@ -225,3 +225,15 @@ respecter : aucune donnee reelle. Ne dit rien sur la vraie carte.
   Citation : « IGN – Inventaire forestier national français, Données brutes, Campagnes
   annuelles 2005 et suivantes, https://inventaire-forestier.ign.fr/dataIFN/ , site consulté le
   2026-11-19 ».
+
+## `ifn_espar_codes.csv` (mission 037, RÉEL)
+
+- **Source :** IGN – Inventaire forestier national français, Données brutes, Campagnes
+  annuelles 2005 et suivantes, https://inventaire-forestier.ign.fr/dataIFN/ , site consulté le
+  20/11/2026. Fichier `metadonnees.csv` de l'archive
+  `https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip`
+  (export du 2026-10-07).
+- **Traitement :** lignes `ESPAR1` (unité des campagnes 2009 et suivantes) du bloc « Définition
+  des modalités pour chaque unité » : colonnes `code;nom;latin`, 195 lignes, texte d'origine.
+  Le code `332G`, présent dans la table ARBRE de la GRECO D, n'y figure pas.
+- **Licence :** Licence Ouverte / Open Licence Etalab Version 2.0.

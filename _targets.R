@@ -516,6 +516,47 @@ if (!isTRUE(cfg$demo)) {
           NULL
         })
     }), grad_reg)),
+    # --- controle par essence et sensibilite (mission 037, ADR 0008) --------------------------
+    # L'essence n'entre JAMAIS dans train, vars_modele, models, cvs, maps ni dans les types : ces
+    # cibles ne servent qu'a des sorties publiees a part (controle_essence*.csv,
+    # sensibilite_essence.csv). Seuils : valeur provisoire, sans source, a verifier (config.yml).
+    tar_target(espar_codes, sylvostation::read_espar_codes()),
+    tar_target(essence_dominante, sylvostation::dominant_species(
+      ifn$arbre, train$trophic$id_placette, min_share = cfg$essence_part_pure)),
+    tar_target(controle_essence, tryCatch({
+      cv <- Filter(Negate(is.null), list(cvs$trophic, cv_sensibilite$trophic))
+      sylvostation::essence_control(
+        train$trophic, cv, essence_dominante,
+        sylvostation::species_optima(essence_dominante$espar[essence_dominante$pure %in% TRUE],
+                                     indicateurs, espar_codes),
+        sylvostation::trophic_without_trees(ifn$flore, indicateurs, espar_codes,
+                                            train$trophic$id_placette),
+        part_pure = cfg$essence_part_pure, min_placettes = cfg$essence_min_placettes,
+        alerte_ecart = cfg$essence_alerte_ecart, alerte_ratio = cfg$essence_alerte_ratio,
+        alerte_pente = cfg$essence_alerte_pente)
+    }, error = function(e) NULL)),
+    tar_target(cv_essence, tryCatch(sylvostation::essence_sensitivity(
+      train$trophic, vars_modele$trophic,
+      # memes encodages que cvs (lithologie, formation) : copie volontaire, cvs reste inchange
+      encode = list(
+        list(var = "coarse_litho_700m", name = "coarse_litho_enc", k = cfg$litho_encoding_k, oof = FALSE),
+        list(var = "coarse_formation_700m", name = "coarse_formation_enc", k = cfg$litho_encoding_k,
+             oof = TRUE)),
+      dominant = essence_dominante,
+      block_sizes = unique(c(cvs$trophic$block_size, cfg$cv_block_sensibilite_m)),
+      part_pure = cfg$essence_part_pure, min_placettes = cfg$essence_min_placettes,
+      k = cfg$litho_encoding_k, ifn_precision_m = cfg$ifn_precision_m, num_trees = 500, seed = 1),
+      error = function(e) NULL)),
+    # option (desactivee par defaut, licence contradictoire) : moyennes par classe seulement
+    tar_target(controle_bdforet, if (!isTRUE(cfg$bdforet_controle)) NULL else {
+      m <- sylvostation::bdforet_class_means(
+        sylvostation::fetch_bdforet(emprise, file.path(cache, "bdforet")), gradient_map$trophic,
+        buffer_m = cfg$bdforet_tampon_m, min_polygones = cfg$bdforet_min_polygones)
+      g <- sylvostation::espar_group_tfv(essence_dominante$espar)
+      p <- essence_dominante$pure %in% TRUE
+      m$moyenne_placettes_ifn <- as.numeric(tapply(train$trophic$trophic[p], g[p], mean)[m$classe])
+      m
+    }),
     # composante locale (en ligne seulement) : trophique sur les ancrages GBIF
     tar_target(local_trophic, {
       if (is.null(anchors)) return(NULL)
@@ -665,6 +706,11 @@ if (!isTRUE(cfg$demo)) {
                    encodage_lithologie = trophic_enc$encoding,
                    encodage_formations = trophic_enc$encoding_formation,
                    formations_non_classees = attr(litho_placettes, "formations_non_classees"))
+      # controle par essence et sensibilite (mission 037) : a part, jamais la carte
+      if (!is.null(controle_essence) && !is.null(cv_essence)) {
+        tabs <- c(tabs, sylvostation::essence_tables(controle_essence, cv_essence))
+      }
+      if (!is.null(controle_bdforet)) tabs$controle_bdforet_classes <- controle_bdforet
       if (!is.null(gnss_validation)) tabs$validation_gnss <- gnss_validation
       if (!is.null(comparison_table)) {
         tabs$comparaison_gradients <- comparison_table

@@ -92,6 +92,25 @@ cv_block_sensibilite_m: 8358
 # « peu interprétable » dans validation_stats.csv et le rapport. Valeur provisoire, à vérifier
 # (mission 035 : hydrique à 8 blocs pour 5 plis, R² porté par un seul pli).
 cv_min_blocs_par_pli: 4
+# Contrôle par essence et modèle de sensibilité (mission 037, ADR 0008). L'essence n'entre jamais
+# dans la carte. TOUS CES SEUILS : valeur provisoire, sans source, à vérifier (choisis par le dev).
+# essence_part_pure : part minimale de surface terrière (pondérée par W) pour une placette « pure » ;
+# essence_min_placettes : placettes pures minimales pour juger une essence ;
+# essence_alerte_ecart : alerte si |moyenne prédite hors pli - moyenne observée| dépasse ce seuil
+# (points de trophique, environ la moitié du RMSE de la validation croisée) ;
+# essence_alerte_ratio : alerte si l'accord d'ordre prédit/essence tombe sous ce ratio de l'accord
+# observé/essence ; essence_alerte_pente : seuil de la pente prévu contre observé par essence.
+essence_part_pure: 0.75
+essence_min_placettes: 15
+essence_alerte_ecart: 0.5
+essence_alerte_ratio: 0.5
+essence_alerte_pente: 0.2
+# Option BD Forêt v2 : moyennes du trophique de la carte par classe de peuplement pur (intérieur des
+# polygones). Désactivée par défaut : licence contradictoire (docs/referentiels.md, § 33.5 bis et
+# § 36) ; rien n'est publié hors moyennes par classe. bdforet_tampon_m : valeur provisoire, sans source.
+bdforet_controle: false
+bdforet_tampon_m: 50
+bdforet_min_polygones: 5
 # Téléchargements (SER, dalles LiDAR, WFS, TOPAGE, SAFRAN, IFN) : nombre total de tentatives
 # avant arrêt (attentes 5, 20, 60 s). Provisoire (mission 026).
 download_retries: 3

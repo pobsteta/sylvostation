@@ -116,6 +116,11 @@ read_config <- function(path = "config.yml") {
   # blocs de la validation croisee du pipeline : cv_block_m absent ou null = portee estimee
   # (le chiffre publie, le plus prudent) ; cv_block_sensibilite_m = taille de la sensibilite
   cv_block_sensibilite_m = 8358, cv_min_blocs_par_pli = 4,
+  # controle par essence et sensibilite (mission 037) : valeurs provisoires, sans source, a
+  # verifier (docs/referentiels.md, section 36)
+  essence_part_pure = 0.75, essence_min_placettes = 15L, essence_alerte_ecart = 0.5,
+  essence_alerte_ratio = 0.5, essence_alerte_pente = 0.2,
+  bdforet_controle = FALSE, bdforet_tampon_m = 50, bdforet_min_polygones = 5L,
   # reprise sur incident reseau des telechargements (mission 026), provisoire
   download_retries = 3L
 )
@@ -138,6 +143,7 @@ read_config <- function(path = "config.yml") {
   logique("offline")
   logique("forest_mask")
   logique("soilgrids_ph")
+  logique("bdforet_controle")
   est_chaine_cfg <- function(x) is.character(x) && length(x) == 1L && !is.na(x)
   entier_pos <- function(k, x = cfg[[k]]) {
     if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 1 || x != round(x)) {
@@ -192,6 +198,21 @@ read_config <- function(path = "config.yml") {
     stop("`litho_encoding_k` doit \u00eatre un nombre >= 0.", call. = FALSE)
   }
   cfg$ru_min_placettes <- as.integer(cfg$ru_min_placettes)
+  x <- cfg$essence_part_pure
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0.5 || x > 1) {
+    stop("`essence_part_pure` doit \u00eatre un nombre dans ]0,5 ; 1].", call. = FALSE)
+  }
+  for (k in c("essence_alerte_ecart", "essence_alerte_ratio", "essence_alerte_pente",
+              "bdforet_tampon_m")) {
+    x <- cfg[[k]]
+    if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0) {
+      stop("`", k, "` doit \u00eatre un nombre >= 0.", call. = FALSE)
+    }
+  }
+  for (k in c("essence_min_placettes", "bdforet_min_polygones")) {
+    entier_pos(k)
+    cfg[[k]] <- as.integer(cfg[[k]])
+  }
   x <- cfg$download_retries
   if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 1 || x != round(x)) {
     stop("`download_retries` doit \u00eatre un entier >= 1.", call. = FALSE)
