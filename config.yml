@@ -69,6 +69,8 @@ hydric_n_controle: 30
 # pour BILJOU ; aucune correction d'altitude. RU de maille : médiane de l'emprise si la
 # maille compte moins de ru_min_placettes placettes IFN.
 safran_interpolation: bilineaire
+# NB (mission 035) : en mode « proche », la maille est reconstruite par un raster de 1 km reprojeté :
+# 3,8 % des placettes de la GRECO D (109 sur 2 894) reçoivent la maille voisine (jusqu'à 2,5 °C d'écart).
 hydric_node_res_m: 1000
 ru_min_placettes: 5
 # Calibration sur la GRECO (mission 035), valeurs provisoires, à vérifier : un disque de 700 m
@@ -80,6 +82,12 @@ litho_encoding_k: 10
 # pH SoilGrids 2.0 (ISRIC, CC BY 4.0, 250 m, 0-5 cm) moyenné dans 700 m : prédicteur à maille large.
 # Exactitude sur la France non évaluée (à vérifier). false : sans pH (jamais remplacé).
 soilgrids_ph: true
+# Taille (m) des blocs de la validation croisée du pipeline. null = portée de l'autocorrélation
+# estimée sur la réponse (environ 22 km pour le trophique de la GRECO D : le R² publié, le plus
+# prudent). cv_block_sensibilite_m = taille de la sensibilité publiée à côté (8 358 m : portée
+# estimée en 018 sur l'emprise test). Les deux R² sont donnés dans le rapport (mission 035).
+cv_block_m: null
+cv_block_sensibilite_m: 8358
 # Téléchargements (SER, dalles LiDAR, WFS, TOPAGE, SAFRAN, IFN) : nombre total de tentatives
 # avant arrêt (attentes 5, 20, 60 s). Provisoire (mission 026).
 download_retries: 3

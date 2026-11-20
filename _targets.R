@@ -463,9 +463,11 @@ if (!isTRUE(cfg$demo)) {
       # d'apprentissage (R2 par blocs 0,15 contre 0,09 hors pli) ; formation (centaines de
       # niveaux, certains rares) : hors pli, qui limite le surapprentissage (mission 035)
       e1 <- sylvostation::encode_by_blocks(d, "trophic", "coarse_litho_700m", "coarse_litho_enc",
-                                           k = cfg$litho_encoding_k, oof = FALSE)
+                                           k = cfg$litho_encoding_k, oof = FALSE,
+                                           block_size = cfg$cv_block_m)
       e2 <- sylvostation::encode_by_blocks(e1$data, "trophic", "coarse_formation_700m",
-                                           "coarse_formation_enc", k = cfg$litho_encoding_k)
+                                           "coarse_formation_enc", k = cfg$litho_encoding_k,
+                                           block_size = cfg$cv_block_m)
       list(data = e2$data, encoding = e1$encoding, encoding_formation = e2$encoding,
            retirees = e1$retirees)
     }),
@@ -486,6 +488,7 @@ if (!isTRUE(cfg$demo)) {
     # CV : l'encodage est refait dans chaque pli (reponse du pli de test jamais utilisee)
     tar_target(cvs, stats::setNames(lapply(grad_reg, function(g) {
       sylvostation::spatial_cv(train[[g]], g, vars_modele[[g]], k = 5, points_source = "ifn",
+                               block_size = cfg$cv_block_m,
                                ifn_precision_m = cfg$ifn_precision_m, num_trees = 500, seed = 1,
                                encode = if (g == "trophic") list(
                                  list(var = "coarse_litho_700m", name = "coarse_litho_enc",
@@ -493,6 +496,17 @@ if (!isTRUE(cfg$demo)) {
                                  list(var = "coarse_formation_700m", name = "coarse_formation_enc",
                                       k = cfg$litho_encoding_k, oof = TRUE)))
     }), grad_reg)),
+    # sensibilite : meme validation croisee du trophique avec des blocs de cv_block_sensibilite_m
+    # (8 358 m par defaut) ; publiee a cote du chiffre principal (blocs de cv_block_m)
+    # (NULL si le jeu est trop petit pour 5 plis de cette taille, par exemple en mode hors ligne)
+    tar_target(cv_sensibilite, tryCatch(sylvostation::spatial_cv(
+      train$trophic, "trophic", vars_modele$trophic, k = 5, points_source = "ifn",
+      block_size = cfg$cv_block_sensibilite_m, ifn_precision_m = cfg$ifn_precision_m,
+      num_trees = 500, seed = 1,
+      encode = list(
+        list(var = "coarse_litho_700m", name = "coarse_litho_enc", k = cfg$litho_encoding_k, oof = FALSE),
+        list(var = "coarse_formation_700m", name = "coarse_formation_enc", k = cfg$litho_encoding_k,
+             oof = TRUE))), error = function(e) NULL)),
     # composante locale (en ligne seulement) : trophique sur les ancrages GBIF
     tar_target(local_trophic, {
       if (is.null(anchors)) return(NULL)
@@ -596,6 +610,11 @@ if (!isTRUE(cfg$demo)) {
     # --- validation ---------------------------------------------------------------------
     tar_target(val_stats, {
       v <- sylvostation::validate_stats(cvs)
+      if (!is.null(cv_sensibilite)) {
+        s <- sylvostation::validate_stats(list(trophic = cv_sensibilite))
+        s$gradient <- "trophic (sensibilit\u00e9 : blocs de taille fixe)"
+        v <- rbind(v, s)
+      }
       if (!is.null(local_trophic)) {
         l <- sylvostation::validate_stats(list(trophic = local_trophic$cv))
         l$gradient <- "trophic (local, ancrages GBIF)"

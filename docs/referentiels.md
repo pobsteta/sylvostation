@@ -1752,12 +1752,27 @@ provisoires manquent surtout les roches cristallines dont la description ne comm
 | 2 893 | contrôle : `ROCHE` + classe | 0,129 | +0,035 [0,009 ; 0,058] sur la classe seule |
 | 2 893 | **contrôle : humus observé (`HUMUS`, encodé) + classe** | **0,406** | non utilisable pour la carte |
 
+**Taille des blocs (correction de la relecture 1).** Tous les R² ci-dessus sont calculés avec
+des blocs de **8 358 m** (portée estimée en 018 sur l'emprise test). Le pipeline, lui, publie
+par défaut (`cv_block_m: null`) la **portée estimée sur la réponse, 22 121 m pour le trophique de
+la GRECO D (37 blocs)**, le chiffre le plus prudent :
+
+| Blocs | Modèle final (classe + formation + pH) | Climat seul | Gain sur le climat seul |
+|---|---|---|---|
+| **portée estimée, 22 121 m (publié)** | **0,193** [0,087 ; 0,275] | -0,263 | +0,449 [0,290 ; 0,621] |
+| 8 358 m (sensibilité, `cv_block_sensibilite_m`) | 0,270 [0,199 ; 0,311] | -0,129 | +0,405 [0,333 ; 0,480] |
+
+(moyennes de 5 affectations de plis ; IC et gain : bootstrap de blocs, graine de plis 1 ;
+le modèle final contient la même géologie et le même pH dans les deux cas). Le R² du pipeline
+est donc d'environ **0,19** et non 0,27 : les blocs plus grands retirent l'autocorrélation
+spatiale résiduelle. Les deux lignes figurent dans `val_stats` et le rapport.
+
 Lecture : le climat seul n'a aucun pouvoir (R² < 0) ; la géologie (formation) et le pH de sol
 apportent presque tout ; la formation (`NOTATION`, 666 niveaux) bat la classe lithologique
 provisoire à 12 niveaux ; la carte géologique explique plus que la roche notée par l'IFN
 (0,196 contre 0,056). L'**humus**, relevé sur le terrain, explique le trophique (0,41) parce qu'il
 est lui-même une conséquence de la richesse du sol que reflète la flore : **contrôle de plafond,
-jamais prédicteur de carte**, circularité possible avec l'indice floristique. Le R² de 0,27 reste
+jamais prédicteur de carte**, circularité possible avec l'indice floristique. Le R² (0,19 à blocs prudents, 0,27 à blocs de 8 358 m) reste
 sous la référence de 0,36 (Vosges ; autre méthode, autres données).
 
 **Climat plus proche voisin contre bilinéaire (033)** : sur les mêmes 2 893 placettes, le climat

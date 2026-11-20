@@ -40,7 +40,9 @@ reçoit l'interpolation bilinéaire des valeurs des mailles entre leurs centres
 Lissé à l'échelle de 8 km, il reste un climat kilométrique (variable large),
 croisable avec les placettes IFN. Aucune correction d'altitude.
 \item \code{interpolation = "proche"} : plus proche voisin (comportement d'avant 033), la
-valeur de la maille est uniforme sur ses 8 km.
+valeur de la maille est uniforme sur ses 8 km. \strong{Attention} : la maille d'une placette
+est lue dans un raster de 1 km reprojeté ; sur la GRECO D, 3,8 \% des placettes (109 sur
+2 894) reçoivent la maille voisine, avec jusqu'à 2,5 °C d'écart (mission 035).
 }
 }
 \examples{

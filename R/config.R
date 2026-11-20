@@ -21,7 +21,8 @@
 #'   `hydric_pas_k` (0,02), `hydric_n_controle` (30), la descente d'échelle du climat
 #'   (mission 033, provisoires) : `safran_interpolation` (`"bilineaire"` ou `"proche"`),
 #'   `hydric_node_res_m` (1000), `ru_min_placettes` (5), la calibration sur la GRECO
-#'   (mission 035, provisoires) : `litho_min_cover` (0,5), `litho_encoding_k` (10), `soilgrids_ph` (`TRUE`),
+#'   (mission 035, provisoires) : `litho_min_cover` (0,5), `litho_encoding_k` (10), `soilgrids_ph` (`TRUE`), `cv_block_m` (`NULL` : portée
+#'   estimée de la réponse) et `cv_block_sensibilite_m` (8 358 m),
 #'   `ifn_archive_url` et `taxref_url` (sans valeur
 #'   par défaut : seule source, config.yml ; exigées en ligne), et les
 #'   entrées optionnelles `gnss_path`, `reference_path`, `soil_paths`, `tichy_path`
@@ -112,6 +113,9 @@ read_config <- function(path = "config.yml") {
   # 700 m couverte par la geologie, poids (en placettes) de la moyenne generale dans
   # l'encodage de la lithologie
   litho_min_cover = 0.5, litho_encoding_k = 10, soilgrids_ph = TRUE,
+  # blocs de la validation croisee du pipeline : cv_block_m absent ou null = portee estimee
+  # (le chiffre publie, le plus prudent) ; cv_block_sensibilite_m = taille de la sensibilite
+  cv_block_sensibilite_m = 8358,
   # reprise sur incident reseau des telechargements (mission 026), provisoire
   download_retries = 3L
 )
@@ -172,6 +176,12 @@ read_config <- function(path = "config.yml") {
   x <- cfg$litho_min_cover
   if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0 || x > 1) {
     stop("`litho_min_cover` doit \u00eatre un nombre dans [0, 1].", call. = FALSE)
+  }
+  for (k in c("cv_block_m", "cv_block_sensibilite_m")) {
+    x <- cfg[[k]]
+    if (!is.null(x) && (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0)) {
+      stop("`", k, "` doit \u00eatre un nombre > 0 (m) ou null.", call. = FALSE)
+    }
   }
   x <- cfg$litho_encoding_k
   if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0) {

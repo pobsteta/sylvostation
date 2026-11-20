@@ -78,7 +78,7 @@ hydrique ».
 | `anchors`, `local_trophic` | `get_gbif()`, `clean_occ()` (écarte les licences CC BY-NC, les jeux Pl@ntNet et les licences inconnues, effectifs par motif dans l'attribut `ecartees`, mission 037), `grid_bioindication()`, `gbif_anchors()` | `occ_search` ou `occ_download` | **absent** |
 | `geol_placettes`, `geol_classes_placettes`, `litho_placettes` | `read_geology()` sur tous les départements de `bdcharm_departements` (7 pour la GRECO D) recoupés à la boîte des placettes ; `lithology_at_points()` : classe et formation (`NOTATION`) dominantes dans 700 m, disque couvert à moins de `litho_min_cover` = pas de lithologie (placette retirée et comptée) ; formations sans règle listées (`formations_non_classees`) | BD Charm-50 | extrait |
 | `soilgrids_file`, `ph_layer` | `fetch_soilgrids_ph()` : pH SoilGrids 2.0 0-5 cm (250 m, CC BY 4.0), fenêtre de la GRECO, cache par emprise ; `soilgrids_disk_mean()` : moyenne dans 700 m (`soilgrids_ph: true`) | files.isric.org | **absent** (jamais remplacé) |
-| `train_climat`, `trophic_enc`, `litho_layer`, `formation_layer`, `calibration_effectifs` | placettes avec climat complet ; `encode_by_blocks()` : lithologie et formation encodées par le trophique moyen rétréci (`litho_encoding_k`), **hors pli** (blocs spatiaux) pour l'apprentissage ; `lithology_encoded_layer()` et `formation_encoded_layer()` (mode du disque calculé à 100 m) pour la carte ; `calibration_counts()` : entonnoir des effectifs | | |
+| `train_climat`, `trophic_enc`, `litho_layer`, `formation_layer`, `calibration_effectifs` | placettes avec climat complet ; `encode_by_blocks()` : lithologie (classe) et formation encodées par le trophique moyen rétréci (`litho_encoding_k`) : la **classe** avec toute la partie d'apprentissage (`oof = FALSE`), la **formation** hors pli (blocs spatiaux, `oof = TRUE`) ; `lithology_encoded_layer()` et `formation_encoded_layer()` (mode du disque calculé à 100 m) pour la carte ; `calibration_counts()` : entonnoir des effectifs | | |
 | `models`, `cvs`, `maps` | `fit_gradient()`, `spatial_cv()`, `predict_raster()` (trophique, hydrique) ; bioclimat = `apply_bioclim()` ; couche `hydric` de `gradient_map` = `-is_topo` de `hydric_grid` (le modèle régional hydrique ne sert qu'à la validation croisée) ; `incertitude.tif` : trophique seul | | régional seul |
 | typologie | `default_thresholds()`, `discretise()`, `merge_rare(plots = types des placettes)`, `type_raster()`, `real_type_legend()` (`azonal = FALSE`) | | |
 | fiches, clé | `indicator_species()`, `real_fertility()`, `build_key()` sur `obs_pente`, `obs_topo`, `obs_humus` (notés par l'IFN) | | |
@@ -99,9 +99,17 @@ saison → sans incident → trophique → climat → lithologie → apprentissa
 
 - **Encodage sans fuite** : la lithologie (classe) et la formation sont remplacées par le
   trophique moyen rétréci vers la moyenne générale (`(n × moyenne + k × générale) / (n + k)`,
-  `litho_encoding_k` = 10, provisoire). L'apprentissage reçoit l'encodage **hors pli**
-  (blocs spatiaux) ; en validation croisée (`spatial_cv(encode = )`) l'encodage est refait
-  dans chaque pli : la réponse du pli de test n'y intervient jamais (un test le vérifie).
+  `litho_encoding_k` = 10, provisoire). À l'apprentissage, la **classe** (12 niveaux, des
+  centaines de placettes par niveau) est encodée avec toute la partie d'apprentissage
+  (`oof = FALSE` : R² par blocs 0,15 contre 0,09 hors pli) et la **formation** (666 niveaux,
+  certains rares) hors pli (`oof = TRUE`, blocs spatiaux : 0,264 contre 0,242). En validation
+  croisée (`spatial_cv(encode = )`) les deux encodages sont refaits dans chaque pli, et les
+  colonnes de même nom déjà présentes sont recalculées : la réponse du pli de test n'y
+  intervient jamais (un test le vérifie).
+- **Blocs de la validation croisée** : `cv_block_m` (config.yml, `null` par défaut = portée de
+  l'autocorrélation estimée sur la réponse, environ 22 km pour le trophique de la GRECO D ; le
+  R² publié, le plus prudent). La cible `cv_sensibilite` refait la validation avec des blocs de
+  `cv_block_sensibilite_m` (8 358 m) ; les deux lignes figurent dans `val_stats` et le rapport.
 - **Pas de variable de peuplement** (ADR 0008) : ni essence, ni BD Forêt dans les prédicteurs.
 - **Placettes sans géologie** (disque couvert à moins de `litho_min_cover`) : retirées de
   l'apprentissage et comptées, jamais complétées ; formations sans règle : `non_classe`

@@ -35,7 +35,9 @@ raster de toute la GRECO. La variable s'appelle \code{coarse_litho_700m}.
 \details{
 La règle des 700 m est appelée en premier (\code{\link[=assert_no_fine_extract_on_ifn]{assert_no_fine_extract_on_ifn()}}), et un
 rayon inférieur à la précision de localisation des points (\code{loc_precision_m}) est
-refusé : ce serait une variable fine déguisée. Jointure par \code{NOTATION}, jamais par
+refusé : ce serait une variable fine déguisée. Pour une placette IFN, la précision est
+au moins 700 m même si \code{loc_precision_m} est absent ou \code{NA} ; hors IFN, une précision
+absente ou \code{NA} est refusée. Jointure par \code{NOTATION}, jamais par
 \code{CODE} ; une notation absente de \code{table} reçoit \code{non_classe} (jamais une classe par
 défaut) et est listée dans l'attribut \code{formations_non_classees}. Un point dont le
 disque est couvert à moins de \code{min_cover} par la couche (hors des départements lus)

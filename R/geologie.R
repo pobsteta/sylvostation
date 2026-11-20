@@ -307,7 +307,9 @@ check_geol_joins <- function(geol, fields = c("dep", "CARTE"), tol = 10,
 #'
 #' La règle des 700 m est appelée en premier ([assert_no_fine_extract_on_ifn()]), et un
 #' rayon inférieur à la précision de localisation des points (`loc_precision_m`) est
-#' refusé : ce serait une variable fine déguisée. Jointure par `NOTATION`, jamais par
+#' refusé : ce serait une variable fine déguisée. Pour une placette IFN, la précision est
+#' au moins 700 m même si `loc_precision_m` est absent ou `NA` ; hors IFN, une précision
+#' absente ou `NA` est refusée. Jointure par `NOTATION`, jamais par
 #' `CODE` ; une notation absente de `table` reçoit `non_classe` (jamais une classe par
 #' défaut) et est listée dans l'attribut `formations_non_classees`. Un point dont le
 #' disque est couvert à moins de `min_cover` par la couche (hors des départements lus)
@@ -343,8 +345,18 @@ lithology_at_points <- function(points, geol, table, radius = 700, min_cover = 0
   if (!is.numeric(radius) || length(radius) != 1L || !is.finite(radius) || radius <= 0) {
     stop("`radius` doit \u00eatre un nombre positif (m).", call. = FALSE)
   }
-  prec <- if ("loc_precision_m" %in% names(points)) max(points$loc_precision_m, na.rm = TRUE) else 0
-  if (is.finite(prec) && radius < prec) {
+  lp <- if ("loc_precision_m" %in% names(points)) points$loc_precision_m else numeric(0)
+  if (.is_ifn(points)) {
+    # placettes IFN : au moins 700 m, meme si loc_precision_m est absent ou NA
+    prec <- max(c(lp, 700), na.rm = TRUE)
+  } else {
+    if (!length(lp) || anyNA(lp)) {
+      stop("`loc_precision_m` absent ou NA : pr\u00e9cision de localisation non garantie, refus.",
+           call. = FALSE)
+    }
+    prec <- max(lp)
+  }
+  if (radius < prec) {
     stop("Rayon (", radius, " m) inf\u00e9rieur \u00e0 la pr\u00e9cision de localisation des points (",
          prec, " m) : variable fine d\u00e9guis\u00e9e, refus\u00e9e.", call. = FALSE)
   }

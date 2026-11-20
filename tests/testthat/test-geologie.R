@@ -206,7 +206,7 @@ test_that("check_geol_joins sur l'extrait réel repère les contacts 67/68", {
 # --- lithology_at_points (mission 035) -----------------------------------------------
 pt_sf <- function(x, y, id = "p", ifn = FALSE) {
   p <- sf::st_sf(id_placette = id, geometry = sf::st_sfc(sf::st_point(c(x, y)), crs = 2154))
-  if (ifn) mark_ifn(p) else p
+  if (ifn) mark_ifn(p) else { p$loc_precision_m <- 10; p }   # point precis (10 m) hors IFN
 }
 tab_synth <- data.frame(notation = c("a", "b"), classe = c("granite", "gres"))
 
@@ -258,10 +258,22 @@ test_that("lithology_at_points : la regle des 700 m bloque un rayon inferieur a 
   expect_error(lithology_at_points(p, g, tab_synth, radius = 100), "précision|fine")
   expect_error(lithology_at_points(p, g, tab_synth, radius = 699), "précision")
   expect_error(lithology_at_points(p, g, tab_synth, radius = 700, min_cover = 0), NA)
-  # points sans loc_precision_m mais marques source = ifn : la regle bloquante s'applique
+  # placette IFN dont loc_precision_m a ete retire ou vaut NA : au moins 700 m s'applique,
+  # un rayon de 50 m est refuse (jamais un contournement par colonne absente)
   q <- p
   q$loc_precision_m <- NULL
-  expect_error(suppressWarnings(lithology_at_points(q, g, tab_synth, radius = 700)), NA)
+  expect_error(lithology_at_points(q, g, tab_synth, radius = 50, min_cover = 0), "pr\u00e9cision")
+  expect_error(suppressWarnings(lithology_at_points(q, g, tab_synth, radius = 700, min_cover = 0)), NA)
+  q2 <- p
+  q2$loc_precision_m <- NA_real_
+  expect_error(lithology_at_points(q2, g, tab_synth, radius = 50, min_cover = 0), "pr\u00e9cision")
+  # hors IFN : precision absente ou NA refusee
+  n1 <- pt_sf(1000250, 6800250)
+  n1$loc_precision_m <- NULL
+  expect_error(lithology_at_points(n1, g, tab_synth, radius = 700), "loc_precision_m")
+  n2 <- pt_sf(1000250, 6800250)
+  n2$loc_precision_m <- NA_real_
+  expect_error(lithology_at_points(n2, g, tab_synth, radius = 700), "loc_precision_m")
   # validations
   expect_error(lithology_at_points(p, g, tab_synth, radius = -1), "radius")
   expect_error(lithology_at_points(p, g, tab_synth, min_cover = 2), "min_cover")

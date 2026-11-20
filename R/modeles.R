@@ -376,7 +376,9 @@ encode_by_blocks <- function(data, response, var, name = "coarse_litho_enc", k =
 #'   (mission 035 ; `oof = FALSE` encode l'apprentissage avec toute sa partie, sans plis
 #'   internes ; défaut `TRUE`) : `var` est une
 #'   colonne catégorielle de `data` (lithologie, formation) et `name` le nom du prédicteur
-#'   numérique à créer (il doit figurer dans `predictors`, pas dans `data`). Dans chaque
+#'   numérique à créer (il doit figurer dans `predictors` ; **si une colonne de ce nom existe
+#'   déjà dans `data`, elle est recalculée dans chaque pli**, par exemple la colonne hors pli
+#'   de [encode_by_blocks()], jamais utilisée telle quelle). Dans chaque
 #'   pli, l'apprentissage reçoit l'encodage **hors pli** ([oof_target_encoding()], blocs
 #'   de la même taille) et le pli de test l'encodage de toute la partie d'apprentissage :
 #'   la réponse du pli de test n'intervient jamais, sans fuite.
