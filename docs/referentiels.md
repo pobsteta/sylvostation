@@ -2161,15 +2161,23 @@ pas le R² et n'en apporte pas de significatif. Son bénéfice est ailleurs : pl
 classe dominante `non_classe` (296 → 0), classes lisibles par un forestier. Les R² de § 35.5 ne
 sont pas remplacés (le run réel n'a pas été relancé).
 
-## 37. Carte trophique locale contre régionale : règle de remplacement (mission 037, 2026-11-20)
+## 41. Carte trophique locale contre régionale : règle de remplacement (mission 037, 2026-11-20)
 
 - **Décision éclairée :** le modèle local (ancrages GBIF, 50 m) remplace-t-il la carte trophique régionale
   (placettes IFN) ? **Propriétaire :** Pascal (a tranché, option b : seulement s'il fait mieux en validation
   croisée). **Rédigé par :** `dev`, mission 037.
 - **Règle :** sur les mêmes ancrages et les mêmes plis, gain = R²(local hors pli) - R²(régional lu aux
   ancrages, brut). Le local remplace si la borne basse de l'IC du gain (bootstrap de blocs, 95 % bilatéral,
-  1 000 tirages) dépasse 0,02. **Valeur provisoire, sans source, à vérifier** (0,02 : environ le bruit de
-  répartition des plis vu au § 36 ; 20 ancrages et 10 blocs minimaux).
+  1 000 tirages) dépasse 0,02. **Valeur provisoire, choix prudent de l'orchestrateur au lieu de 0, sans source, à
+  vérifier** (20 ancrages et 10 blocs minimaux : même statut). En repère seulement, les écarts-types
+  du R² sur 5 partitions mesurés en 039 (± 0,009 à 0,024, § 37 de 039) donnent un ordre de grandeur du
+  bruit de répartition des plis ; ce n'est **pas une calibration** du 0,02.
+- **Portée de l'IC :** il est **conditionnel aux prédictions hors pli figées** (une seule répartition en
+  plis, un seul ajustement) : il rend compte du choix des blocs d'ancrages, pas de la variabilité de
+  l'ajustement du local. `n_tirages` donne le nombre de tirages valides.
+- **Variables égales :** le local reprend les prédicteurs, sauf les variables climatiques de maille large que
+  le régional trophique n'utilise pas (`local_trophic_vars()` ; `trophique_climat: sans` : aucune, donc
+  pas de `coarse_t_corr_700m`).
 - **Asymétries :** (a) décalage de domaine (flore IFN sur 700 m contre listes de 50 m) : défavorise le
   régional ; un régional recalibré hors pli est rendu pour information, **jamais comme critère** ; (b) fuite
   possible en faveur du régional (placettes IFN d'apprentissage voisines des ancrages) : règle plus dure pour

@@ -114,7 +114,7 @@ bdforet_min_polygones: 5
 # Carte trophique locale (ancrages GBIF, en ligne) : elle ne remplace la carte régionale que si, sur les
 # mêmes ancrages et les mêmes plis, la borne basse de l'IC (bootstrap de blocs) du gain de R² du local
 # sur le régional dépasse local_gain_min. TOUTES CES VALEURS : provisoire, sans source, à vérifier.
-# local_gain_min : marge minimale (0,02, environ le bruit de répartition des plis vu en 037) ;
+# local_gain_min : marge minimale 0,02 (choix prudent de l'orchestrateur au lieu de 0, sans source) ;
 # local_min_ancrages, local_min_blocs : en dessous, la comparaison est impossible (carte régionale
 # gardée, avertissement) ; local_ic_niveau : niveau de l'IC bilatéral ; local_bootstrap : tirages.
 local_gain_min: 0.02

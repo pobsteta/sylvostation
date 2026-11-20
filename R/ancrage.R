@@ -582,10 +582,15 @@ load_gnss <- function(path, epsg = 2154) {
 #' (`aoa_part_carte`). Le **régional recalibré hors pli** (décalage moyen appris sur les autres plis)
 #' est rendu **pour information seulement, jamais comme critère de décision**.
 #'
+#' L'IC est **conditionnel aux prédictions hors pli figées** : il rend compte du choix des blocs
+#' d'ancrages, pas de la variabilité de l'ajustement du modèle local ni de la répartition en plis.
+#'
 #' Seuils : **valeur provisoire, sans source, à vérifier**.
 #'
 #' @param local_trophic Liste de la cible `local_trophic` : `data` (`sf` des ancrages, colonne
-#'   `trophic`, EPSG:2154) et `cv` (résultat de [spatial_cv()] sur ces ancrages), ou `NULL`.
+#'   `trophic`, EPSG:2154) et `cv` (résultat de [spatial_cv()] sur ces ancrages) ; sans modèle, `NULL`
+#'   ou une liste portant `n_complets` (effectif après exclusion des incomplets) et, si l'ajustement a
+#'   échoué, `erreur` (message d'origine).
 #' @param regional_map `SpatRaster` (une couche) de la carte trophique **régionale**, EPSG:2154.
 #' @param n_anchors Nombre d'ancrages avant exclusion des incomplets (pour le message ; `NA` ok).
 #' @param gain_min Marge minimale sur la borne basse de l'IC du gain de R² (0,02).
@@ -594,7 +599,8 @@ load_gnss <- function(path, epsg = 2154) {
 #' @param n_boot Tirages du bootstrap de blocs (1 000).
 #' @param seed Graine du bootstrap (l'état du générateur est restauré).
 #' @param aoa_part Part de la carte dans la zone d'applicabilité du modèle local (information).
-#' @return Une liste : `resume` (une ligne : `n_ancrages`, `n_blocs`, `k_plis`, `r2_local`,
+#' @return Une liste : `resume` (une ligne : `n_ancrages`, `n_blocs`, `k_plis`, `n_tirages` (tirages valides du
+#'   bootstrap), `r2_local`,
 #'   `r2_regional`, `r2_regional_recalibre` (information), `gain`, `ic_bas`, `ic_haut`, `niveau_ic`, `seuil_gain`,
 #'   `rmse_local`, `rmse_regional`, `biais_regional`, `aoa_part_carte`, `decision`, `motif`,
 #'   `statut_seuils`), `par_pli`, `remplace` (logique) et `publiee` (`"locale"` ou `"regionale"`).
@@ -629,7 +635,7 @@ compare_local_regional <- function(local_trophic, regional_map, n_anchors = NA_i
   if (!is.numeric(n_boot) || length(n_boot) != 1L || !is.finite(n_boot) || n_boot < 10) {
     stop("`n_boot` doit \u00eatre un entier >= 10.", call. = FALSE)
   }
-  cols <- c("n_ancrages", "n_blocs", "k_plis", "r2_local", "r2_regional", "r2_regional_recalibre",
+  cols <- c("n_ancrages", "n_blocs", "k_plis", "n_tirages", "r2_local", "r2_regional", "r2_regional_recalibre",
             "gain", "ic_bas", "ic_haut", "niveau_ic", "rmse_local", "rmse_regional", "biais_regional")
   vide <- function(motif, n = n_anchors, nb = NA_integer_, k = NA_integer_) {
     warning("Comparaison local / r\u00e9gional impossible : ", motif,
@@ -642,8 +648,15 @@ compare_local_regional <- function(local_trophic, regional_map, n_anchors = NA_i
     list(resume = r, par_pli = data.frame(), remplace = FALSE, publiee = "regionale")
   }
   if (is.null(local_trophic) || is.null(local_trophic$cv) || is.null(local_trophic$data)) {
-    return(vide(paste0("mod\u00e8le local absent (", if (is.na(n_anchors)) "aucun" else n_anchors,
-                       " ancrage(s) complet(s) pour au moins ", min_anchors, " requis)")))
+    # deux causes distinctes : effectif insuffisant (apres exclusion des ancrages incomplets) ou
+    # echec de l'ajustement (message d'origine rendu tel quel)
+    nc <- if (!is.null(local_trophic$n_complets)) local_trophic$n_complets else n_anchors
+    if (!is.null(local_trophic$erreur)) {
+      return(vide(paste0("\u00e9chec du mod\u00e8le local (", local_trophic$erreur, ")"), n = nc))
+    }
+    return(vide(paste0("effectif insuffisant : ", if (is.na(nc)) "aucun" else nc,
+                       " ancrage(s) complet(s) apr\u00e8s exclusion des incomplets pour au moins ",
+                       min_anchors, " requis"), n = nc))
   }
   d <- local_trophic$data
   cv <- local_trophic$cv
@@ -708,7 +721,7 @@ compare_local_regional <- function(local_trophic, regional_map, n_anchors = NA_i
   motif <- sprintf(paste0("gain de R2 du local %.3f, IC %.0f %% [%.3f ; %.3f] sur %d ancrages et %d blocs : ",
                           "%s la marge de %.3f"), gain, level * 100, q[1], q[2], n_ok, nb,
                    if (remplace) "borne basse au-dessus de" else "borne basse non sup\u00e9rieure \u00e0", gain_min)
-  res <- data.frame(n_ancrages = n_ok, n_blocs = nb, k_plis = k,
+  res <- data.frame(n_ancrages = n_ok, n_blocs = nb, k_plis = k, n_tirages = sum(is.finite(gains)),
                     r2_local = r2(obs[ok], loc[ok]), r2_regional = r2(obs[ok], reg[ok]),
                     r2_regional_recalibre = r2(obs[ok], cal[ok]), gain = gain,
                     ic_bas = q[1], ic_haut = q[2], niveau_ic = level, seuil_gain = gain_min,
@@ -755,4 +768,24 @@ select_trophic_map <- function(maps_regional, local_map = NULL, comparison = NUL
     return(list(maps = m, publiee = "locale", motif = comparison$resume$motif))
   }
   list(maps = maps_regional, publiee = "regionale", motif = comparison$resume$motif)
+}
+
+#' Variables du modèle trophique local : celles du régional pour le climat de maille large
+#'
+#' Le modèle local (ancrages GBIF) reprend tous les prédicteurs, **sauf** les variables climatiques de
+#' maille large que le modèle régional trophique n'utilise pas : avec `trophique_climat = "sans"`,
+#' aucune ; `coarse_t_corr_700m` n'y entre que si le régional l'a. Les deux modèles ne diffèrent
+#' ainsi que par la finesse des données (terrain fin, lithologie), jamais par un climat que l'un
+#' voit et l'autre non.
+#'
+#' @param predictors Noms de toutes les couches de prédicteurs.
+#' @param climate Noms des couches climatiques de maille large (`predictors_climat`).
+#' @param regional Variables du modèle trophique régional (`vars_modele$trophic`).
+#' @return Vecteur de noms de variables du modèle local.
+#' @examples
+#' local_trophic_vars(c("coarse_t_moy", "coarse_t_corr_700m", "pente", "coarse_litho_enc"),
+#'                    c("coarse_t_moy", "coarse_t_corr_700m"), "coarse_litho_enc")
+#' @export
+local_trophic_vars <- function(predictors, climate, regional) {
+  setdiff(predictors, setdiff(climate, regional))
 }

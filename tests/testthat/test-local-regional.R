@@ -46,6 +46,7 @@ test_that("le local gagne : borne basse de l'IC au-dessus de la marge, remplacem
   expect_equal(res$resume$niveau_ic, 0.95)
   expect_gte(res$resume$n_blocs, 10L)
   expect_equal(res$resume$k_plis, 5L)
+  expect_equal(res$resume$n_tirages, 300L)                  # tirages valides du bootstrap
   expect_equal(sum(res$par_pli$n), 160L)
   expect_equal(res$par_pli$gain, res$par_pli$r2_local - res$par_pli$r2_regional)
   expect_match(res$resume$motif, "au-dessus de")
@@ -94,12 +95,20 @@ test_that("comparaison impossible : avertissement avec la raison, carte regional
   skip_if_not_installed("ranger")
   d <- fabrique_ancrages(signal = "a")
   r <- carte(function(x, y) rep(0, length(x)))
-  # modele local absent (moins d'ancrages que le minimum dans la cible)
-  expect_warning(a <- compare_local_regional(NULL, r, n_anchors = 2L), "mod.le local absent \\(2 ancrage")
+  # effectif insuffisant APRES exclusion des incomplets (n_complets) : distinct d'un echec du modele
+  expect_warning(a <- compare_local_regional(list(n_complets = 2L), r, n_anchors = 9L),
+                 "effectif insuffisant : 2 ancrage\\(s\\) complet\\(s\\) apr.s exclusion")
   expect_false(a$remplace)
   expect_equal(a$publiee, "regionale")
   expect_match(a$resume$decision, "comparaison impossible")
-  expect_equal(a$resume$n_ancrages, 2L)
+  expect_equal(a$resume$n_ancrages, 2L)                  # les complets, pas les 9 d'origine
+  expect_warning(a0 <- compare_local_regional(NULL, r, n_anchors = 4L), "effectif insuffisant : 4")
+  expect_false(a0$remplace)
+  # echec de l'ajustement : message d'origine rendu, jamais confondu avec un effectif insuffisant
+  expect_warning(f <- compare_local_regional(list(n_complets = 40L, erreur = "trop peu de blocs"), r),
+                 "chec du mod.le local \\(trop peu de blocs\\)")
+  expect_false(f$remplace)
+  expect_false(grepl("effectif", f$resume$motif))
   expect_true(is.na(a$resume$gain))
   expect_equal(nrow(a$par_pli), 0L)
   # trop peu d'ancrages
@@ -210,4 +219,33 @@ test_that("_targets.R : le local n'entre dans maps que par select_trophic_map", 
   expect_false(grepl("local", bloc("maps_regional")))
   expect_match(bloc("comparaison_locale"), "compare_local_regional", fixed = TRUE)
   expect_match(bloc("comparaison_locale"), "maps_regional", fixed = TRUE)   # le regional, jamais maps
+})
+
+test_that("local_trophic_vars : jamais de climat que le regional n'a pas (trophique_climat = sans)", {
+  pred <- c("coarse_p_etp_sv", "coarse_t_moy", "coarse_t_corr_700m", "coarse_litho_enc",
+            "coarse_formation_enc", "pente", "twi")
+  clim <- c("coarse_p_etp_sv", "coarse_t_moy", "coarse_t_corr_700m")
+  reg_sans <- c("coarse_litho_enc", "coarse_formation_enc")           # trophique_climat = sans
+  v <- local_trophic_vars(pred, clim, reg_sans)
+  expect_setequal(v, c("coarse_litho_enc", "coarse_formation_enc", "pente", "twi"))
+  expect_false(any(clim %in% v))
+  expect_false("coarse_t_corr_700m" %in% v)
+  # le regional a la T corrigee : le local l'a aussi, et seulement elle
+  v2 <- local_trophic_vars(pred, clim, c("coarse_p_etp_sv", "coarse_t_corr_700m", reg_sans))
+  expect_true(all(c("coarse_p_etp_sv", "coarse_t_corr_700m") %in% v2))
+  expect_false("coarse_t_moy" %in% v2)
+})
+
+test_that("_targets.R : local_trophic prend ses variables de local_trophic_vars et vars_modele", {
+  f <- testthat::test_path("..", "..", "_targets.R")
+  skip_if_not(file.exists(f), "_targets.R absent du paquet installe")
+  l <- readLines(f, encoding = "UTF-8")
+  debuts <- grep("^\\s*tar_target\\(", l)
+  nom <- sub("^\\s*tar_target\\(([A-Za-z_0-9.]+).*$", "\\1", l[debuts])
+  skip_if(!"maps_regional" %in% nom, "cibles reelles absentes de _targets.R")
+  i <- which(nom == "local_trophic")
+  b <- paste(l[debuts[i]:(c(debuts, length(l) + 1L)[i + 1L] - 1L)], collapse = "\n")
+  expect_match(b, "local_trophic_vars(names(predictors), names(predictors_climat)", fixed = TRUE)
+  expect_match(b, "vars_modele$trophic", fixed = TRUE)
+  expect_false(grepl("coarse_t_corr", b))                       # jamais nomme en dur
 })

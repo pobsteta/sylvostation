@@ -667,26 +667,32 @@ if (!isTRUE(cfg$demo)) {
       m
     }),
     # composante locale (en ligne seulement) : trophique sur les ancrages GBIF
+    # Variables du local : celles des predicteurs SAUF les variables climatiques de maille large que le
+    # modele regional n'utilise pas (trophique_climat = sans : aucune ; coarse_t_corr_700m n'y entre
+    # que si le regional l'a), pour que les deux modeles ne different que par la finesse des donnees.
+    # Toujours une liste quand des ancrages ont ete cherches : `model`/`cv`/`data`, ou `n_complets`
+    # (effectif insuffisant) ou `erreur` (echec de l'ajustement, message d'origine).
     tar_target(local_trophic, {
       if (is.null(anchors)) return(NULL)
-      v <- setdiff(names(predictors), character(0))
+      v <- sylvostation::local_trophic_vars(names(predictors), names(predictors_climat),
+                                            vars_modele$trophic)
       d <- anchors[stats::complete.cases(sf::st_drop_geometry(anchors)[, c("trophic", v)]), ]
-      if (nrow(d) < cfg$local_min_ancrages) return(NULL)
+      if (nrow(d) < cfg$local_min_ancrages) return(list(n_complets = nrow(d)))
       # un echec (trop peu de blocs pour 5 plis, par exemple) : avertissement avec sa raison, pas de
       # modele local, carte regionale gardee (jamais un arret ni un silence)
       tryCatch(list(model = sylvostation::fit_gradient(d, "trophic", v, num_trees = 500, seed = 1),
                     cv = sylvostation::spatial_cv(d, "trophic", v, k = 5, num_trees = 500, seed = 1),
-                    data = d),
+                    data = d, n_complets = nrow(d), variables = v),
                error = function(e) {
                  warning("local_trophic : ", conditionMessage(e), " ; mod\u00e8le local omis.", call. = FALSE)
-                 NULL
+                 list(n_complets = nrow(d), erreur = conditionMessage(e))
                })
     }),
     # cartes du modele REGIONAL (IFN) : jamais remplacees ici ; le local n'entre que par maps
     tar_target(maps_regional, stats::setNames(lapply(grad_reg, function(g) {
       sylvostation::predict_raster(models[[g]], predictors, cv = cvs[[g]])
     }), grad_reg)),
-    tar_target(local_map, if (is.null(local_trophic)) NULL else
+    tar_target(local_map, if (is.null(local_trophic$model)) NULL else
       sylvostation::predict_raster(local_trophic$model, predictors, cv = local_trophic$cv)),
     # le local ne remplace le regional que s'il fait mieux en validation croisee sur les memes
     # ancrages et les memes plis (borne basse de l'IC du gain > local_gain_min). Hors ligne (pas
@@ -789,7 +795,7 @@ if (!isTRUE(cfg$demo)) {
 
     # --- validation ---------------------------------------------------------------------
     tar_target(val_stats, sylvostation::validation_table(
-      cvs, sensibilite = cv_sensibilite, local = if (!is.null(local_trophic)) local_trophic$cv,
+      cvs, sensibilite = cv_sensibilite, local = local_trophic$cv,
       min_blocs_par_pli = cfg$cv_min_blocs_par_pli)),
     tar_target(gnss_validation, if (is.null(src$gnss)) NULL else {
       g <- sylvostation::gnss_field_gradients(sylvostation::load_gnss(src$gnss), indicateurs_noms,
