@@ -14,7 +14,6 @@
 
 ## Validé
 
-- [037-ancrages-gbif-bdforet](missions/037-ancrages-gbif-bdforet.md) · depuis le cycle 5 · dev (opus, plan d'abord)
 
 
 
@@ -33,6 +32,7 @@
 
 ## Terminé
 
+- [037-ancrages-gbif-bdforet](missions/037-ancrages-gbif-bdforet.md) · cycle 5 · dev · ancrages GBIF 5 → 2 (licences) ; contrôle par essence : pente 0,31, 3 alertes ; gain net de l'essence ≈ 0,05 (ADR 0008 maintenue)
 - [035-calibration-greco](missions/035-calibration-greco.md) · cycle 5 · dev · 187 → 2 893 placettes ; R² trophique 0,19 [0,09 ; 0,28] (blocs estimés 22 km), 0,27 [0,20 ; 0,31] (8 358 m)
 - [034-predicteurs-piedallu](missions/034-predicteurs-piedallu.md) · cycle 5 · dev · plan rendu, code absorbé par 035
 - [033-empreinte-safran](missions/033-empreinte-safran.md) · cycle 5 · dev · maille : type modal 0,90 → 0,53 ; trophique sans pouvoir prédictif jusqu'à 035
