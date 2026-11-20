@@ -565,7 +565,17 @@ if (synth) cat("Sur des données synthétiques, un R² supérieur au repère **n
 ```
 
 ```{r}
-tab(lire("validation_stats"))
+vs <- lire("validation_stats")
+tab(if (is.null(vs)) NULL else vs[, setdiff(names(vs), "alerte"), drop = FALSE])
+```
+
+```{r}
+#| results: asis
+# R² porté par trop peu de blocs (mission 035) : signalé en clair, avec renvoi à la sensibilité
+if (!is.null(vs) && "alerte" %in% names(vs)) {
+  al <- vs[!is.na(vs$alerte) & nzchar(vs$alerte), , drop = FALSE]
+  for (i in seq_len(nrow(al))) cat("**Attention, ", al$gradient[i], " : ", al$alerte[i], ".**\n\n", sep = "")
+}
 ```
 
 ```{r}

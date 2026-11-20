@@ -107,9 +107,18 @@ saison → sans incident → trophique → climat → lithologie → apprentissa
   colonnes de même nom déjà présentes sont recalculées : la réponse du pli de test n'y
   intervient jamais (un test le vérifie).
 - **Blocs de la validation croisée** : `cv_block_m` (config.yml, `null` par défaut = portée de
-  l'autocorrélation estimée sur la réponse, environ 22 km pour le trophique de la GRECO D ; le
-  R² publié, le plus prudent). La cible `cv_sensibilite` refait la validation avec des blocs de
-  `cv_block_sensibilite_m` (8 358 m) ; les deux lignes figurent dans `val_stats` et le rapport.
+  l'autocorrélation estimée sur la réponse ; le R² publié, le plus prudent : environ 22 km pour
+  le trophique de la GRECO D, 76,7 km pour l'hydrique). La cible `cv_sensibilite` refait la
+  validation de **chaque gradient modelisé** (`trophic`, `hydric`) avec des blocs de
+  `cv_block_sensibilite_m` (8 358 m) ; les lignes « `<gradient>` (sensibilité : blocs de taille
+  fixe) » figurent dans `val_stats` (`validation_table()`) et le rapport. Si une sensibilité
+  échoue (jeu trop petit pour 5 plis de cette taille, par exemple hors ligne), un **avertissement
+  donne la raison** et la ligne est omise.
+- **Alerte `blocs_insuffisants`** : `validation_stats.csv` porte les colonnes `blocs` (blocs
+  occupés), `k`, `blocs_insuffisants` (vraie si `blocs < cv_min_blocs_par_pli × k`, soit moins de
+  20 blocs pour 5 plis ; valeur provisoire, à vérifier) et `alerte`. Le rapport l'affiche en clair :
+  « R² peu interprétable : N blocs pour k plis ; voir la ligne de sensibilité ». Cas réel : l'hydrique
+  de la relance 035, à 8 blocs.
 - **Pas de variable de peuplement** (ADR 0008) : ni essence, ni BD Forêt dans les prédicteurs.
 - **Placettes sans géologie** (disque couvert à moins de `litho_min_cover`) : retirées de
   l'apprentissage et comptées, jamais complétées ; formations sans règle : `non_classe`

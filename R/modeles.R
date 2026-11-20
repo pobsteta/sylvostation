@@ -385,7 +385,8 @@ encode_by_blocks <- function(data, response, var, name = "coarse_litho_enc", k =
 #' @param ... Transmis à [fit_gradient()] (`num_trees`, `seed`, `points_source`).
 #' @return Une liste : `par_pli` (pli, n, r2, rmse), `global` (r2, rmse sur toutes les
 #'   prédictions hors pli), `predictions` (observé, prédit, écart-type prédit `sd`, pli),
-#'   `block_size`, `k`, `plis`.
+#'   `block_size`, `k`, `plis`, `n_blocs` (blocs carrés occupés par au moins un point ;
+#'   `NA` si `folds` est fourni).
 #'   R² = 1 - SCR/SCT par rapport à la moyenne observée ; il peut être négatif.
 #' @examples
 #' set.seed(1)
@@ -423,8 +424,10 @@ spatial_cv <- function(data, response, predictors, method = c("ranger", "gam"),
   if (!is.numeric(block_size) || length(block_size) != 1L || block_size <= 0) {
     stop("`block_size` doit \u00eatre un nombre positif (m\u00e8tres).", call. = FALSE)
   }
+  n_blocs <- NA_integer_
   if (is.null(folds)) {
     folds <- .block_folds(xy, block_size, k)
+    n_blocs <- length(unique(paste(floor(xy[, 1] / block_size), floor(xy[, 2] / block_size))))
   } else if (length(folds) != nrow(df)) {
     stop("`folds` doit avoir la longueur de `data`.", call. = FALSE)
   }
@@ -461,7 +464,7 @@ spatial_cv <- function(data, response, predictors, method = c("ranger", "gam"),
     par_pli = as.data.frame(do.call(rbind, met)),
     global = c(r2 = .r2(obs, pred), rmse = .rmse(obs, pred)),
     predictions = data.frame(observe = obs, predit = pred, sd = pred_sd, pli = folds),
-    block_size = block_size, k = length(ids), plis = folds
+    block_size = block_size, k = length(ids), plis = folds, n_blocs = n_blocs
   )
 }
 

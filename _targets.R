@@ -496,17 +496,26 @@ if (!isTRUE(cfg$demo)) {
                                  list(var = "coarse_formation_700m", name = "coarse_formation_enc",
                                       k = cfg$litho_encoding_k, oof = TRUE)))
     }), grad_reg)),
-    # sensibilite : meme validation croisee du trophique avec des blocs de cv_block_sensibilite_m
-    # (8 358 m par defaut) ; publiee a cote du chiffre principal (blocs de cv_block_m)
-    # (NULL si le jeu est trop petit pour 5 plis de cette taille, par exemple en mode hors ligne)
-    tar_target(cv_sensibilite, tryCatch(sylvostation::spatial_cv(
-      train$trophic, "trophic", vars_modele$trophic, k = 5, points_source = "ifn",
-      block_size = cfg$cv_block_sensibilite_m, ifn_precision_m = cfg$ifn_precision_m,
-      num_trees = 500, seed = 1,
-      encode = list(
-        list(var = "coarse_litho_700m", name = "coarse_litho_enc", k = cfg$litho_encoding_k, oof = FALSE),
-        list(var = "coarse_formation_700m", name = "coarse_formation_enc", k = cfg$litho_encoding_k,
-             oof = TRUE))), error = function(e) NULL)),
+    # sensibilite : meme validation croisee de CHAQUE gradient modelise avec des blocs de
+    # cv_block_sensibilite_m (8 358 m par defaut), publiee a cote du chiffre principal (blocs de
+    # cv_block_m). Un echec (jeu trop petit pour 5 plis de cette taille, par exemple hors ligne)
+    # donne un avertissement avec sa raison et un element NULL : la ligne est omise, pas muette.
+    tar_target(cv_sensibilite, stats::setNames(lapply(grad_reg, function(g) {
+      tryCatch(sylvostation::spatial_cv(
+        train[[g]], g, vars_modele[[g]], k = 5, points_source = "ifn",
+        block_size = cfg$cv_block_sensibilite_m, ifn_precision_m = cfg$ifn_precision_m,
+        num_trees = 500, seed = 1,
+        encode = if (g == "trophic") list(
+          list(var = "coarse_litho_700m", name = "coarse_litho_enc", k = cfg$litho_encoding_k,
+               oof = FALSE),
+          list(var = "coarse_formation_700m", name = "coarse_formation_enc",
+               k = cfg$litho_encoding_k, oof = TRUE))),
+        error = function(e) {
+          warning("cv_sensibilite (", g, ") : ", conditionMessage(e),
+                  " ; ligne de sensibilit\u00e9 omise.", call. = FALSE)
+          NULL
+        })
+    }), grad_reg)),
     # composante locale (en ligne seulement) : trophique sur les ancrages GBIF
     tar_target(local_trophic, {
       if (is.null(anchors)) return(NULL)
@@ -608,20 +617,9 @@ if (!isTRUE(cfg$demo)) {
       seuil = key$min_accuracy, atteint = key$meets_target, profondeur = key$depth)),
 
     # --- validation ---------------------------------------------------------------------
-    tar_target(val_stats, {
-      v <- sylvostation::validate_stats(cvs)
-      if (!is.null(cv_sensibilite)) {
-        s <- sylvostation::validate_stats(list(trophic = cv_sensibilite))
-        s$gradient <- "trophic (sensibilit\u00e9 : blocs de taille fixe)"
-        v <- rbind(v, s)
-      }
-      if (!is.null(local_trophic)) {
-        l <- sylvostation::validate_stats(list(trophic = local_trophic$cv))
-        l$gradient <- "trophic (local, ancrages GBIF)"
-        v <- rbind(v, l)
-      }
-      v
-    }),
+    tar_target(val_stats, sylvostation::validation_table(
+      cvs, sensibilite = cv_sensibilite, local = if (!is.null(local_trophic)) local_trophic$cv,
+      min_blocs_par_pli = cfg$cv_min_blocs_par_pli)),
     tar_target(gnss_validation, if (is.null(src$gnss)) NULL else {
       g <- sylvostation::gnss_field_gradients(sylvostation::load_gnss(src$gnss), indicateurs_noms,
                                               predictors, attr(ifn_gradients, "bioclim_axis"))
