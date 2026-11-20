@@ -167,3 +167,32 @@ test_that("lateral_balance : classes 1 a 3, equivalents en RU, couches fines", {
   expect_error(lateral_balance(terra::aggregate(dtm, 10), cf0), "50")
   expect_error(lateral_balance(dtm), "coef")
 })
+
+test_that("soilgrids_cu : GeoTIFF unique, balise echelle = 10 lue ; sans balise, somme a 100 controlee", {
+  skip_if_not_installed("euptf2")
+  mk <- function(f) {
+    L <- lapply(c("clay", "sand", "silt", "cfvo"), function(p) {
+      r <- terra::rast(nrows = 2, ncols = 2, xmin = 1e6, xmax = 1000500, ymin = 6.8e6,
+                       ymax = 6800500, crs = "EPSG:2154", nlyrs = 6,
+                       vals = f * switch(p, clay = 20, sand = 40, silt = 40, cfvo = 10))
+      names(r) <- paste0(p, "_", c("0-5", "5-15", "15-30", "30-60", "60-100", "100-200"), "cm_mean")
+      r
+    })
+    do.call(c, L)
+  }
+  ref <- terra::values(soilgrids_cu(mk(1)))
+  # x 10 avec la balise : divise par 10, meme resultat qu'en %
+  a <- mk(10)
+  terra::metags(a) <- c(echelle = "10")
+  fa <- tempfile(fileext = ".tif")
+  terra::writeRaster(a, fa, datatype = "INT2S")
+  expect_equal(terra::values(soilgrids_cu(fa)), ref, tolerance = 1e-6)
+  # en % sans balise : accepte
+  fp <- tempfile(fileext = ".tif")
+  terra::writeRaster(mk(1), fp)
+  expect_equal(terra::values(soilgrids_cu(fp)), ref, tolerance = 1e-6)
+  # x 10 sans balise : somme 1 000 au lieu de 100, arret qui nomme l'echelle x 10
+  fb <- tempfile(fileext = ".tif")
+  terra::writeRaster(mk(10), fb, datatype = "INT2S")
+  expect_error(soilgrids_cu(fb), "echelle|× 10")
+})
