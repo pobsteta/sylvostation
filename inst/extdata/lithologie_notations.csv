@@ -1,157 +1,199 @@
-"notation","classe","origine","regle","confiance","source","decision_pascal"
-"CFy-z","colluvions_eboulis","regle","9.2","moyenne","BD Charm-50 (BRGM)","non"
-"D","non_classe","laisse","","moyenne","BD Charm-50 (BRGM)","non"
-"FJx-y","alluvions","regle","9.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"FJy-z","alluvions","regle","9.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"Fn","non_classe","laisse","","moyenne","BD Charm-50 (BRGM)","non"
-"Fp-v","alluvions","regle","9.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"Fv","alluvions","table","","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"FzI","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"GLx-y","glaciaire","regle","9.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"GLy","glaciaire","regle","9.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"GP","colluvions_eboulis","regle","9.2","moyenne","BD Charm-50 (BRGM) ; recherche web : grouine = équivalent des grèzes (source non ouverte : à vérifier)","non"
-"Hydro","non_classe","laisse","","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"JA","colluvions_eboulis","regle","9.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"JAy-z","colluvions_eboulis","regle","9.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"LGy","glaciaire","regle","9.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"Lz","non_classe","laisse","","moyenne","BD Charm-50 (BRGM)","non"
-"P","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"Pv","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"Pw","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"Px","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"Q","non_classe","laisse","","moyenne","BD Charm-50 (BRGM)","non"
-"Tx-y","non_classe","laisse","","moyenne","BD Charm-50 (BRGM)","non"
-"X","non_classe","laisse","","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"d-h","volcanite","regle","10.4","basse","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","oui"
-"d-h1-2","schiste_grauwacke","regle","10.2","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"d-h2","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"d-hK1","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"d-hK3","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"d-hPh","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"d1-5LK","schiste_grauwacke","regle","10.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"d4-5v","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"d4-5vs","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"d4-5Õa","schiste_grauwacke","regle","10.2","basse","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"d5-6Ph","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"d5br(ö-q)","volcanite","regle","10.4","basse","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"d5brsâ","roche_basique","regle","10.5","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"d5gM","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"d5îìa","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"d5îìq","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"d5öq","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"fm","non_classe","laisse","","moyenne","BD Charm-50 (BRGM)","non"
-"g1P","marne_argile","regle","11.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88 ; lithologie à vérifier","oui"
-"g1Sp","marne_argile","regle","11.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88 ; lithologie à vérifier","oui"
-"h2","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2(áö)","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2(ôë)","plutonite_intermediaire","regle","10.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2(öâ)","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88-89","non"
-"h2-3LãER","granite","regle","10.6","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","oui"
-"h2-3ã3Sn","granite","regle","10.6","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2BrLa","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2G2vs","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2GBr","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2GGa","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2GGai","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2GGam","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2GGá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2GGö","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2GPi","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2GPm","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2GPs","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2Gâ","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2Gó3(1)","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2Góá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2Göâ","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2La","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2MK","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2MK3(1)","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2MK3(2)","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","oui"
-"h2PK","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2PK(1)","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2PK3","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87 et p.89","oui"
-"h2PT","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2PTB","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2PTC","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2PTL","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2bC","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2bCá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2bCóá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM)","non"
-"h2bGBr","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2bGGa","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2bGGam","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2bGPi","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2bGPm","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2bGPs","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2bGá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2bGâ","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2bGóá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2bGö","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2bGöâ","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2bLMk","volcanite","table","","basse","BD Charm-50 (BRGM) ; à vérifier","non"
-"h2br","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2br(1)O","volcanite","table","","moyenne","BD Charm-50 (BRGM) ; à vérifier (notice 068 non lue)","non"
-"h2br(2)O","volcanite","table","","moyenne","BD Charm-50 (BRGM) ; à vérifier (notice 068 non lue)","non"
-"h2grw(1a)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2grw(1b)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2grw(1c)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2grw(2a)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2grw(2b)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2grw(2c)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2grw(3)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2grwMk","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2ióá6","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2pá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2pëMu","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2pöâ","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88-89","non"
-"h2sâO","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2tfO","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88-89","non"
-"h2vs(2)","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2vs(4)","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2áö","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2âîìO","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87 et p.89","non"
-"h2ã4CFS","plutonite_intermediaire","regle","10.35","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui"
-"h2ã4L","plutonite_intermediaire","regle","10.35","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui"
-"h2ã4St","plutonite_intermediaire","regle","10.35","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui"
-"h2ã4W","plutonite_intermediaire","regle","10.35","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui"
-"h2ã4ëCFS","plutonite_intermediaire","regle","10.35","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui"
-"h2ãMqBa","plutonite_intermediaire","regle","10.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2ëCF","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2ëìBa","plutonite_intermediaire","regle","10.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"h2ìMBa","roche_basique","regle","10.5","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87-88","non"
-"h2ôãBa","plutonite_intermediaire","regle","10.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2ôãMqBa","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2ö(1)","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2öO","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"h2öq","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h2öáq","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h3îë","plutonite_intermediaire","regle","10.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h4ã3Sn","granite","regle","10.6","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"h5r1Lã","granite","regle","10.6","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"haã","granite","regle","10.6","haute","BD Charm-50 (BRGM)","non"
-"hydro","non_classe","laisse","","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"j1","marne_argile","table","","basse","BD Charm-50 (BRGM) ; à vérifier","oui"
-"my","non_classe","laisse","","moyenne","BD Charm-50 (BRGM)","non"
-"o-s","schiste_grauwacke","regle","10.2","haute","BD Charm-50 (BRGM) ; notice BRGM non lue (à vérifier)","non"
-"o-sC","schiste_grauwacke","regle","10.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"o-sCë","schiste_grauwacke","regle","10.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"o-sN","schiste_grauwacke","regle","10.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"r2","volcanite","regle","10.4","basse","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"r2a","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"r2öá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"r3bF","calcaire","table","","basse","BD Charm-50 (BRGM)","non"
-"rB","schiste_grauwacke","table","","basse","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui"
-"rE","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui"
-"t3C-D","calcaire","table","","basse","BD Charm-50 (BRGM) ; à vérifier (notice non lue)","non"
-"t3T","calcaire","regle","12.1","moyenne","BD Charm-50 (BRGM) ; recherche web (source non ouverte : à vérifier)","non"
-"t4C","calcaire","regle","12.1","haute","BD Charm-50 (BRGM) ; recherche web (calcaires du Muschelkalk supérieur, source non ouverte : à vérifier)","non"
-"t4a-b","marne_argile","regle","11.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
-"t4e","marne_argile","regle","11.2","basse","BD Charm-50 (BRGM)","non"
-"¡I","marne_argile","regle","11.1","moyenne","BD Charm-50 (BRGM) ; à vérifier","non"
-"Ûâ","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"á","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"ë1-2","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"ë3","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non"
-"ëô","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"ëô(1)","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non"
-"îë","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non"
+"notation","classe","origine","regle","confiance","source","decision_pascal","classe_regle","surface_km2"
+"¡I","marne_argile","regle","11.1","moyenne","BD Charm-50 (BRGM) ; à vérifier","non","",NA
+"á","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"CFy-z","colluvions_eboulis","regle","9.2","moyenne","BD Charm-50 (BRGM)","non","",NA
+"D","non_classe","laisse",NA,"moyenne","BD Charm-50 (BRGM)","non","",NA
+"d-h","volcanite","regle","10.4","basse","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","oui","",NA
+"d-h1-2","schiste_grauwacke","regle","10.2","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"d-h2","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"d-hK1","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"d-hK3","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"d-hPh","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"d1-5LK","schiste_grauwacke","regle","10.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"d4-5Õa","schiste_grauwacke","regle","10.2","basse","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"d4-5v","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"d4-5vs","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"d5-6Ph","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"d5br(ö-q)","volcanite","regle","10.4","basse","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"d5brsâ","roche_basique","regle","10.5","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"d5gM","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"d5îìa","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"d5îìq","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"d5öq","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"ë1-2","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"ë3","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"ëô","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"ëô(1)","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"FJx-y","alluvions","regle","9.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"FJy-z","alluvions","regle","9.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"fm","non_classe","laisse",NA,"moyenne","BD Charm-50 (BRGM)","non","",NA
+"Fn","non_classe","laisse",NA,"moyenne","BD Charm-50 (BRGM)","non","",NA
+"Fp-v","alluvions","regle","9.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"Fv","alluvions","table",NA,"moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"FzI","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"g1P","marne_argile","regle","11.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88 ; lithologie à vérifier","oui","",NA
+"g1Sp","marne_argile","regle","11.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88 ; lithologie à vérifier","oui","",NA
+"GLx-y","glaciaire","regle","9.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"GLy","glaciaire","regle","9.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"GP","colluvions_eboulis","regle","9.2","moyenne","BD Charm-50 (BRGM) ; recherche web : grouine = équivalent des grèzes (source non ouverte : à vérifier)","non","",NA
+"h2","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2-3ã3Sn","granite","regle","10.6","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2-3LãER","granite","regle","10.6","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","oui","",NA
+"h2(áö)","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2(öâ)","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88-89","non","",NA
+"h2(ôë)","plutonite_intermediaire","regle","10.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2ã4CFS","plutonite_intermediaire","regle","10.35","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui","",NA
+"h2ã4ëCFS","plutonite_intermediaire","regle","10.35","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui","",NA
+"h2ã4L","plutonite_intermediaire","regle","10.35","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui","",NA
+"h2ã4St","plutonite_intermediaire","regle","10.35","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui","",NA
+"h2ã4W","plutonite_intermediaire","regle","10.35","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui","",NA
+"h2âîìO","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87 et p.89","non","",NA
+"h2ãMqBa","plutonite_intermediaire","regle","10.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2áö","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2bC","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2bCá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h2bCóá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM)","non","",NA
+"h2bGá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h2bGâ","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2bGBr","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h2bGGa","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2bGGam","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2bGö","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2bGóá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2bGöâ","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h2bGPi","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2bGPm","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2bGPs","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2bLMk","volcanite","table",NA,"basse","BD Charm-50 (BRGM) ; à vérifier","non","",NA
+"h2br","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h2br(1)O","volcanite","table",NA,"moyenne","BD Charm-50 (BRGM) ; à vérifier (notice 068 non lue)","non","",NA
+"h2br(2)O","volcanite","table",NA,"moyenne","BD Charm-50 (BRGM) ; à vérifier (notice 068 non lue)","non","",NA
+"h2BrLa","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h2ëCF","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h2ëìBa","plutonite_intermediaire","regle","10.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h2G2vs","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2Gâ","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2GBr","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h2GGa","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2GGá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h2GGai","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2GGam","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2GGö","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2Gó3(1)","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2Góá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2Göâ","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h2GPi","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2GPm","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2GPs","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2grw(1a)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2grw(1b)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2grw(1c)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2grw(2a)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2grw(2b)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2grw(2c)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2grw(3)","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2grwMk","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2ìMBa","roche_basique","regle","10.5","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87-88","non","",NA
+"h2ióá6","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2La","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2MK","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2MK3(1)","volcanite","table","","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","oui","",NA
+"h2MK3(2)","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","oui","",NA
+"h2ö(1)","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2ôãBa","plutonite_intermediaire","regle","10.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2ôãMqBa","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2öáq","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2öO","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2öq","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2pá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h2pëMu","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h2PK","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2PK(1)","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h2PK3","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87 et p.89","oui","",NA
+"h2pöâ","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88-89","non","",NA
+"h2PT","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2PTB","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2PTC","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2PTL","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2sâO","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2tfO","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88-89","non","",NA
+"h2vs(2)","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"h2vs(4)","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"h3îë","plutonite_intermediaire","regle","10.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h4ã3Sn","granite","regle","10.6","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"h5r1Lã","granite","regle","10.6","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"haã","granite","regle","10.6","haute","BD Charm-50 (BRGM)","non","",NA
+"hydro","non_classe","laisse",NA,"haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"Hydro","non_classe","laisse",NA,"haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"îë","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"j1","marne_argile","table",NA,"basse","BD Charm-50 (BRGM) ; à vérifier","oui","",NA
+"JA","colluvions_eboulis","regle","9.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"JAy-z","colluvions_eboulis","regle","9.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"LGy","glaciaire","regle","9.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"Lz","non_classe","laisse",NA,"moyenne","BD Charm-50 (BRGM)","non","",NA
+"my","non_classe","laisse",NA,"moyenne","BD Charm-50 (BRGM)","non","",NA
+"o-s","schiste_grauwacke","regle","10.2","haute","BD Charm-50 (BRGM) ; notice BRGM non lue (à vérifier)","non","",NA
+"o-sC","schiste_grauwacke","regle","10.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"o-sCë","schiste_grauwacke","regle","10.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"o-sN","schiste_grauwacke","regle","10.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"P","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"Pv","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"Pw","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"Px","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"Q","non_classe","laisse",NA,"moyenne","BD Charm-50 (BRGM)","non","",NA
+"r2","volcanite","regle","10.4","basse","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"r2a","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"r2öá","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"r3bF","calcaire","table",NA,"basse","BD Charm-50 (BRGM)","non","",NA
+"rB","schiste_grauwacke","table",NA,"basse","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui","",NA
+"rE","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui","",NA
+"t3C-D","calcaire","table",NA,"basse","BD Charm-50 (BRGM) ; à vérifier (notice non lue)","non","",NA
+"t3T","calcaire","regle","12.1","moyenne","BD Charm-50 (BRGM) ; recherche web (source non ouverte : à vérifier)","non","",NA
+"t4a-b","marne_argile","regle","11.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",NA
+"t4C","calcaire","regle","12.1","haute","BD Charm-50 (BRGM) ; recherche web (calcaires du Muschelkalk supérieur, source non ouverte : à vérifier)","non","",NA
+"t4e","marne_argile","regle","11.2","basse","BD Charm-50 (BRGM)","non","",NA
+"Tx-y","non_classe","laisse",NA,"moyenne","BD Charm-50 (BRGM)","non","",NA
+"Ûâ","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",NA
+"X","non_classe","laisse",NA,"haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",NA
+"d-h2(1)","conglomerat","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","non_classe",0.041
+"d5br(ö)","non_classe","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","volcanite",0.875
+"d7","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","schiste_grauwacke",8.336
+"döq","non_classe","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","volcanite",0.008
+"dS","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","schiste_grauwacke",0.015
+"dW","non_classe","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","schiste_grauwacke",0.253
+"e","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",1.599
+"FJw-x","non_classe","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","alluvions",0.525
+"g1-2","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",0.108
+"g2CD","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",0.061
+"GPx-y","glaciaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","colluvions_eboulis",3.556
+"h2goO","non_classe","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","schiste_grauwacke",0.935
+"j1b","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",14.366
+"j2a-b","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",271.771
+"j2c2","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",29.362
+"j2OM","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",46.203
+"j3-4","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",9.406
+"j3a","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",141.506
+"j3aC","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",0.883
+"j4","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",2.941
+"j5a1","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",4.847
+"j5c","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",2.987
+"j5cC","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",13.024
+"j5CH","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",26.795
+"j6a","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",11.819
+"j6a-c","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",0.852
+"j6aC","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",0.083
+"j7","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",3.641
+"l2-3","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",72.495
+"l3a1","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",14.165
+"l3b","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",82.006
+"l3b-c","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",27.672
+"l3c","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",10.042
+"o-sÕ","non_classe","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","schiste_grauwacke",0.17
+"rD","conglomerat","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","gres",23.813
+"rE-F","gres","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","schiste_grauwacke",0.922
+"t2a","conglomerat","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","gres",160.476
+"t3B","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",2.961
+"t3BG","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",22.851
+"t3CMT","gres","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",39.441
+"t4b-c","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",34.95
+"t4c","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",24.211

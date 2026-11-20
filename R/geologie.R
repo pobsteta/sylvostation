@@ -91,12 +91,16 @@ read_lithology_rules <- function(path = system.file("extdata", "lithologie_regle
 #' contient que des **codes de notation et des classes** (BD Charm-50, BRGM, Licence
 #' Ouverte ; aucune description). La colonne `origine` distingue : `table` (classe imposée,
 #' prioritaire sur les règles : homonymies, descriptions sans mot-clé, décisions de Pascal),
+#' `gele` (formation dont les règles changeraient la classe sans que la proposition l'ait
+#' annoncé : classe d'avant conservée, classe que donnerait la règle dans `classe_regle`,
+#' candidate soumise à Pascal ; supprimer la ligne pour accepter le changement),
 #' `regle` (classe que les règles retrouvent ; ligne de contrôle) et `laisse` (formation
 #' laissée `non_classe`, listée et jamais supprimée).
 #'
 #' @param path Chemin du CSV. Par défaut `inst/extdata/lithologie_notations.csv`.
 #' @return Un `data.frame` : `notation`, `classe`, `origine`, `regle`, `confiance`,
-#'   `source`, `decision_pascal`.
+#'   `source`, `decision_pascal`, `classe_regle`, `surface_km2` (ces deux dernières pour les
+#'   lignes `gele`).
 #' @examples
 #' table(read_lithology_notations()$origine)
 #' @export
@@ -107,8 +111,8 @@ read_lithology_notations <- function(path = system.file("extdata", "lithologie_n
   if (!all(c("notation", "classe", "origine") %in% names(t))) {
     stop("La table de notations doit avoir les colonnes notation, classe, origine.", call. = FALSE)
   }
-  if (!all(t$origine %in% c("table", "regle", "laisse"))) {
-    stop("`origine` doit valoir table, regle ou laisse.", call. = FALSE)
+  if (!all(t$origine %in% c("table", "gele", "regle", "laisse"))) {
+    stop("`origine` doit valoir table, gele, regle ou laisse.", call. = FALSE)
   }
   if (anyDuplicated(t$notation)) stop("Notation en double dans la table.", call. = FALSE)
   t
@@ -120,7 +124,7 @@ read_lithology_notations <- function(path = system.file("extdata", "lithologie_n
 #' en minuscules et sans accents) dans l'ordre de `priorite` : la **première** règle
 #' qui correspond donne la classe. Une formation sans règle reçoit `non_classe` :
 #' elle n'est **jamais** affectée par défaut, et un avertissement la liste.
-#' Les formations dont la notation figure dans `overrides` (lignes `origine = "table"`,
+#' Les formations dont la notation figure dans `overrides` (lignes `origine = "table"` ou `"gele"`,
 #' voir [read_lithology_notations()]) reçoivent d'abord la classe de la table, avec le
 #' statut `table`. Les règles fournies sont **provisoires** (`validated = FALSE` jusqu'à
 #' relecture).
@@ -145,14 +149,17 @@ recode_lithology <- function(formations, rules = read_lithology_rules(),
   txt <- .norm_texte(formations$description)
   classe <- rep(NA_character_, length(txt))
   statut <- rep("regle", length(txt))
+  fixe <- rep(FALSE, length(txt))
   if (!is.null(overrides) && "notation" %in% names(formations)) {
-    ov <- overrides[overrides$origine == "table", , drop = FALSE]
+    ov <- overrides[overrides$origine %in% c("table", "gele"), , drop = FALSE]
     j <- match(as.character(formations$notation), ov$notation)
-    classe[!is.na(j)] <- ov$classe[j[!is.na(j)]]
-    statut[!is.na(j)] <- "table"
+    fixe <- !is.na(j)
+    cl <- ov$classe[j[fixe]]
+    classe[fixe] <- ifelse(cl == "non_classe", NA_character_, cl)
+    statut[fixe] <- "table"
   }
   for (i in seq_len(nrow(rules))) {
-    hit <- is.na(classe) & grepl(rules$motif[i], txt, perl = TRUE)
+    hit <- is.na(classe) & !fixe & grepl(rules$motif[i], txt, perl = TRUE)
     classe[hit] <- rules$classe[i]
   }
   nc <- is.na(classe)

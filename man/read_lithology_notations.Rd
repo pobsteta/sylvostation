@@ -13,7 +13,8 @@ read_lithology_notations(
 }
 \value{
 Un \code{data.frame} : \code{notation}, \code{classe}, \code{origine}, \code{regle}, \code{confiance},
-\code{source}, \code{decision_pascal}.
+\code{source}, \code{decision_pascal}, \code{classe_regle}, \code{surface_km2} (ces deux dernières pour les
+lignes \code{gele}).
 }
 \description{
 Table de classes lithologiques acceptée par Pascal le 2026-11-20 (option b) pour les
@@ -21,6 +22,9 @@ formations de la GRECO D que les règles seules ne classent pas ou classent mal.
 contient que des \strong{codes de notation et des classes} (BD Charm-50, BRGM, Licence
 Ouverte ; aucune description). La colonne \code{origine} distingue : \code{table} (classe imposée,
 prioritaire sur les règles : homonymies, descriptions sans mot-clé, décisions de Pascal),
+\code{gele} (formation dont les règles changeraient la classe sans que la proposition l'ait
+annoncé : classe d'avant conservée, classe que donnerait la règle dans \code{classe_regle},
+candidate soumise à Pascal ; supprimer la ligne pour accepter le changement),
 \code{regle} (classe que les règles retrouvent ; ligne de contrôle) et \code{laisse} (formation
 laissée \code{non_classe}, listée et jamais supprimée).
 }

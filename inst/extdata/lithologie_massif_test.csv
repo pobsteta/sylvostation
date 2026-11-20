@@ -54,7 +54,7 @@
 "h5r1ã0","145","Granites de Vosges du Nord - Granites acides, hyperalcalins de Raon-l'Etape, des Brûlées et du Kagenfels et faciès granopyriques et rhyolitiques de bordure - (Stéphanien à Autunien ?)",8,0.3451,"granite","regle",FALSE
 "îãb-m","143","Filons tardi- à postorogéniques - Microgranite et granophyre à biotite et muscovite associés aux granites intrusifs à deux mica - (Carbonifère indifférencié)",15,0.3448,"granite","regle",FALSE
 "CFz","39","Colluvions de fonds de vallons et vallées (Weichsélien à Holocène)",8,0.3325,"colluvions_eboulis","regle",FALSE
-"j1b","98","Couches à Murchisonae : Grès calcaires à L. murchisonae (Aalénien moyen)",4,0.2934,"marne_argile","regle",FALSE
+"j1b","98","Couches à Murchisonae : Grès calcaires à L. murchisonae (Aalénien moyen)",4,0.2934,"calcaire","table",FALSE
 "r2bK","161/134","Permien - Assise de Kohlbaechel : conglomérats, arkoses, dolomies en concrétions - (Saxonien (et Thuringien))",7,0.2839,"conglomerat","regle",FALSE
 "FJx","23","Cônes de déjections des vallées vosgiennes d'âge Riss (Pléistocène moyen récent)",6,0.2553,"alluvions","regle",FALSE
 "t5-6A-M","113","Marnes irisées supérieures et Argiles de Chanville à la base (Keuper moyen)",1,0.251,"marne_argile","regle",FALSE
@@ -80,7 +80,7 @@
 "Fz3V","7","Alluvions récentes des rivières Vosgiennes FzV (Holocène)",1,0.076,"alluvions","regle",FALSE
 "F","19","Alluvions anciennes d'âge indéterminé, cailloutis  (Pléistocène)",1,0.0583,"alluvions","regle",FALSE
 "I3a","107","Marnes à Zeill. Numismalis et Calc. à Davoei (Pliensbachien inférieur)",2,0.0551,"marne_argile","regle",FALSE
-"e","77","Eocène indifférencié calcaire lacustre, parfois bréchiques et grains sidérolithique (Eocène)",1,0.0497,"calcaire","regle",FALSE
+"e","77","Eocène indifférencié calcaire lacustre, parfois bréchiques et grains sidérolithique (Eocène)",1,0.0497,"marne_argile","table",FALSE
 "FJ","25","Cônes de déjection indivisés (Pléistocène à Holocène)",2,0.0448,"alluvions","regle",FALSE
 "j2bB","95","Marnes et calcaires à T. blagdeni et S. humphriesianum.  (Bajocien moyen)",1,0.0354,"marne_argile","regle",FALSE
 "FJG","26","Cône de déjection remaniant du matériel glaciaire (Pléistocène à Holocène)",2,0.0348,"alluvions","regle",FALSE

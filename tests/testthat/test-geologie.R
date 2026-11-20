@@ -320,16 +320,25 @@ classe_de <- function(descr, notation = "zz", ...) {
   suppressWarnings(recode_lithology(f, ...))$classe
 }
 
-test_that("read_lithology_notations : codes et classes seulement, 156 notations, 10 laissées non_classe", {
+test_that("read_lithology_notations : codes et classes seulement, 156 notations + 42 gelées, 10 laissées non_classe", {
   t <- read_lithology_notations()
-  expect_equal(nrow(t), 156)
+  expect_equal(nrow(t), 198)
+  expect_equal(sum(t$origine == "gele"), 42)
+  expect_equal(sum(t$origine != "gele"), 156)
   expect_false(anyDuplicated(t$notation) > 0)
   expect_setequal(names(t), c("notation", "classe", "origine", "regle", "confiance", "source",
-                              "decision_pascal"))
-  expect_setequal(t$origine, c("table", "regle", "laisse"))
+                              "decision_pascal", "classe_regle", "surface_km2"))
+  expect_setequal(t$origine, c("table", "gele", "regle", "laisse"))
   expect_equal(sum(t$origine == "laisse"), 10)
   expect_true(all(t$classe[t$origine == "laisse"] == "non_classe"))
-  expect_false(any(t$classe[t$origine != "laisse"] == "non_classe"))
+  expect_false(any(t$classe[!t$origine %in% c("laisse", "gele")] == "non_classe"))
+  # lignes gelées : classe d'avant conservée, classe de la règle et surface renseignées
+  g <- t[t$origine == "gele", ]
+  expect_true(all(nzchar(g$classe_regle) & g$classe_regle != g$classe))
+  expect_true(all(g$surface_km2 > 0))
+  expect_true(all(c("t2a", "rD", "t3CMT", "GPx-y", "d-h2(1)") %in% g$notation))
+  expect_equal(t$classe[t$notation == "h2MK3(1)"], "volcanite")
+  expect_false("t1b" %in% t$notation)
   expect_true(all(c("hydro", "Hydro", "X", "fm", "Q", "Fn", "my", "Tx-y", "Lz", "D") %in%
                     t$notation[t$origine == "laisse"]))
   # licence : aucun texte long (pas de description BRGM), chaque ligne porte sa source
@@ -417,4 +426,15 @@ test_that("classe nouvelle de bout en bout : un point connu tombe dans la bonne 
   cel <- terra::cellFromXY(r, cbind(1000250, 6800350))
   expect_equal(terra::rowColFromCell(r, cel), cbind(2, 3))
   expect_equal(as.character(terra::extract(r, cbind(1000250, 6800350))[1, 1]), "volcanite")
+})
+
+test_that("lignes gelées : la classe d'avant est conservée, même si la règle dirait autre chose", {
+  f <- data.frame(notation = c("t2a", "d-h2(1)", "t1b", "j2b2"),
+                  description = c("Grès conglomératique", "Grès conglomératique",
+                                  "Grès vosgien, souvent conglomératique",
+                                  "Calcaires oolithiques, marnes"), stringsAsFactors = FALSE)
+  r <- suppressWarnings(recode_lithology(f))
+  expect_equal(r$classe, c("conglomerat", "conglomerat", "gres", "calcaire"))
+  r0 <- suppressWarnings(recode_lithology(f, overrides = NULL))
+  expect_equal(r0$classe[1:2], c("gres", "gres"))
 })

@@ -27,7 +27,7 @@ Applique des règles de mots-clés (expressions régulières sur la description,
 en minuscules et sans accents) dans l'ordre de \code{priorite} : la \strong{première} règle
 qui correspond donne la classe. Une formation sans règle reçoit \code{non_classe} :
 elle n'est \strong{jamais} affectée par défaut, et un avertissement la liste.
-Les formations dont la notation figure dans \code{overrides} (lignes \code{origine = "table"},
+Les formations dont la notation figure dans \code{overrides} (lignes \code{origine = "table"} ou \code{"gele"},
 voir \code{\link[=read_lithology_notations]{read_lithology_notations()}}) reçoivent d'abord la classe de la table, avec le
 statut \code{table}. Les règles fournies sont \strong{provisoires} (\code{validated = FALSE} jusqu'à
 relecture).

@@ -252,7 +252,7 @@ respecter : aucune donnee reelle. Ne dit rien sur la vraie carte.
   (docs/referentiels.md § 5 et § 35.3).
 - **Contenu :** uniquement des **codes de notation** (`NOTATION`) et des **classes**
   lithologiques (14 classes dont `volcanite`, `schiste_grauwacke`, `plutonite_intermediaire`),
-  avec l'origine du classement (`table`, `regle`, `laisse`), la règle qui le donne et une
+  avec l'origine du classement (`table`, `gele`, `regle`, `laisse`), la règle qui le donne et une
   source courte. **Aucune description longue** de la BD Charm-50 n'est copiée dans le dépôt ;
   rien du texte de l'annexe 1 de Piedallu et al. (2006), seulement la mention de la page
   qui a servi à choisir la classe (« Piedallu 2006 annexe 1 p.87 »).
