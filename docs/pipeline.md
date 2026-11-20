@@ -348,7 +348,9 @@ par le gradient lu entre les mailles (−0,49 °C/100 m sur la GRECO D ; RMSE de
 0,11 °C contre 0,22 en bilinéaire), apprise sur sa moyenne dans 700 m (`coarse_t_corr_700m`) et
 appliquée à la cellule (`t_corr`, fine) ; RU de la carte apprise (géologie et SoilGrids dans 700 m),
 la RU SoilGrids brute restant un diagnostic (biais +137 mm à 1 m) ; bilan latéral câblé et
-désactivé. Clés de `config.yml` : `climat_temperature`, `trophique_climat`, `ru_carte`,
+désactivé ; **climat retiré du modèle trophique** (`trophique_climat: sans`, décision de Pascal du
+2026-11-20), les variantes `actuel` (P − ETP et T bilinéaire, état d'avant 039) et `corrige`
+(P − ETP et T corrigée) restant des options ; table `variables_modeles`. Clés de `config.yml` : `climat_temperature`, `trophique_climat`, `ru_carte`,
 `mnt_large_res_m`, `mnt_large_path`, `bilan_lateral`, `bilan_lateral_ru_mm`, `bilan_lateral_coef`.
 Sorties ajoutées : `temperature_corrigee.tif`, `ru_apprise.tif`, `bilan_lateral.tif` (si activé),
 tables `temperature_gradient`, `temperature_validation`, `ru_apprise_validation`,

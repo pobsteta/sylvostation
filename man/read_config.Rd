@@ -30,8 +30,8 @@ provisoires) : \code{solar_linke} (3), \code{solar_albedo} (0,2), \code{solar_st
 (mission 035, provisoires) : \code{litho_min_cover} (0,5), \code{litho_encoding_k} (10), \code{soilgrids_ph} (\code{TRUE}), \code{cv_block_m} (\code{NULL} : portée
 estimée de la réponse) \code{cv_block_sensibilite_m} (8 358 m) et \code{cv_min_blocs_par_pli} (4),
 les choix de la mission 039 : \code{climat_temperature} (\code{"corrigee"} ou \code{"bilineaire"}),
-\code{trophique_climat} (\code{"actuel"}, \code{"corrige"} ou \code{"sans"}, défaut \code{"actuel"} jusqu'à la
-décision de Pascal), \code{ru_carte} (\code{"apprise"} ou \code{"maille"}), \code{mnt_large_res_m} (250),
+\code{trophique_climat} (\code{"sans"} par défaut, décision de Pascal du 2026-11-20 ;
+options \code{"actuel"} et \code{"corrige"}), \code{ru_carte} (\code{"apprise"} ou \code{"maille"}), \code{mnt_large_res_m} (250),
 \code{bilan_lateral} (\code{FALSE}), \code{bilan_lateral_ru_mm} (−30, 0, 60) et \code{bilan_lateral_coef}
 (\code{NULL} : tableau 20 de Piedallu et al. 2006, à vérifier), l'entrée optionnelle
 \code{mnt_large_path} (MNT de 250 m local, mode hors ligne),

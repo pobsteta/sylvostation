@@ -832,7 +832,12 @@ if (!isTRUE(cfg$demo)) {
       if (NROW(hydric_grid$ecart)) tabs$hydrique_ecart_table <- hydric_grid$ecart
       tabs$hydrique_mailles <- if (is.null(hydric_grid$mailles)) ru_mailles else
         merge(ru_mailles, hydric_grid$mailles, by = "maille", all.x = TRUE)
-      # mission 039 : temperature corrigee, RU apprise, RU SoilGrids (diagnostic), bilan lateral
+      # mission 039 : variables des modeles regionaux (climat du trophique : trophique_climat),
+      # temperature corrigee, RU apprise, RU SoilGrids (diagnostic), bilan lateral
+      tabs$variables_modeles <- data.frame(
+        gradient = names(vars_modele),
+        variables = vapply(vars_modele, paste, "", collapse = ", "),
+        climat = c(trophic = cfg$trophique_climat, hydric = cfg$climat_temperature)[names(vars_modele)])
       if (!is.null(t_lapse)) tabs$temperature_gradient <- data.frame(
         gradient_100m = t_lapse$gradient_100m, erreur_type_100m = t_lapse$erreur_type_100m,
         r2 = t_lapse$r2, sigma = t_lapse$sigma, n_mailles = t_lapse$n, formule = t_lapse$formule,

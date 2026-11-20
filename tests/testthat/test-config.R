@@ -129,7 +129,7 @@ test_that("config.yml du depot : grille de 20 m (mission 025, ADR 0007)", {
 test_that("cles de la mission 039 : defauts (arbitrages du 2026-11-20) et controles", {
   cfg <- read_config(ecrire_config())
   expect_identical(cfg$climat_temperature, "corrigee")
-  expect_identical(cfg$trophique_climat, "actuel")          # decision laissee a Pascal
+  expect_identical(cfg$trophique_climat, "sans")            # decision de Pascal (2026-11-20)
   expect_identical(cfg$ru_carte, "apprise")
   expect_false(cfg$bilan_lateral)                          # option C : desactive
   expect_equal(cfg$bilan_lateral_ru_mm, c(-30, 0, 60))
@@ -146,9 +146,9 @@ test_that("cles de la mission 039 : defauts (arbitrages du 2026-11-20) et contro
              equilibre = list(constante = 0.5, curv150 = 1, idr_1500 = 1, moore = -0.2))
   expect_equal(read_config(ecrire_config(list(bilan_lateral_coef = cf)))$bilan_lateral_coef$depart[["idr_1500"]], 3)
   expect_error(read_config(ecrire_config(list(bilan_lateral_coef = list(depart = 1)))), "bilan_lateral_coef")
-  expect_identical(read_config(ecrire_config(list(trophique_climat = "sans")))$trophique_climat, "sans")
+  expect_identical(read_config(ecrire_config(list(trophique_climat = "actuel")))$trophique_climat, "actuel")
   f <- testthat::test_path("..", "..", "config.yml")
   skip_if_not(file.exists(f), "config.yml absent du paquet installe")
-  expect_identical(read_config(f)$trophique_climat, "actuel")
+  expect_identical(read_config(f)$trophique_climat, "sans")
   expect_false(read_config(f)$bilan_lateral)
 })

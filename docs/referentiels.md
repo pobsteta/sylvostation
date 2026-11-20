@@ -1987,6 +1987,8 @@ les plis changent) : c'est la série qui permet de lire un écart sous 0,03.
 **+0,009 ± 0,024** (de −0,026 à +0,040) au bloc publié, +0,018 ± 0,005 à 8 358 m ; trophique actuel − sans
 climat −0,005 ± 0,022 et −0,002 ± 0,007. Au bloc publié, les trois variantes du trophique ne se
 distinguent pas : l'écart de la mesure du plan (0,231 contre 0,194, une partition) tenait à la partition.
+**Décision de Pascal (2026-11-20) : climat retiré du trophique** (`trophique_climat: sans`, défaut) ;
+`actuel` et `corrige` restent des options de `config.yml`.
 La RU apprise est validée sans réencodage de la lithologie dans les plis (encodage par le trophique, comme
 la carte) : 0,114 à 0,141, contre 0,099 pour la médiane de la maille, placette exclue, non spatiale (optimiste).
 

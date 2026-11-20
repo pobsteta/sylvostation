@@ -24,8 +24,8 @@
 #'   (mission 035, provisoires) : `litho_min_cover` (0,5), `litho_encoding_k` (10), `soilgrids_ph` (`TRUE`), `cv_block_m` (`NULL` : portée
 #'   estimée de la réponse) `cv_block_sensibilite_m` (8 358 m) et `cv_min_blocs_par_pli` (4),
 #'   les choix de la mission 039 : `climat_temperature` (`"corrigee"` ou `"bilineaire"`),
-#'   `trophique_climat` (`"actuel"`, `"corrige"` ou `"sans"`, défaut `"actuel"` jusqu'à la
-#'   décision de Pascal), `ru_carte` (`"apprise"` ou `"maille"`), `mnt_large_res_m` (250),
+#'   `trophique_climat` (`"sans"` par défaut, décision de Pascal du 2026-11-20 ;
+#'   options `"actuel"` et `"corrige"`), `ru_carte` (`"apprise"` ou `"maille"`), `mnt_large_res_m` (250),
 #'   `bilan_lateral` (`FALSE`), `bilan_lateral_ru_mm` (−30, 0, 60) et `bilan_lateral_coef`
 #'   (`NULL` : tableau 20 de Piedallu et al. 2006, à vérifier), l'entrée optionnelle
 #'   `mnt_large_path` (MNT de 250 m local, mode hors ligne),
@@ -131,8 +131,8 @@ read_config <- function(path = "config.yml") {
   download_retries = 3L,
   # bioclimat et RU plus fins (mission 039, arbitrages du 2026-11-20) : temperature corrigee du
   # relief par le gradient lu dans SAFRAN, MNT BD ALTI de 250 m, RU de carte apprise ; climat
-  # dans le trophique laisse a Pascal (defaut : etat d'avant 039) ; bilan lateral desactive
-  climat_temperature = "corrigee", trophique_climat = "actuel", ru_carte = "apprise",
+  # retire du trophique (decision de Pascal du 2026-11-20) ; bilan lateral desactive
+  climat_temperature = "corrigee", trophique_climat = "sans", ru_carte = "apprise",
   mnt_large_res_m = 250, bilan_lateral = FALSE, bilan_lateral_ru_mm = c(-30, 0, 60)
 )
 

@@ -23,8 +23,8 @@ Variables à maille large des modèles trophique et hydrique selon \code{config.
 \code{climat_temperature} (\code{"corrigee"} : \code{coarse_t_corr_700m} ; \code{"bilineaire"} :
 \code{coarse_t_moy}) pour l'hydrique et le bioclimat ; \code{trophique_climat} (\code{"actuel"} :
 \code{coarse_p_etp_sv} et \code{coarse_t_moy}, état d'avant 039 ; \code{"corrige"} : \code{coarse_p_etp_sv} et
-\code{coarse_t_corr_700m} ; \code{"sans"} : aucune). Le choix du climat dans le trophique est laissé à
-Pascal (journal du 2026-11-20) ; le défaut garde l'état actuel.
+\code{coarse_t_corr_700m} ; \code{"sans"} : aucune). Défaut du pipeline : \code{"sans"} (climat retiré du
+trophique, décision de Pascal du 2026-11-20) ; les deux autres variantes restent des options.
 }
 \examples{
 model_climate_vars("corrigee", "actuel")

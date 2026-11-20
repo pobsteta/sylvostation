@@ -412,8 +412,8 @@ coarse_t_corr_layer <- function(dem, safran, alt_mailles, lapse, months = 1:12, 
 #' `climat_temperature` (`"corrigee"` : `coarse_t_corr_700m` ; `"bilineaire"` :
 #' `coarse_t_moy`) pour l'hydrique et le bioclimat ; `trophique_climat` (`"actuel"` :
 #' `coarse_p_etp_sv` et `coarse_t_moy`, état d'avant 039 ; `"corrige"` : `coarse_p_etp_sv` et
-#' `coarse_t_corr_700m` ; `"sans"` : aucune). Le choix du climat dans le trophique est laissé à
-#' Pascal (journal du 2026-11-20) ; le défaut garde l'état actuel.
+#' `coarse_t_corr_700m` ; `"sans"` : aucune). Défaut du pipeline : `"sans"` (climat retiré du
+#' trophique, décision de Pascal du 2026-11-20) ; les deux autres variantes restent des options.
 #'
 #' @param temperature `"corrigee"` ou `"bilineaire"`.
 #' @param trophique `"actuel"`, `"corrige"` ou `"sans"`.

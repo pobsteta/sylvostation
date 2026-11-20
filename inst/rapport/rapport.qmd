@@ -591,6 +591,16 @@ if (synth) {
 
 ```{r}
 #| results: asis
+vm <- lire("variables_modeles")
+if (!is.null(vm)) {
+  ct <- vm$climat[vm$gradient == "trophic"]
+  cat("Variables des modèles régionaux. Climat dans le modèle trophique : **",
+      if (identical(ct, "sans")) "retiré" else if (identical(ct, "corrige")) "P − ETP et température corrigée" else "P − ETP et température bilinéaire",
+      "** (`trophique_climat: ", ct, "` ; décision de Pascal du 2026-11-20 : retiré ; au bloc publié, ",
+      "les trois variantes ne se distinguent pas sur cinq partitions décalées, voir ",
+      "docs/referentiels.md § 37.6).\n\n", sep = "")
+  print(tab(vm))
+}
 tg <- lire("temperature_gradient")
 tv <- lire("temperature_validation")
 if (is.null(tg)) {

@@ -118,14 +118,14 @@ download_retries: 3
 # docs/referentiels.md § 37). climat_temperature : corrigee = T SAFRAN corrigée du relief par le
 # gradient lu entre les mailles (T ~ altitude moyenne + x + y), MNT BD ALTI de 250 m
 # (IGN, Licence Ouverte) ; bilineaire = état d'avant 039. trophique_climat : climat dans le
-# modèle trophique, décision laissée à Pascal ; défaut actuel = état d'avant 039 (sans : aucun
-# climat ; corrige : P - ETP et T corrigée). ru_carte : apprise = RU des placettes IFN apprise
+# modèle trophique ; sans = retiré (décision de Pascal du 2026-11-20, défaut) ; options : actuel =
+# P - ETP et T bilinéaire (état d'avant 039), corrige = P - ETP et T corrigée. ru_carte : apprise = RU des placettes IFN apprise
 # sur la géologie et SoilGrids (texture, cailloux, euptf2) dans 700 m ; maille = RU uniforme
 # par maille SAFRAN (avant 039). bilan_lateral : carte de contrôle du tableau 20 de Piedallu et
 # al. 2006 (coefficients à vérifier, jamais ajoutée à la RU) ; false par défaut, car appliquée
 # telle quelle elle donne 53 % d'apports contre 28 % observés.
 climat_temperature: corrigee
-trophique_climat: actuel
+trophique_climat: sans
 ru_carte: apprise
 mnt_large_res_m: 250
 bilan_lateral: false
