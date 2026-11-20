@@ -381,3 +381,4 @@
 2026-11-20 · Claude (orchestrateur) · 037d · intégrée après 039b ; carte en Terminé. Suite complète lancée sur l'arbre fusionné (deuxième intégration sur les mêmes fichiers).
 2026-11-20 · relecteur · 039c · bon pour intégration (adfd4a8) : les 6 mineurs de 039b sont corrigés et testés (contrôle de la somme des textures sur 3 cas, metags aligné sur assert_not_synthetic, SOURCES.md, `{` nu, NEWS.md, exemple sans `:::`, roxygen) ; fichiers de test touchés verts sur extrait propre ; merge-tree propre sur f0a229f.
 2026-11-20 · Claude (orchestrateur) · 039c · intégrée. La suite complète en cours sur 625925c ne la couvre pas : à relancer sur la tête finale si elle passe.
+2026-11-20 · Claude (orchestrateur) · tête · suite complète sur 625925c (039b + 037d intégrées) : FAIL 0, WARN 5, PASS 3 016, EXIT 0. Relance sur la tête finale fdc86ea (avec 039c) en cours.
