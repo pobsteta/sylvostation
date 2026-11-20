@@ -1767,6 +1767,23 @@ le modèle final contient la même géologie et le même pH dans les deux cas). 
 est donc d'environ **0,19** et non 0,27 : les blocs plus grands retirent l'autocorrélation
 spatiale résiduelle. Les deux lignes figurent dans `val_stats` et le rapport.
 
+**Hydrique : même sensibilité, et alerte.** Relance réelle de 018 avec la calibration (2026-11-20,
+2 827 placettes, prédicteurs climatiques seuls ; IC par bootstrap de blocs, calculés sur les
+prédictions de `cvs` du store du run pour la portée estimée, hors store pour 8 358 m) :
+
+| Blocs | R² hydrique | IC 95 % | Blocs occupés |
+|---|---|---|---|
+| portée estimée, 76 736 m (publié) | 0,285 | [-0,288 ; 0,385] | **8** |
+| 8 358 m (sensibilité) | **0,358** (5 graines : 0,355 à 0,369) | [0,248 ; 0,442] | 162 |
+| 20 000 m (non publié) | 0,309 | | |
+
+À la portée estimée, 8 blocs se partagent 5 plis et un pli de 240 placettes (R² -1,62) porte le
+chiffre global : R² par pli -0,18 / 0,12 / 0,04 / -1,62 / 0,16. La portée n'est pas plafonnée
+(ce serait un changement de méthode) ; la table de validation porte `blocs`, `k`,
+`blocs_insuffisants` (seuil `cv_min_blocs_par_pli` = 4 blocs par pli, **provisoire, à
+vérifier**) et une alerte en clair, et la sensibilité à blocs fixes est calculée pour chaque
+gradient. Trophique à titre de comparaison : 37 blocs (publié, 0,194) et 163 blocs (0,272).
+
 Lecture : le climat seul n'a aucun pouvoir (R² < 0) ; la géologie (formation) et le pH de sol
 apportent presque tout ; la formation (`NOTATION`, 666 niveaux) bat la classe lithologique
 provisoire à 12 niveaux ; la carte géologique explique plus que la roche notée par l'IFN

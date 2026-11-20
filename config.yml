@@ -88,6 +88,10 @@ soilgrids_ph: true
 # estimée en 018 sur l'emprise test). Les deux R² sont donnés dans le rapport (mission 035).
 cv_block_m: null
 cv_block_sensibilite_m: 8358
+# Nombre minimal de blocs occupés par pli : sous cv_min_blocs_par_pli x 5 blocs, le R² est signalé
+# « peu interprétable » dans validation_stats.csv et le rapport. Valeur provisoire, à vérifier
+# (mission 035 : hydrique à 8 blocs pour 5 plis, R² porté par un seul pli).
+cv_min_blocs_par_pli: 4
 # Téléchargements (SER, dalles LiDAR, WFS, TOPAGE, SAFRAN, IFN) : nombre total de tentatives
 # avant arrêt (attentes 5, 20, 60 s). Provisoire (mission 026).
 download_retries: 3

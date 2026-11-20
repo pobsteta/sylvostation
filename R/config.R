@@ -22,7 +22,7 @@
 #'   (mission 033, provisoires) : `safran_interpolation` (`"bilineaire"` ou `"proche"`),
 #'   `hydric_node_res_m` (1000), `ru_min_placettes` (5), la calibration sur la GRECO
 #'   (mission 035, provisoires) : `litho_min_cover` (0,5), `litho_encoding_k` (10), `soilgrids_ph` (`TRUE`), `cv_block_m` (`NULL` : portée
-#'   estimée de la réponse) et `cv_block_sensibilite_m` (8 358 m),
+#'   estimée de la réponse) `cv_block_sensibilite_m` (8 358 m) et `cv_min_blocs_par_pli` (4),
 #'   `ifn_archive_url` et `taxref_url` (sans valeur
 #'   par défaut : seule source, config.yml ; exigées en ligne), et les
 #'   entrées optionnelles `gnss_path`, `reference_path`, `soil_paths`, `tichy_path`
@@ -115,7 +115,7 @@ read_config <- function(path = "config.yml") {
   litho_min_cover = 0.5, litho_encoding_k = 10, soilgrids_ph = TRUE,
   # blocs de la validation croisee du pipeline : cv_block_m absent ou null = portee estimee
   # (le chiffre publie, le plus prudent) ; cv_block_sensibilite_m = taille de la sensibilite
-  cv_block_sensibilite_m = 8358,
+  cv_block_sensibilite_m = 8358, cv_min_blocs_par_pli = 4,
   # reprise sur incident reseau des telechargements (mission 026), provisoire
   download_retries = 3L
 )
@@ -182,6 +182,10 @@ read_config <- function(path = "config.yml") {
     if (!is.null(x) && (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0)) {
       stop("`", k, "` doit \u00eatre un nombre > 0 (m) ou null.", call. = FALSE)
     }
+  }
+  x <- cfg$cv_min_blocs_par_pli
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0) {
+    stop("`cv_min_blocs_par_pli` doit \u00eatre un nombre >= 0.", call. = FALSE)
   }
   x <- cfg$litho_encoding_k
   if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0) {

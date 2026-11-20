@@ -101,6 +101,8 @@ test_that("cles de la calibration GRECO (mission 035) : defauts et controles", {
   expect_true(cfg$soilgrids_ph)
   expect_null(cfg$cv_block_m)                      # portee estimee par defaut
   expect_equal(cfg$cv_block_sensibilite_m, 8358)
+  expect_equal(cfg$cv_min_blocs_par_pli, 4)
+  expect_error(read_config(ecrire_config(list(cv_min_blocs_par_pli = -1))), "cv_min_blocs_par_pli")
   expect_equal(read_config(ecrire_config(list(cv_block_m = 8358)))$cv_block_m, 8358)
   expect_error(read_config(ecrire_config(list(cv_block_m = -5))), "cv_block_m")
   expect_error(read_config(ecrire_config(list(cv_block_sensibilite_m = "a"))), "cv_block_sensibilite_m")
@@ -112,6 +114,7 @@ test_that("cles de la calibration GRECO (mission 035) : defauts et controles", {
   f <- testthat::test_path("..", "..", "config.yml")
   skip_if_not(file.exists(f), "config.yml absent du paquet installe")
   expect_null(read_config(f)$cv_block_m)
+  expect_equal(read_config(f)$cv_min_blocs_par_pli, 4)
   expect_identical(read_config(f)$bdcharm_departements,
                    c("054", "057", "067", "068", "070", "088", "090"))
 })

@@ -57,7 +57,8 @@ la réponse du pli de test n'intervient jamais, sans fuite.}
 \value{
 Une liste : \code{par_pli} (pli, n, r2, rmse), \code{global} (r2, rmse sur toutes les
 prédictions hors pli), \code{predictions} (observé, prédit, écart-type prédit \code{sd}, pli),
-\code{block_size}, \code{k}, \code{plis}.
+\code{block_size}, \code{k}, \code{plis}, \code{n_blocs} (blocs carrés occupés par au moins un point ;
+\code{NA} si \code{folds} est fourni).
 R² = 1 - SCR/SCT par rapport à la moyenne observée ; il peut être négatif.
 }
 \description{
