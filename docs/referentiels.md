@@ -2207,3 +2207,30 @@ Les gains restent **dans le bruit** (IC à 22 km : [0,087 ; 0,275], § 35.5) : l
 pas le R² et n'en apporte pas de significatif. Son bénéfice est ailleurs : plus de placette à
 classe dominante `non_classe` (296 → 0), classes lisibles par un forestier. Les R² de § 35.5 ne
 sont pas remplacés (le run réel n'a pas été relancé).
+
+## 41. Carte trophique locale contre régionale : règle de remplacement (mission 037, 2026-11-20)
+
+- **Décision éclairée :** le modèle local (ancrages GBIF, 50 m) remplace-t-il la carte trophique régionale
+  (placettes IFN) ? **Propriétaire :** Pascal (a tranché, option b : seulement s'il fait mieux en validation
+  croisée). **Rédigé par :** `dev`, mission 037.
+- **Règle :** sur les mêmes ancrages et les mêmes plis, gain = R²(local hors pli) - R²(régional lu aux
+  ancrages, brut). Le local remplace si la borne basse de l'IC du gain (bootstrap de blocs, 95 % bilatéral,
+  1 000 tirages) dépasse 0,02. **Valeur provisoire, choix prudent de l'orchestrateur au lieu de 0, sans source, à
+  vérifier** (20 ancrages et 10 blocs minimaux : même statut). En repère seulement, les écarts-types
+  du R² sur 5 partitions mesurés en 039 (± 0,009 à 0,024, § 37 de 039) donnent un ordre de grandeur du
+  bruit de répartition des plis ; ce n'est **pas une calibration** du 0,02.
+- **Portée de l'IC :** il est **conditionnel aux prédictions hors pli figées** (une seule répartition en
+  plis, un seul ajustement) : il rend compte du choix des blocs d'ancrages, pas de la variabilité de
+  l'ajustement du local. `n_tirages` donne le nombre de tirages valides.
+- **Variables égales :** le local prend les mêmes variables larges que le régional (`vars_modele$trophic`,
+  donc il suit `trophique_climat` ; avec `sans`, aucun climat, pas de `coarse_t_corr_700m`) plus des variables fines
+  nommées (`vars_fines` : terrain fin non vide, sols), écrites dans `variables_locales` (`local_trophic_vars()`).
+  Une couche de sol préfixée `coarse_` (maille de 90 m ou plus, `stack_soil_layers`) est **large** : elle
+  n'entre dans le local que si le régional l'a ; `vars_fines` ne contient que des couches non `coarse_`.
+- **Asymétries :** (a) décalage de domaine (flore IFN sur 700 m contre listes de 50 m) : défavorise le
+  régional ; un régional recalibré hors pli est rendu pour information, **jamais comme critère** ; (b) fuite
+  possible en faveur du régional (placettes IFN d'apprentissage voisines des ancrages) : règle plus dure pour
+  le local ; (c) ancrages non représentatifs de la carte (chemins, lisières) : part de la carte dans la zone
+  d'applicabilité du local rendue.
+- **Mesure :** sur l'emprise test de 018, 2 ancrages valides après `clean_occ` (§ 33.5 bis) : la comparaison est
+  impossible et la carte régionale reste publiée. Aucun remplacement n'est mesuré sur données réelles à ce jour.

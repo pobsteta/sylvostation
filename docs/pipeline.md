@@ -79,7 +79,7 @@ hydrique ».
 | `predictors_climat`, `clim_vars`, `coarse_vars`, `t_corr_grid` | `coarse_predictors()` + `coarse_t_corr_700m` ; `model_climate_vars()` : variables climatiques selon `climat_temperature` et `trophique_climat` ; `t_corrected()` : T corrigée à la cellule (`t_corr`, **variable fine**, bioclimat de la carte par `apply_bioclim(layers = c(coarse_t_corr_700m = "t_corr"))`) | | |
 | `soilgrids_texture_files`, `cu700`, `ru_learn`, `ru_model`, `ru_cv`, `ru_map`, `ru_sg_diagnostic` | mission 039, `ru_carte: apprise` : `fetch_soilgrids_texture()` (24 couches, CC BY 4.0), `soilgrids_cu()` (euptf2 par horizon, cailloux), `coarse_cu_layers()` (700 m), `ru_learned_data()` + `fit_gradient()` : RU des placettes apprise sur la géologie encodée et les capacités SoilGrids ; `spatial_cv()` aux deux tailles de blocs (`ru_apprise_validation.csv`) ; `ru_soilgrids_diagnostic()` : RU SoilGrids brute contre RU IFN (diagnostic, jamais la carte) | files.isric.org | `soilgrids_texture_path`, sinon **absent** : RU par maille |
 | `lateral` | `lateral_balance()` : bilan latéral de Piedallu et al. (2006, tableau 20), carte de contrôle, `bilan_lateral: false` par défaut, jamais ajouté à la RU | | |
-| `anchors`, `local_trophic` | `get_gbif()`, `clean_occ()` (écarte les licences CC BY-NC, les jeux Pl@ntNet et les licences inconnues, effectifs par motif dans l'attribut `ecartees`, mission 037), `grid_bioindication()`, `gbif_anchors()` | `occ_search` ou `occ_download` | **absent** |
+| `anchors`, `local_trophic`, `maps_regional`, `local_map`, `comparaison_locale` | `get_gbif()`, `clean_occ()` (écarte les licences CC BY-NC, les jeux Pl@ntNet et les licences inconnues, effectifs par motif dans l'attribut `ecartees`, mission 037), `grid_bioindication()`, `gbif_anchors()` | `occ_search` ou `occ_download` | **absent** |
 | `geol_placettes`, `geol_classes_placettes`, `litho_placettes` | `read_geology()` sur tous les départements de `bdcharm_departements` (7 pour la GRECO D) recoupés à la boîte des placettes ; `lithology_at_points()` : classe et formation (`NOTATION`) dominantes dans 700 m, disque couvert à moins de `litho_min_cover` = pas de lithologie (placette retirée et comptée) ; formations sans règle listées (`formations_non_classees`) | BD Charm-50 | extrait |
 | `soilgrids_file`, `ph_layer` | `fetch_soilgrids_ph()` : pH SoilGrids 2.0 0-5 cm (250 m, CC BY 4.0), fenêtre de la GRECO, cache par emprise ; `soilgrids_disk_mean()` : moyenne dans 700 m (`soilgrids_ph: true`) | files.isric.org | **absent** (jamais remplacé) |
 | `train_climat`, `trophic_enc`, `litho_layer`, `formation_layer`, `calibration_effectifs` | placettes avec climat complet ; `encode_by_blocks()` : lithologie (classe) et formation encodées par le trophique moyen rétréci (`litho_encoding_k`) : la **classe** avec toute la partie d'apprentissage (`oof = FALSE`), la **formation** hors pli (blocs spatiaux, `oof = TRUE`) ; `lithology_encoded_layer()` et `formation_encoded_layer()` (mode du disque calculé à 100 m) pour la carte ; `calibration_counts()` : entonnoir des effectifs | | |
@@ -441,3 +441,23 @@ non extraite d'un raster : la règle des 700 m n'est pas en cause) ; le préfixe
 - **BD Forêt** (`bdforet_controle: false` par défaut) : télécharge la couche WFS dans `data/cache/bdforet`
   (hors dépôt, licence contradictoire, `docs/referentiels.md` § 33.5 bis et § 36) ; seules les moyennes par
   classe sont publiées.
+
+## Carte trophique locale ou régionale (mission 037)
+
+En ligne, le modèle local du trophique (`local_trophic`, ancrages GBIF) **ne remplace la carte
+régionale (`maps_regional`, placettes IFN) que s'il fait mieux** en validation croisée, sur les mêmes
+ancrages et les mêmes plis (décision de Pascal, option b). `compare_local_regional()` évalue le local hors
+pli par blocs et lit la carte régionale aux ancrages ; le gain de R² a un IC par bootstrap de blocs
+(`local_ic_niveau`, `local_bootstrap`) ; le local remplace seulement si la **borne basse de l'IC dépasse
+`local_gain_min`** (0,02). Comparaison impossible (modèle local absent, moins de `local_min_ancrages`
+ancrages ou `local_min_blocs` blocs, carte régionale indéfinie) : **avertissement avec la raison, carte
+régionale gardée**, ligne de décision écrite quand même. Hors ligne (pas d'ancrage cherché) : pas de
+comparaison, carte régionale. `select_trophic_map()` est le seul passage du local vers `maps`. Sorties :
+`comparaison_trophique_locale.csv` (une ligne : R² local et régional, gain, IC, décision, motif ; le
+régional recalibré hors pli est une **information**, jamais un critère) et
+`comparaison_trophique_locale_par_pli.csv` ; le rapport écrit quelle carte est publiée et pourquoi, avec
+les trois asymétries (décalage de domaine, fuite possible en faveur du régional, représentativité).
+L'IC est conditionnel aux prédictions hors pli figées. Le local prend les mêmes variables larges que le régional (`vars_modele$trophic`, donc il suit
+`trophique_climat`) plus des variables fines nommées (cible `vars_fines` : terrain fin non vide, sols), écrites dans
+`variables_locales` (`local_trophic_vars()`). Seuils :
+valeur provisoire, sans source, à vérifier (`config.yml`) ; justification : `docs/referentiels.md` § 41.

@@ -343,7 +343,8 @@ test_that("ADR 0008 : l'essence n'entre dans aucune cible de la carte, des types
   bloc <- function(n) paste(unlist(Map(function(a, b) l[a:b], debuts[nom == n], fin[nom == n])),
                             collapse = "\n")
   cibles <- c("train_climat", "trophic_enc", "train", "vars_modele", "models", "cvs", "maps",
-              "gradient_map", "uncertainty", "type_map", "cell_types", "merged", "thresholds")
+              "gradient_map", "uncertainty", "type_map", "cell_types", "merged", "thresholds",
+              "maps_regional", "local_map", "local_trophic", "comparaison_locale", "vars_fines")
   present <- intersect(cibles, nom)
   skip_if(length(present) < 5L, "cibles reelles absentes de _targets.R")
   motif <- paste0("essence_dominante|coarse_essence|cv_essence|controle_essence|essence_sensitivity|",

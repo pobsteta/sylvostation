@@ -559,3 +559,237 @@ load_gnss <- function(path, epsg = 2154) {
   pts$source <- "gnss"
   pts
 }
+
+#' Comparer le modèle trophique local (ancrages GBIF) au modèle régional (IFN)
+#'
+#' Décide si la carte trophique locale peut remplacer la carte régionale (mission 037, décision de
+#' Pascal : **le local ne remplace le régional que s'il fait mieux**). Sur les **mêmes ancrages et
+#' les mêmes plis** : le modèle local est évalué hors pli par blocs (`local_trophic$cv`) ; le modèle
+#' régional, appris sur les placettes IFN, n'a jamais vu les ancrages : on lit sa carte aux
+#' coordonnées des ancrages (x = est, y = nord, EPSG:2154). R² = 1 - SCR / SCT sur les mêmes
+#' points. Le gain est `R²(local) - R²(régional brut)`. Son **IC** vient d'un bootstrap **de blocs**
+#' (les blocs de la grille de `spatial_cv()`, rééchantillonnés avec remise) ; le local remplace le
+#' régional **seulement si** la borne basse de l'IC dépasse `gain_min`.
+#'
+#' La comparaison est **impossible** (carte régionale gardée, avertissement avec la raison, jamais un
+#' silence) si le modèle local est absent, s'il y a moins de `min_anchors` ancrages, moins de
+#' `min_blocks` blocs occupés, ou une prédiction régionale manquante.
+#'
+#' Trois asymétries, à lire avec le verdict : (a) décalage de domaine : le régional apprend des
+#' placettes IFN (flore sur 700 m), les ancrages sont des listes de 50 m ; (b) fuite possible en
+#' faveur du régional : des placettes IFN d'apprentissage voisines des ancrages ; (c) les ancrages
+#' sont là où l'on herborise (chemins, lisières), non représentatifs de la carte
+#' (`aoa_part_carte`). Le **régional recalibré hors pli** (décalage moyen appris sur les autres plis)
+#' est rendu **pour information seulement, jamais comme critère de décision**.
+#'
+#' L'IC est **conditionnel aux prédictions hors pli figées** : il rend compte du choix des blocs
+#' d'ancrages, pas de la variabilité de l'ajustement du modèle local ni de la répartition en plis.
+#'
+#' Seuils : **valeur provisoire, sans source, à vérifier**.
+#'
+#' @param local_trophic Liste de la cible `local_trophic` : `data` (`sf` des ancrages, colonne
+#'   `trophic`, EPSG:2154) et `cv` (résultat de [spatial_cv()] sur ces ancrages) ; sans modèle, `NULL`
+#'   ou une liste portant `n_complets` (effectif après exclusion des incomplets) et, si l'ajustement a
+#'   échoué, `erreur` (message d'origine).
+#' @param regional_map `SpatRaster` (une couche) de la carte trophique **régionale**, EPSG:2154.
+#' @param n_anchors Nombre d'ancrages avant exclusion des incomplets (pour le message ; `NA` ok).
+#' @param gain_min Marge minimale sur la borne basse de l'IC du gain de R² (0,02).
+#' @param min_anchors,min_blocks Effectifs minimaux (20 ancrages, 10 blocs).
+#' @param level Niveau de l'IC bilatéral (0,95).
+#' @param n_boot Tirages du bootstrap de blocs (1 000).
+#' @param seed Graine du bootstrap (l'état du générateur est restauré).
+#' @param aoa_part Part de la carte dans la zone d'applicabilité du modèle local (information).
+#' @return Une liste : `resume` (une ligne : `n_ancrages`, `n_blocs`, `k_plis`, `n_tirages` (tirages valides du
+#'   bootstrap), `r2_local`,
+#'   `r2_regional`, `r2_regional_recalibre` (information), `gain`, `ic_bas`, `ic_haut`, `niveau_ic`, `seuil_gain`,
+#'   `rmse_local`, `rmse_regional`, `biais_regional`, `aoa_part_carte`, `variables_locales` (variables du
+#'   modèle local, lues dans `local_trophic$variables`), `decision`, `motif`,
+#'   `statut_seuils`), `par_pli`, `remplace` (logique) et `publiee` (`"locale"` ou `"regionale"`).
+#' @examples
+#' set.seed(1)
+#' n <- 60
+#' d <- sf::st_as_sf(data.frame(x = runif(n, 1e6, 1.1e6), y = runif(n, 6.8e6, 6.9e6),
+#'                              loc_precision_m = 10, a = rnorm(n)),
+#'                   coords = c("x", "y"), crs = 2154, remove = FALSE)
+#' d$trophic <- d$a + rnorm(n, sd = 0.2)
+#' cv <- spatial_cv(d, "trophic", "a", k = 3, block_size = 20000, num_trees = 50)
+#' r <- terra::rast(xmin = 1e6, xmax = 1.1e6, ymin = 6.8e6, ymax = 6.9e6, resolution = 1000,
+#'                  crs = "EPSG:2154", vals = 0)
+#' compare_local_regional(list(data = d, cv = cv), r, min_blocks = 3)$resume$decision
+#' @export
+compare_local_regional <- function(local_trophic, regional_map, n_anchors = NA_integer_,
+                                   gain_min = 0.02, min_anchors = 20L, min_blocks = 10L,
+                                   level = 0.95, n_boot = 1000L, seed = 1L, aoa_part = NA_real_) {
+  if (!inherits(regional_map, "SpatRaster")) {
+    stop("`regional_map` doit \u00eatre un SpatRaster.", call. = FALSE)
+  }
+  assert_crs_2154(regional_map)
+  for (k in c("gain_min")) {
+    x <- get(k)
+    if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0) {
+      stop("`", k, "` doit \u00eatre un nombre >= 0.", call. = FALSE)
+    }
+  }
+  if (!is.numeric(level) || length(level) != 1L || !is.finite(level) || level <= 0 || level >= 1) {
+    stop("`level` doit \u00eatre dans ]0, 1[.", call. = FALSE)
+  }
+  if (!is.numeric(n_boot) || length(n_boot) != 1L || !is.finite(n_boot) || n_boot < 10) {
+    stop("`n_boot` doit \u00eatre un entier >= 10.", call. = FALSE)
+  }
+  cols <- c("n_ancrages", "n_blocs", "k_plis", "n_tirages", "r2_local", "r2_regional", "r2_regional_recalibre",
+            "gain", "ic_bas", "ic_haut", "niveau_ic", "rmse_local", "rmse_regional", "biais_regional")
+  vars_loc <- if (is.null(local_trophic$variables)) NA_character_ else
+    paste(local_trophic$variables, collapse = ", ")
+  vide <- function(motif, n = n_anchors, nb = NA_integer_, k = NA_integer_) {
+    warning("Comparaison local / r\u00e9gional impossible : ", motif,
+            " ; carte trophique r\u00e9gionale gard\u00e9e.", call. = FALSE)
+    r <- as.data.frame(stats::setNames(as.list(rep(NA_real_, length(cols))), cols))
+    r$n_ancrages <- as.integer(n); r$n_blocs <- as.integer(nb); r$k_plis <- as.integer(k)
+    r$seuil_gain <- gain_min; r$aoa_part_carte <- aoa_part; r$variables_locales <- vars_loc
+    r$decision <- "r\u00e9gionale (comparaison impossible)"; r$motif <- motif
+    r$statut_seuils <- "valeur provisoire, sans source, \u00e0 v\u00e9rifier"
+    list(resume = r, par_pli = data.frame(), remplace = FALSE, publiee = "regionale")
+  }
+  if (is.null(local_trophic) || is.null(local_trophic$cv) || is.null(local_trophic$data)) {
+    # deux causes distinctes : effectif insuffisant (apres exclusion des ancrages incomplets) ou
+    # echec de l'ajustement (message d'origine rendu tel quel)
+    nc <- if (!is.null(local_trophic$n_complets)) local_trophic$n_complets else n_anchors
+    if (!is.null(local_trophic$erreur)) {
+      return(vide(paste0("\u00e9chec du mod\u00e8le local (", local_trophic$erreur, ")"), n = nc))
+    }
+    return(vide(paste0("effectif insuffisant : ", if (is.na(nc)) "aucun" else nc,
+                       " ancrage(s) complet(s) apr\u00e8s exclusion des incomplets pour au moins ",
+                       min_anchors, " requis"), n = nc))
+  }
+  d <- local_trophic$data
+  cv <- local_trophic$cv
+  p <- cv$predictions
+  if (!inherits(d, "sf") || nrow(d) != nrow(p) || !"trophic" %in% names(d) ||
+      max(abs(p$observe - d$trophic)) > 1e-8) {
+    stop("Les ancrages de `local_trophic$data` ne sont pas align\u00e9s sur sa validation crois\u00e9e.",
+         call. = FALSE)
+  }
+  assert_crs_2154(d)
+  xy <- sf::st_coordinates(d)  # x = est, y = nord
+  obs <- d$trophic
+  loc <- p$predit
+  reg <- as.numeric(terra::extract(regional_map[[1]], xy)[, 1])
+  ok <- is.finite(obs) & is.finite(loc) & is.finite(reg)
+  pli <- cv$plis
+  bloc <- paste(floor(xy[, 1] / cv$block_size), floor(xy[, 2] / cv$block_size))
+  n_ok <- sum(ok)
+  nb <- length(unique(bloc[ok]))
+  k <- length(unique(pli[ok]))
+  if (sum(is.finite(reg)) < length(reg)) {
+    return(vide(paste0("carte r\u00e9gionale non d\u00e9finie sur ", sum(!is.finite(reg)), " ancrage(s) sur ",
+                       length(reg)), n = n_ok, nb = nb, k = k))
+  }
+  if (n_ok < min_anchors) {
+    return(vide(paste0(n_ok, " ancrage(s) < ", min_anchors, " requis"), n = n_ok, nb = nb, k = k))
+  }
+  if (nb < min_blocks) {
+    return(vide(paste0(nb, " bloc(s) occup\u00e9(s) < ", min_blocks, " requis"), n = n_ok, nb = nb, k = k))
+  }
+  r2 <- function(o, q) 1 - sum((o - q)^2) / sum((o - mean(o))^2)
+  # regional recalibre hors pli : decalage moyen appris sur les autres plis (information seulement)
+  cal <- reg
+  for (f in unique(pli)) {
+    a <- ok & pli != f
+    cal[pli == f] <- reg[pli == f] + mean(obs[a] - reg[a])
+  }
+  par_pli <- do.call(rbind, lapply(sort(unique(pli[ok])), function(f) {
+    i <- ok & pli == f
+    data.frame(pli = f, n = sum(i), r2_local = r2(obs[i], loc[i]), r2_regional = r2(obs[i], reg[i]),
+               r2_regional_recalibre = r2(obs[i], cal[i]), stringsAsFactors = FALSE)
+  }))
+  par_pli$gain <- par_pli$r2_local - par_pli$r2_regional
+  # bootstrap de blocs : les blocs sont rééchantillonnés avec remise, le gain est recalculé
+  graine <- if (exists(".Random.seed", envir = globalenv(), inherits = FALSE))
+    get(".Random.seed", envir = globalenv()) else NULL
+  on.exit(if (is.null(graine)) {
+    if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) rm(".Random.seed", envir = globalenv())
+  } else assign(".Random.seed", graine, envir = globalenv()), add = TRUE)
+  set.seed(seed)
+  idx <- split(which(ok), bloc[ok])
+  gains <- vapply(seq_len(n_boot), function(b) {
+    i <- unlist(idx[sample.int(length(idx), replace = TRUE)], use.names = FALSE)
+    o <- obs[i]
+    sct <- sum((o - mean(o))^2)
+    if (!is.finite(sct) || sct == 0) return(NA_real_)
+    (sum((o - reg[i])^2) - sum((o - loc[i])^2)) / sct
+  }, numeric(1))
+  q <- stats::quantile(gains, c((1 - level) / 2, 1 - (1 - level) / 2), na.rm = TRUE, names = FALSE)
+  gain <- r2(obs[ok], loc[ok]) - r2(obs[ok], reg[ok])
+  remplace <- is.finite(q[1]) && q[1] > gain_min
+  motif <- sprintf(paste0("gain de R2 du local %.3f, IC %.0f %% [%.3f ; %.3f] sur %d ancrages et %d blocs : ",
+                          "%s la marge de %.3f"), gain, level * 100, q[1], q[2], n_ok, nb,
+                   if (remplace) "borne basse au-dessus de" else "borne basse non sup\u00e9rieure \u00e0", gain_min)
+  res <- data.frame(n_ancrages = n_ok, n_blocs = nb, k_plis = k, n_tirages = sum(is.finite(gains)),
+                    r2_local = r2(obs[ok], loc[ok]), r2_regional = r2(obs[ok], reg[ok]),
+                    r2_regional_recalibre = r2(obs[ok], cal[ok]), gain = gain,
+                    ic_bas = q[1], ic_haut = q[2], niveau_ic = level, seuil_gain = gain_min,
+                    rmse_local = sqrt(mean((obs[ok] - loc[ok])^2)),
+                    rmse_regional = sqrt(mean((obs[ok] - reg[ok])^2)),
+                    biais_regional = mean(reg[ok] - obs[ok]), aoa_part_carte = aoa_part,
+                    variables_locales = vars_loc,
+                    decision = if (remplace) "locale" else "r\u00e9gionale", motif = motif,
+                    statut_seuils = "valeur provisoire, sans source, \u00e0 v\u00e9rifier",
+                    stringsAsFactors = FALSE)
+  list(resume = res, par_pli = par_pli, remplace = remplace,
+       publiee = if (remplace) "locale" else "regionale")
+}
+
+#' Choisir la carte trophique publiée : régionale, ou locale si elle a gagné
+#'
+#' Rend les cartes du pipeline avec la couche trophique **régionale**, sauf si la comparaison
+#' ([compare_local_regional()]) a décidé de remplacer. Sans décision positive explicite, la carte
+#' régionale est gardée : la carte locale n'est jamais lue.
+#'
+#' @param maps_regional Liste nommée de `SpatRaster` (`trophic`, `hydric`, …) du modèle régional.
+#' @param local_map `SpatRaster` du modèle local (couches `pred`, `sd`, `sd_cv`, `di`, `aoa`) ou `NULL`.
+#' @param comparison Résultat de [compare_local_regional()] ou `NULL`.
+#' @return Une liste : `maps` (même structure que `maps_regional`), `publiee` (`"locale"` ou
+#'   `"regionale"`) et `motif`.
+#' @examples
+#' r <- terra::rast(nrows = 2, ncols = 2, xmin = 1e6, xmax = 1000040, ymin = 6.8e6, ymax = 6800040,
+#'                  crs = "EPSG:2154", vals = 1)
+#' select_trophic_map(list(trophic = r), NULL, NULL)$publiee
+#' @export
+select_trophic_map <- function(maps_regional, local_map = NULL, comparison = NULL) {
+  if (!is.list(maps_regional) || !"trophic" %in% names(maps_regional)) {
+    stop("`maps_regional` doit \u00eatre une liste avec l'\u00e9l\u00e9ment `trophic`.", call. = FALSE)
+  }
+  if (is.null(comparison)) {
+    return(list(maps = maps_regional, publiee = "regionale",
+                motif = "aucune comparaison (pas d'ancrages) : carte r\u00e9gionale"))
+  }
+  if (isTRUE(comparison$remplace)) {
+    if (!inherits(local_map, "SpatRaster")) {
+      stop("D\u00e9cision de remplacement sans carte locale.", call. = FALSE)
+    }
+    m <- maps_regional
+    m$trophic <- local_map
+    return(list(maps = m, publiee = "locale", motif = comparison$resume$motif))
+  }
+  list(maps = maps_regional, publiee = "regionale", motif = comparison$resume$motif)
+}
+
+#' Variables du modèle trophique local : les mêmes variables larges que le régional, plus des fines
+#'
+#' Le modèle local (ancrages GBIF) prend **exactement les variables larges du modèle régional**
+#' (`vars_modele$trophic` : climat selon `trophique_climat`, lithologie, formation, pH) auxquelles
+#' s'ajoutent des variables **fines nommées** (terrain fin non vide, sols) : seule la finesse des
+#' données les distingue, jamais un climat que l'un verrait et l'autre non. Le local suit donc
+#' `trophique_climat` de lui-même.
+#'
+#' @param regional Variables du modèle trophique régional (`vars_modele$trophic`).
+#' @param fines Noms des variables fines ajoutées (couches de terrain fin non vides, sols). Une couche
+#'   préfixée `coarse_` (maille de 90 m ou plus, [stack_soil_layers()]) est **large** : elle est écartée
+#'   ici et n'entre dans le local que si le régional l'a (`regional`).
+#' @return Vecteur de noms de variables du modèle local (sans doublon), les larges d'abord.
+#' @examples
+#' local_trophic_vars(c("coarse_litho_enc", "coarse_formation_enc"), c("pente", "twi"))
+#' @export
+local_trophic_vars <- function(regional, fines) {
+  unique(c(regional, fines[!startsWith(fines, "coarse_")]))
+}
