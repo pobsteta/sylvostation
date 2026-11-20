@@ -4,13 +4,13 @@
 \alias{lateral_balance}
 \title{Bilan latéral en eau (Piedallu et al. 2006, tableau 20) : carte de contrôle}
 \usage{
-lateral_balance(dtm, coef = .PIEDALLU_T20, offsets = c(-30, 0, 60))
+lateral_balance(dtm, coef, offsets = c(-30, 0, 60))
 }
 \arguments{
 \item{dtm}{\code{SpatRaster} d'altitude (m), EPSG:2154, maille <= 50 m.}
 
 \item{coef}{Coefficients (liste \code{depart}, \code{equilibre} : \code{constante}, \code{curv150},
-\code{idr_1500}, \code{moore}).}
+\code{idr_1500}, \code{moore}), \code{bilan_lateral_coef} de \code{\link[=read_config]{read_config()}} (config.yml).}
 
 \item{offsets}{Équivalent en RU (mm) des classes départ, équilibre, apports.}
 }
@@ -32,13 +32,14 @@ utile \code{offsets} (−30, 0, +60 mm, synthèse bibliographique de la p. 54, n
 jamais ajouté à la RU de BILJOU : appliqué tel quel à l'emprise test (mesure de la mission
 034), il donne 53 \% d'apports et presque aucun départ (0 à 0,1 \%), contre 27,6 \% d'apports
 et 25,9 \% de départs observés en calibration (tableau 21). Coefficients \strong{à vérifier},
-modifiables dans \code{config.yml} (\code{bilan_lateral_coef}). Toutes les couches sont fines
+lus dans \code{config.yml} (\code{bilan_lateral_coef}, mission 039b). Toutes les couches sont fines
 (\code{FINE_VARIABLES}).
 }
 \examples{
 f <- system.file("extdata", "synth_dtm.tif", package = "sylvostation")
 if (nzchar(f)) {
-  b <- lateral_balance(terra::rast(f))
+  cf <- sylvostation:::.CONFIG_REEL_DEFAUTS$bilan_lateral_coef   # tableau 20, à vérifier
+  b <- lateral_balance(terra::rast(f), cf)
   attr(b, "parts")
 }
 }

@@ -130,6 +130,13 @@ ru_carte: apprise
 mnt_large_res_m: 250
 bilan_lateral: false
 bilan_lateral_ru_mm: [-30, 0, 60]
+# Coefficients du bilan latéral : logit multinomial du tableau 20 de Piedallu et al. (2006),
+# HAL hal-00835906, p. 53 imprimée (référence : apports ; N = 1 200 relevés EcoPlant vosgiens,
+# pseudo-R² 0,112). À VÉRIFIER : unités de la courbure, calcul de l'indice de Moore (lu comme le
+# TWI) et MNT de 50 m non donnés par le texte. Équivalents en RU (bilan_lateral_ru_mm) : p. 54.
+bilan_lateral_coef:
+  depart: {constante: -0.926, curv150: 2.659, idr_1500: 3.410, moore: -0.395}
+  equilibre: {constante: 0.459, curv150: 1.327, idr_1500: 1.379, moore: -0.176}
 # Départements BD Charm-50 de l'emprise (référentiels § 5) : liste explicite.
 bdcharm_departements: ["054", "057", "067", "068", "070", "088", "090"]
 ifn_archive_url: "https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip"

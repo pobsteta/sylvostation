@@ -416,14 +416,14 @@ coarse_t_corr_layer <- function(dem, safran, alt_mailles, lapse, months = 1:12, 
 #' trophique, décision de Pascal du 2026-11-20) ; les deux autres variantes restent des options.
 #'
 #' @param temperature `"corrigee"` ou `"bilineaire"`.
-#' @param trophique `"actuel"`, `"corrige"` ou `"sans"`.
+#' @param trophique `"sans"` (défaut, décision de Pascal du 2026-11-20), `"actuel"` ou `"corrige"`.
 #' @return Une liste : `t_var` (température du bioclimat et de l'hydrique), `trophic`,
 #'   `hydric`, `toutes`.
 #' @examples
 #' model_climate_vars("corrigee", "actuel")
 #' @export
 model_climate_vars <- function(temperature = c("corrigee", "bilineaire"),
-                               trophique = c("actuel", "corrige", "sans")) {
+                               trophique = c("sans", "actuel", "corrige")) {
   temperature <- match.arg(temperature)
   trophique <- match.arg(trophique)
   t_var <- if (temperature == "corrigee") "coarse_t_corr_700m" else "coarse_t_moy"

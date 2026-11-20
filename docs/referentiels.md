@@ -1961,8 +1961,10 @@ capacités SoilGrids moyennées dans 700 m ; cellules sans prédicteur complét�
 Câblé (`lateral_balance()`), **désactivé par défaut** (`bilan_lateral: false`), jamais ajouté à la RU de
 BILJOU. Appliqué tel quel à l'emprise test (mesure de la mission 034) : **53 % d'apports** (+60 mm) et 0 à
 0,1 % de départs, contre **27,6 % d'apports** et 25,9 % de départs observés en calibration (tableau 21) ;
-le modèle d'origine ne reclasse bien que 57,4 % des relevés (pseudo-R² 0,112). Coefficients dans
-`config.yml` (`bilan_lateral_coef`), à vérifier ; à recalibrer sur les points GNSS (mission 029).
+le modèle d'origine ne reclasse bien que 57,4 % des relevés (pseudo-R² 0,112). Coefficients du
+tableau 20 dans `config.yml` (`bilan_lateral_coef`, source et page en commentaire, mission 039b ;
+valeur d'une configuration sans la clé : `R/config.R`), à vérifier ; aucun coefficient dans
+`R/terrain.R` ; à recalibrer sur les points GNSS (mission 029).
 
 ### 37.6 Mesures avant / après (store du run réel 035, 5 graines)
 

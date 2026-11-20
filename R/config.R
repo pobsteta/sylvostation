@@ -27,7 +27,7 @@
 #'   `trophique_climat` (`"sans"` par défaut, décision de Pascal du 2026-11-20 ;
 #'   options `"actuel"` et `"corrige"`), `ru_carte` (`"apprise"` ou `"maille"`), `mnt_large_res_m` (250),
 #'   `bilan_lateral` (`FALSE`), `bilan_lateral_ru_mm` (−30, 0, 60) et `bilan_lateral_coef`
-#'   (`NULL` : tableau 20 de Piedallu et al. 2006, à vérifier), l'entrée optionnelle
+#'   (coefficients du tableau 20 de Piedallu et al. 2006, à vérifier), l'entrée optionnelle
 #'   `mnt_large_path` (MNT de 250 m local, mode hors ligne),
 #'   `ifn_archive_url` et `taxref_url` (sans valeur
 #'   par défaut : seule source, config.yml ; exigées en ligne), et les
@@ -133,7 +133,13 @@ read_config <- function(path = "config.yml") {
   # relief par le gradient lu dans SAFRAN, MNT BD ALTI de 250 m, RU de carte apprise ; climat
   # retire du trophique (decision de Pascal du 2026-11-20) ; bilan lateral desactive
   climat_temperature = "corrigee", trophique_climat = "sans", ru_carte = "apprise",
-  mnt_large_res_m = 250, bilan_lateral = FALSE, bilan_lateral_ru_mm = c(-30, 0, 60)
+  mnt_large_res_m = 250, bilan_lateral = FALSE, bilan_lateral_ru_mm = c(-30, 0, 60),
+  # bilan lateral : logit multinomial du tableau 20 de Piedallu et al. (2006, HAL hal-00835906,
+  # p. 53 imprimee ; reference : apports), A VERIFIER (unites de la courbure, indice de Moore,
+  # MNT de 50 m non donnes) ; meme valeur que config.yml (cle absente = cette valeur)
+  bilan_lateral_coef = list(
+    depart = c(constante = -0.926, curv150 = 2.659, idr_1500 = 3.410, moore = -0.395),
+    equilibre = c(constante = 0.459, curv150 = 1.327, idr_1500 = 1.379, moore = -0.176))
 )
 
 .config_reel <- function(cfg) {
@@ -248,7 +254,7 @@ read_config <- function(path = "config.yml") {
          call. = FALSE)
   }
   cfg$bilan_lateral_ru_mm <- as.numeric(x)
-  if (!is.null(cfg$bilan_lateral_coef)) {
+  {
     cf <- cfg$bilan_lateral_coef
     nm <- c("constante", "curv150", "idr_1500", "moore")
     ok <- is.list(cf) && all(c("depart", "equilibre") %in% names(cf)) &&
