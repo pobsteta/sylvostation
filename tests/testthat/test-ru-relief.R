@@ -146,7 +146,8 @@ test_that("lateral_balance : classes 1 a 3, equivalents en RU, couches fines", {
   f <- system.file("extdata", "synth_dtm.tif", package = "sylvostation")
   skip_if(!nzchar(f))
   dtm <- terra::rast(f)
-  b <- lateral_balance(dtm)
+  cf0 <- sylvostation:::.CONFIG_REEL_DEFAUTS$bilan_lateral_coef
+  b <- lateral_balance(dtm, cf0)
   expect_true(all(c("curv150", "idr_1500", "moore", "bilan_lateral", "ru_bilan_lateral") %in% names(b)))
   v <- terra::values(b)
   cl <- v[, "bilan_lateral"]
@@ -159,9 +160,10 @@ test_that("lateral_balance : classes 1 a 3, equivalents en RU, couches fines", {
     expect_error(assert_no_fine_extract_on_ifn(mark_ifn(data.frame(x = 1)), n), "IFN")
   }
   # coefficient tres favorable au depart : tout part
-  cf <- sylvostation:::.PIEDALLU_T20
+  cf <- cf0
   cf$depart[["constante"]] <- 50
   expect_equal(attr(lateral_balance(dtm, coef = cf), "parts")[["depart"]], 1)
   expect_error(lateral_balance(dtm, coef = list(depart = 1)), "coef")
-  expect_error(lateral_balance(terra::aggregate(dtm, 10)), "50")
+  expect_error(lateral_balance(terra::aggregate(dtm, 10), cf0), "50")
+  expect_error(lateral_balance(dtm), "coef")
 })

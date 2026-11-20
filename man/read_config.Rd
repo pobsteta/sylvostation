@@ -33,8 +33,10 @@ les choix de la mission 039 : \code{climat_temperature} (\code{"corrigee"} ou \c
 \code{trophique_climat} (\code{"sans"} par défaut, décision de Pascal du 2026-11-20 ;
 options \code{"actuel"} et \code{"corrige"}), \code{ru_carte} (\code{"apprise"} ou \code{"maille"}), \code{mnt_large_res_m} (250),
 \code{bilan_lateral} (\code{FALSE}), \code{bilan_lateral_ru_mm} (−30, 0, 60) et \code{bilan_lateral_coef}
-(\code{NULL} : tableau 20 de Piedallu et al. 2006, à vérifier), l'entrée optionnelle
-\code{mnt_large_path} (MNT de 250 m local, mode hors ligne),
+(coefficients du tableau 20 de Piedallu et al. 2006, à vérifier), l'entrée optionnelle
+\code{mnt_large_path} (MNT de 250 m local, mode hors ligne), l'entrée optionnelle
+\code{soilgrids_texture_path} (\code{NULL} par défaut : GeoTIFF à 24 couches de textures et
+cailloux SoilGrids, mode hors ligne, mission 039b),
 \code{ifn_archive_url} et \code{taxref_url} (sans valeur
 par défaut : seule source, config.yml ; exigées en ligne), et les
 entrées optionnelles \code{gnss_path}, \code{reference_path}, \code{soil_paths}, \code{tichy_path}

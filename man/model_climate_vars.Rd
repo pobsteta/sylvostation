@@ -6,13 +6,13 @@
 \usage{
 model_climate_vars(
   temperature = c("corrigee", "bilineaire"),
-  trophique = c("actuel", "corrige", "sans")
+  trophique = c("sans", "actuel", "corrige")
 )
 }
 \arguments{
 \item{temperature}{\code{"corrigee"} ou \code{"bilineaire"}.}
 
-\item{trophique}{\code{"actuel"}, \code{"corrige"} ou \code{"sans"}.}
+\item{trophique}{\code{"sans"} (défaut, décision de Pascal du 2026-11-20), \code{"actuel"} ou \code{"corrige"}.}
 }
 \value{
 Une liste : \code{t_var} (température du bioclimat et de l'hydrique), \code{trophic},

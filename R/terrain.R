@@ -757,12 +757,8 @@ fetch_mnt_large <- function(bbox, cache_dir, res = 250, margin_m = 2000, offline
 }
 
 # ---- Bilan lateral en eau (Piedallu et al. 2006, tableau 20 ; mission 039, option C) -----------
-# Coefficients du logit multinomial (reference : apports), N = 1 200 releves EcoPlant vosgiens,
-# pseudo-R2 de McFadden 0,112, 57,4 % bien reclasses (tableau 21). A VERIFIER : unites de la
-# courbure, calcul de l'indice de Moore et MNT de 50 m non donnes par le texte.
-.PIEDALLU_T20 <- list(
-  depart = c(constante = -0.926, curv150 = 2.659, idr_1500 = 3.410, moore = -0.395),
-  equilibre = c(constante = 0.459, curv150 = 1.327, idr_1500 = 1.379, moore = -0.176))
+# Les coefficients du tableau 20 sont dans config.yml (`bilan_lateral_coef`, source et page en
+# commentaire, a verifier) ; valeur par defaut d'une configuration sans la cle : R/config.R.
 
 #' Bilan latéral en eau (Piedallu et al. 2006, tableau 20) : carte de contrôle
 #'
@@ -777,12 +773,12 @@ fetch_mnt_large <- function(bbox, cache_dir, res = 250, margin_m = 2000, offline
 #' jamais ajouté à la RU de BILJOU : appliqué tel quel à l'emprise test (mesure de la mission
 #' 034), il donne 53 % d'apports et presque aucun départ (0 à 0,1 %), contre 27,6 % d'apports
 #' et 25,9 % de départs observés en calibration (tableau 21). Coefficients **à vérifier**,
-#' modifiables dans `config.yml` (`bilan_lateral_coef`). Toutes les couches sont fines
+#' lus dans `config.yml` (`bilan_lateral_coef`, mission 039b). Toutes les couches sont fines
 #' (`FINE_VARIABLES`).
 #'
 #' @param dtm `SpatRaster` d'altitude (m), EPSG:2154, maille <= 50 m.
 #' @param coef Coefficients (liste `depart`, `equilibre` : `constante`, `curv150`,
-#'   `idr_1500`, `moore`).
+#'   `idr_1500`, `moore`), `bilan_lateral_coef` de [read_config()] (config.yml).
 #' @param offsets Équivalent en RU (mm) des classes départ, équilibre, apports.
 #' @return `SpatRaster` à 50 m : `curv150`, `idr_1500`, `moore`, `p_depart`, `p_equilibre`,
 #'   `p_apports`, `bilan_lateral` (classe 1 à 3), `ru_bilan_lateral` (mm). Attribut `parts`
@@ -790,13 +786,16 @@ fetch_mnt_large <- function(bbox, cache_dir, res = 250, margin_m = 2000, offline
 #' @examples
 #' f <- system.file("extdata", "synth_dtm.tif", package = "sylvostation")
 #' if (nzchar(f)) {
-#'   b <- lateral_balance(terra::rast(f))
+#'   cf <- sylvostation:::.CONFIG_REEL_DEFAUTS$bilan_lateral_coef   # tableau 20, à vérifier
+#'   b <- lateral_balance(terra::rast(f), cf)
 #'   attr(b, "parts")
 #' }
 #' @export
-lateral_balance <- function(dtm, coef = .PIEDALLU_T20, offsets = c(-30, 0, 60)) {
+lateral_balance <- function(dtm, coef, offsets = c(-30, 0, 60)) {
   .check_dtm(dtm)
-  if (is.null(coef)) coef <- .PIEDALLU_T20
+  if (missing(coef) || is.null(coef)) {
+    stop("`coef` est requis : `bilan_lateral_coef` de read_config() (config.yml).", call. = FALSE)
+  }
   for (cl in c("depart", "equilibre")) {
     if (is.null(coef[[cl]]) || !all(c("constante", "curv150", "idr_1500", "moore") %in%
                                     names(coef[[cl]]))) {

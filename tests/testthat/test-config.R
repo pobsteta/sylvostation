@@ -134,7 +134,8 @@ test_that("cles de la mission 039 : defauts (arbitrages du 2026-11-20) et contro
   expect_false(cfg$bilan_lateral)                          # option C : desactive
   expect_equal(cfg$bilan_lateral_ru_mm, c(-30, 0, 60))
   expect_equal(cfg$mnt_large_res_m, 250)
-  expect_null(cfg$bilan_lateral_coef)
+  expect_equal(cfg$bilan_lateral_coef$depart[["idr_1500"]], 3.410)   # tableau 20 (defaut)
+  expect_equal(cfg$bilan_lateral_coef$equilibre[["moore"]], -0.176)
   expect_null(cfg$mnt_large_path)
   expect_error(read_config(ecrire_config(list(climat_temperature = "meteoland"))), "climat_temperature")
   expect_error(read_config(ecrire_config(list(trophique_climat = "oui"))), "trophique_climat")
@@ -150,5 +151,7 @@ test_that("cles de la mission 039 : defauts (arbitrages du 2026-11-20) et contro
   f <- testthat::test_path("..", "..", "config.yml")
   skip_if_not(file.exists(f), "config.yml absent du paquet installe")
   expect_identical(read_config(f)$trophique_climat, "sans")
+  # config.yml du depot et defaut de R/config.R : memes coefficients du tableau 20
+  expect_equal(read_config(f)$bilan_lateral_coef, cfg$bilan_lateral_coef)
   expect_false(read_config(f)$bilan_lateral)
 })

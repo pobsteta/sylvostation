@@ -641,6 +641,37 @@ test_that("ifn_real_gradients : trois gradients aux placettes, maille large seul
   expect_false(is.null(attr(g, "bioclim_axis")))
 })
 
+test_that("ifn_real_gradients(t_layer) : T corrigee dans 700 m aux placettes, axe appris sur elle", {
+  skip_if_not_installed("euptf2")
+  skip_if_not_installed("soiltexture")
+  skip_if_not_installed("ranger")
+  ifn <- filter_releves(load_ifn(ex("")))
+  ind <- load_indicator_values("tichy", ex("tichy_2023_extrait.csv"), ex("taxref_v18_extrait.csv"),
+                               taxa = unique(ifn$flore$CD_REF))
+  s <- read_safran(ex("safran_sim2_12mailles_extrait.csv"))
+  b <- sf::st_bbox(ifn$placettes)
+  # couche large fabriquee en memoire : T croissante vers l'est (x = est, Lambert-93)
+  t7 <- terra::rast(xmin = floor(b[["xmin"]] / 250) * 250 - 5000, xmax = ceiling(b[["xmax"]] / 250) * 250 + 5000,
+                    ymin = floor(b[["ymin"]] / 250) * 250 - 5000, ymax = ceiling(b[["ymax"]] / 250) * 250 + 5000,
+                    resolution = 250, crs = "EPSG:2154")
+  xy <- terra::xyFromCell(t7, seq_len(terra::ncell(t7)))
+  terra::values(t7) <- 8 + (xy[, 1] - b[["xmin"]]) / 10000
+  names(t7) <- "coarse_t_corr_700m"
+  g <- suppressWarnings(ifn_real_gradients(ifn, ind, safran_climate(s), s, t_layer = t7))
+  expect_true("coarse_t_corr_700m" %in% names(g))
+  x <- sf::st_coordinates(g)[, 1]
+  expect_equal(g$coarse_t_corr_700m, 8 + (x - b[["xmin"]]) / 10000, tolerance = 1e-6)
+  ax <- attr(g, "bioclim_axis")
+  expect_identical(ax$vars, c("coarse_p_etp_sv", "coarse_t_corr_700m"))
+  expect_gt(ax$loadings[["coarse_t_corr_700m"]], 0)
+  expect_equal(g$bioclim, apply_bioclim(g, ax))
+  # une couche fine (t_corr) est refusee aux placettes IFN (regle des 700 m)
+  fine <- t7
+  names(fine) <- "t_corr"
+  expect_error(suppressWarnings(ifn_real_gradients(ifn, ind, safran_climate(s), s, t_layer = fine)),
+               "IFN|interdite")
+})
+
 test_that("ifn_observables, ifn_flora_matrix, ifn_trees : formats pour la clé et les fiches", {
   ifn <- load_ifn(ex(""))
   o <- ifn_observables(ifn$placettes)

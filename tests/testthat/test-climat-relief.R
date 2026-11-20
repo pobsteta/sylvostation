@@ -150,6 +150,9 @@ test_that("model_climate_vars : choix de config.yml", {
   expect_identical(model_climate_vars("corrigee", "corrige")$trophic,
                    c("coarse_p_etp_sv", "coarse_t_corr_700m"))
   expect_error(model_climate_vars("x"))
+  # defaut : climat retire du trophique (decision de Pascal, 2026-11-20)
+  expect_length(model_climate_vars()$trophic, 0)
+  expect_identical(model_climate_vars()$t_var, "coarse_t_corr_700m")
 })
 
 test_that("t_correction_validation : le gradient de la SER bat le bilineaire sur un champ lineaire", {

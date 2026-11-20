@@ -8,7 +8,9 @@ soilgrids_cu(files)
 }
 \arguments{
 \item{files}{Chemins de \code{\link[=fetch_soilgrids_texture]{fetch_soilgrids_texture()}} (ou \code{SpatRaster} à 24 couches nommées
-\verb{clay_0-5cm_mean}, ...), en \%, EPSG:2154.}
+\verb{clay_0-5cm_mean}, ...), en \%, EPSG:2154 ; ou un seul GeoTIFF à 24 couches nommées
+(\code{soilgrids_texture_path}, mode hors ligne), divisé par 10 s'il porte la balise
+\code{echelle = 10} (unités natives de SoilGrids).}
 }
 \value{
 \code{SpatRaster} à six couches \code{cu_0_5}, \code{cu_5_15}, ..., \code{cu_100_200} (mm/cm).
@@ -18,7 +20,8 @@ Pour chaque horizon de SoilGrids, eau disponible θ(pF 2,0) − θ(pF 4,2) par e
 (PTF01 : sable, limon, argile ramenés à 100 \%, profondeur au milieu de l'horizon), comme
 \code{\link[=ru_from_texture]{ru_from_texture()}}, réduite par les cailloux : capacité \verb{cu_<horizon>} en mm d'eau par cm
 de sol. La réserve utile jusqu'à une profondeur est la somme des capacités × épaisseurs
-(\code{\link[=ru_soilgrids]{ru_soilgrids()}}). Calcul mesuré sur la GRECO D : 231 s pour 447 044 cellules × 6
+(\code{\link[=ru_soilgrids]{ru_soilgrids()}}). Valeur obtenue : environ 3,2 mm/cm pour un limon à 20 \% d'argile sans
+cailloux, haute pour une eau disponible (pF 2,0 au lieu de 2,5) : \strong{à vérifier}. Calcul mesuré sur la GRECO D : 231 s pour 447 044 cellules × 6
 horizons, 1,4 Go.
 }
 \examples{
