@@ -1888,3 +1888,75 @@ RMSE de la validation croisée, 0,93) ; `essence_alerte_ratio` 0,5 ; `essence_al
 **Limites** : une seule répartition en plis ; le contrôle n'est pas une validation indépendante (essences
 liées au climat et à la roche que le modèle voit) ; les alertes pointent surtout l'absence de relief fin,
 attendue sous la règle des 700 m ; plantations (douglas, épicéa) lues « pauvres » : limite visée par l'ADR 0008.
+
+## 40. Table lithologique : 155 formations non classées de la GRECO D (mission 040, 2026-11-20)
+
+**Décision de Pascal (journal, 2026-11-20)** : table acceptée (option b) hors 7 cas tranchés
+un par un ; trois classes nouvelles ; règles complétées ; défauts `t1b` et `j2b2` corrigés ;
+10 formations laissées `non_classe`. Fichiers : `inst/extdata/lithologie_regles.csv` (27 règles,
+priorités décimales), `inst/extdata/lithologie_notations.csv` (156 notations : codes, classes,
+origine, source ; **aucune description BRGM**), `recode_lithology(overrides = )` et
+`read_lithology_notations()`. Source : BD Charm-50 (BRGM) ; les pages de l'annexe 1 de Piedallu
+et al. (2006) ne sont que citées. Les classes marquées « à vérifier » (notices départementales
+067, 068 non lues) restent à confirmer. Codage par `NOTATION` seule (décision de l'orchestrateur :
+aucun gain mesuré à coder département + `NOTATION`).
+
+### 40.1 Rejeu des motifs (store du run réel 035, 667 formations)
+
+Chaque motif a été rejoué avec `recode_lithology()` sur les descriptions de `geol_classes_placettes`
+(description du plus grand polygone, comme dans le pipeline). **Résultat : les décomptes faits à
+la main de la proposition sont exacts** (règle gagnante, première qui correspond) : 10.1 : 27 ;
+10.2 : 7 ; 10.3 : 13 ; 10.4 : 51 ; 10.5 : 9 ; 9.1 : 8 ; 9.2 : 4 ; 9.3 : 3 ; 11.1 : 4 ; 11.2 : 2 ;
+12.1 : 2 ; 6 notations par la table (+ `j1`, `rB` fixées par la table) ; 10 laissées. **Seul écart** :
+10.6 (10 notations) est scindée par la décision de Pascal sur la granodiorite du Champ-du-Feu
+(Piedallu : c) : 5 `h2ã4*` vont à `plutonite_intermediaire` par une règle 10.35 `granodiorit`
+(placée après 10.2, pour que « granodiorite du Hohwald » des schistes de Steige reste dans
+`schiste_grauwacke`) ; 5 restent `granite`. Les motifs « seuls » (hors ordre) captent plus que
+leurs décomptes (ex. 10.4 : 59 dans la liste) : c'est l'ordre qui les départage.
+
+### 40.2 Effets hors de la liste des 156 notations (à lire)
+
+Les règles s'appliquent à toutes les formations lues (667) et pas seulement aux 156 : **46
+formations hors liste (2 557 km²) changent de classe**. `marne_argile` → `calcaire` : 22
+(1 599 km²), surtout par la règle 10.9 (`^calcaires? `, Jurassique : j2a-b, j2b2, j3a, l1-2, l2-3,
+I1-2a…) ; `calcaire` → `marne_argile` : 9 (197 km², règle 11.2 « marno-calcaires » : t3B, t3BG, t4b-c,
+t4c, l3b, l3c, j1b, j3aC, j5a1) ; `conglomerat` → `gres` : 3 (706 km² : t1b 522, t2a 161, rD 24) par la
+correction de la règle 1 ; `gres` → `calcaire` : t3CMT (39 km², règle 12.1) ; `glaciaire` →
+`colluvions_eboulis` : GPx-y (3,6 km², règle 9.2) ; 6 formations `non_classe` hors des disques
+reçoivent une classe (2,8 km²) ; **perte** : `d-h2(1)` (0,04 km²) `conglomerat` → `non_classe`
+(« conglomératique » n'est plus un conglomérat). La proposition n'annonçait pour 10.9 que
+l1-2 et I1-2a : l'effet réel est plus large. Marnes et calcaires ayant la même richesse (e,
+brouillon 034), l'effet sur le R² est nul (voir 40.4).
+
+### 40.3 Décompte `non_classe`, avant et après
+
+| | Avant | Après |
+|---|---|---|
+| Formations `non_classe` (667 lues, 25 774 km²) | 171 (1 466 km²) | 21 (202 km²) |
+| Formations `non_classe` dans les disques de 700 m | 155 (434,9 km²) | **10 (11,65 km²)** |
+| Placettes touchant ces formations (somme par formation) | 2 002 | 333 |
+| Placettes dont la classe dominante est `non_classe` | 296 | **0** |
+
+Les 10 restantes : `hydro` (183 placettes), `Hydro` (3), `X` (25), `fm` (59), `Q` (39), `Fn` (11),
+`my` (8), `Tx-y` (3), `Lz` (1), `D` (1).
+Classes dominantes dans 700 m après (2 893 placettes) : grès 1 109, granite 545, conglomérat 373,
+gneiss/migmatite 228, marne/argile 148, alluvions 144, volcanite 143, schiste/grauwacke 48,
+glaciaire 38, plutonite intermédiaire 37, calcaire 28, colluvions/éboulis 27, loess 17,
+roche basique 8.
+
+### 40.4 R² du trophique, avant et après
+
+Mesure hors pipeline (script du scratchpad), modèle final (climat + classe + formation + pH),
+2 893 placettes, même code que `_targets.R` (035), 3 graines d'affectation des plis.
+« Avant » reproduit le store (0,1938 et 0,2723, graine 1).
+
+| Blocs | Avant (graines 1, 2, 3 ; moyenne) | Après (moyenne) | Écart |
+|---|---|---|---|
+| portée estimée, 22 121 m | 0,1938 ; 0,1925 ; 0,1914 ; **0,1926** | 0,2007 ; 0,2006 ; 0,2039 ; **0,2017** | +0,009 |
+| 8 358 m | 0,2723 ; 0,2721 ; 0,2729 ; **0,2724** | 0,2754 ; 0,2743 ; 0,2754 ; **0,2750** | +0,003 |
+
+Sans la règle 10.9 : 0,2015 et 0,2750 — elle ne joue pas. Les gains sont **dans le bruit**
+(IC à 22 km : [0,087 ; 0,275], § 35.5) : la table ne dégrade pas le R² et n'en apporte pas de
+significatif. Son bénéfice est ailleurs : plus de placettes à classe dominante `non_classe`
+(296 → 0), classes lisibles par un forestier. Les R² de § 35.5 ne sont pas remplacés
+(le run réel n'a pas été relancé).
