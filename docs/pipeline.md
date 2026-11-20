@@ -67,7 +67,7 @@ hydrique ».
 | `dtm`, `grid` | `mosaic_tiles()` (5 m), `real_grid()` (`resolution_m`) | | |
 | `hydro`, `terrain` | `get_hydro_network()`, `real_terrain()` (`mrvbf = TRUE`) | WFS TOPAGE | extrait |
 | `forest` | `forest_mask()` : MHC > 5 m sur la moitié de la cellule (provisoire) | | |
-| `geol_*` | `read_geology()`, `recode_lithology()`, `dominant_lithology(700)` | BD Charm-50 (`bdcharm_departements`) | extrait |
+| `geol_*` | `read_geology()`, `recode_lithology()` (règles `lithologie_regles.csv` + table de notations `lithologie_notations.csv`, 14 classes dont `volcanite`, `schiste_grauwacke`, `plutonite_intermediaire` ; mission 040), `dominant_lithology(700)` | BD Charm-50 (`bdcharm_departements`) | extrait |
 | `ifn` | `load_ifn()`, `filter_greco()`, `filter_releves()` | `fetch_ifn()` | extrait |
 | `taxref`, `indicateurs` | `read_taxref()`, `load_indicator_values("tichy")` | `taxref_url`, `tichy_path` | extraits |
 | `safran`, `climat` | `fetch_safran()`, `read_safran()`, `safran_climate()` (avril-septembre, interpolation bilinéaire entre centres de mailles, `safran_interpolation`, mission 033). **Emprise lue = boîte de toutes les placettes de la GRECO ∪ emprise de la carte** (497 mailles pour la GRECO D) ; le fichier filtré `emprise_<année>_<emprise>.csv` porte son emprise dans son nom, jamais resservi pour une autre (mission 035) | SIM2 | 12 mailles |

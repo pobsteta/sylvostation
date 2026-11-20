@@ -244,3 +244,28 @@ respecter : aucune donnee reelle. Ne dit rien sur la vraie carte.
   des modalités pour chaque unité » : colonnes `code;nom;latin`, 195 lignes, texte d'origine.
   Le code `332G`, présent dans la table ARBRE de la GRECO D, n'y figure pas.
 - **Licence :** Licence Ouverte / Open Licence Etalab Version 2.0.
+
+## `lithologie_notations.csv` et `lithologie_regles.csv` (mission 040, RÉEL, dérivé)
+
+- **Source :** BRGM, BD Charm-50, cartes géologiques départementales à 1/50 000 harmonisées
+  (départements 054, 057, 067, 068, 070, 088, 090), téléchargées sur InfoTerre le 2026-11-19
+  (docs/referentiels.md § 5 et § 35.3).
+- **Contenu :** uniquement des **codes de notation** (`NOTATION`) et des **classes**
+  lithologiques (14 classes dont `volcanite`, `schiste_grauwacke`, `plutonite_intermediaire`),
+  avec l'origine du classement (`table`, `gele`, `regle`, `laisse`), la règle qui le donne et une
+  source courte. **Aucune description longue** de la BD Charm-50 n'est copiée dans le dépôt ;
+  rien du texte de l'annexe 1 de Piedallu et al. (2006), seulement la mention de la page
+  qui a servi à choisir la classe (« Piedallu 2006 annexe 1 p.87 »).
+- **Établissement :** proposition de l'agent `acquereur-litho` (2026-11-20), acceptée par
+  Pascal hors 7 cas tranchés un par un (colonne `decision_pascal`) ; classes marquées « à vérifier »
+  quand la notice BRGM départementale n'a pas pu être lue.
+- **Licence :** celle de la BD Charm-50 (voir l'entrée `bdcharm50_emprise_test.gpkg` ci-dessus :
+  aucune licence nommée dans les métadonnées, « Aucune condition ne s'applique », données
+  ouvertes). La mission 040 est cadrée par l'orchestrateur comme relevant de la Licence Ouverte :
+  **écart à vérifier** ; sans conséquence ici, puisque le fichier ne reprend que des codes de
+  notation et des classes, pas de texte du BRGM. Citation : « BRGM, BD Charm-50, cartes
+  géologiques départementales à 1/50 000 harmonisées, https://infoterre.brgm.fr ».
+- **Départements :** la colonne `dep` de `lithologie_notations.csv` limite les lignes `table` et
+  `gele` aux départements où la classe a été établie (GRECO D : 54, 57, 67, 68, 70, 88, 90).
+- **`lithologie_regles_avant040.csv` :** copie du jeu de règles en vigueur avant la mission 040
+  (13 règles de mots-clés, aucune donnée BRGM), appliquée aux lignes `gele`.

@@ -8,20 +8,23 @@ list_formations(
   geol,
   notation = "NOTATION",
   description = "DESCR",
-  code = "CODE"
+  code = "CODE",
+  dep = "dep"
 )
 }
 \arguments{
 \item{geol}{Objet \code{sf} polygonal en Lambert-93 (EPSG:2154) portant les champs
 \code{NOTATION}, \code{DESCR} et \code{CODE} (nom des champs réglable ci-dessous).}
 
-\item{notation, description, code}{Noms des champs.}
+\item{notation, description, code, dep}{Noms des champs (\code{dep} : facultatif).}
 }
 \value{
 Un \code{data.frame} trié par surface décroissante : \code{notation}, \code{code} (les
 \code{CODE} distincts, séparés par \code{/}), \code{description} (celle du plus grand polygone
 de la notation), \code{n_poly}, \code{area_km2} (surface des polygones \strong{dans
-l'emprise de la couche}, calculée sur la géométrie fournie).
+l'emprise de la couche}, calculée sur la géométrie fournie) et, si la couche porte
+le champ \code{dep}, \code{dep} : département du plus grand polygone (celui dont vient la
+description), sans zéro de tête (\code{"67"}).
 }
 \description{
 Regroupe les polygones d'une couche BD Charm-50 par \code{NOTATION} (jamais par \code{CODE},

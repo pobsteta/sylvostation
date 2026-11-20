@@ -25,7 +25,8 @@ synth_grille <- function(res = 100) {
 test_that("list_formations regroupe par NOTATION et somme les surfaces (extrait réel)", {
   f <- list_formations(geol_reelle())
   expect_equal(nrow(f), 94)  # 94 NOTATION distinctes (docs/referentiels.md, 5)
-  expect_named(f, c("notation", "code", "description", "n_poly", "area_km2"))
+  expect_named(f, c("notation", "code", "description", "n_poly", "area_km2", "dep"))
+  expect_true(all(f$dep %in% c("67", "68", "88")))  # sans zéro de tête
   expect_equal(sum(f$n_poly), 661)
   expect_equal(sum(f$area_km2), 225, tolerance = 0.01)
   expect_false(is.unsorted(rev(f$area_km2)))
@@ -79,7 +80,8 @@ test_that("la table livrée est cohérente avec les règles et reste non validé
   tab <- utils::read.csv(csv, encoding = "UTF-8", stringsAsFactors = FALSE)
   expect_true(all(c("notation", "classe", "statut", "validated") %in% names(tab)))
   expect_false(any(tab$validated))
-  expect_setequal(tab$statut, c("regle", "non_classe"))
+  expect_true(all(tab$statut %in% c("regle", "table", "gele", "non_classe")))
+  expect_true("non_classe" %in% tab$statut)
   expect_equal(tab$classe == "non_classe", tab$statut == "non_classe")
   f <- list_formations(geol_reelle())
   expect_setequal(tab$notation, f$notation)
@@ -310,3 +312,196 @@ test_that("formation_encoded_layer : valeur de la formation dominante, a la mail
   expect_error(formation_encoded_layer(g, grid, e, res = 75), "multiple")
   expect_error(formation_encoded_layer(g[, "dep"], grid, e), "NOTATION")
 })
+
+# --- Mission 040 : table lithologique (règles complétées + table notation -> classe) -------
+# Descriptions courtes fabriquées (synthétiques) : seuls les mots-clés comptent.
+
+classe_de <- function(descr, notation = "zz", ...) {
+  f <- data.frame(notation = notation, description = descr, stringsAsFactors = FALSE)
+  suppressWarnings(recode_lithology(f, ...))$classe
+}
+
+test_that("read_lithology_notations : codes et classes seulement, 156 notations + 42 gelées, 10 laissées non_classe", {
+  t <- read_lithology_notations()
+  expect_equal(nrow(t), 198)
+  expect_equal(sum(t$origine == "gele"), 42)
+  expect_equal(sum(t$origine != "gele"), 156)
+  expect_false(anyDuplicated(t$notation) > 0)
+  expect_setequal(names(t), c("notation", "classe", "origine", "regle", "confiance", "source",
+                              "decision_pascal", "classe_regle", "surface_km2", "dep"))
+  expect_true(is.numeric(t$surface_km2))
+  expect_false(anyNA(t$surface_km2[t$origine == "gele"]))
+  expect_true(all(is.na(t$surface_km2[t$origine != "gele"])))
+  expect_true(all(nzchar(t$dep)))
+  expect_true(all(unlist(strsplit(t$dep, "/")) %in% c("54", "57", "67", "68", "70", "88", "90")))
+  expect_setequal(t$origine, c("table", "gele", "regle", "laisse"))
+  expect_equal(sum(t$origine == "laisse"), 10)
+  expect_true(all(t$classe[t$origine == "laisse"] == "non_classe"))
+  expect_false(any(t$classe[!t$origine %in% c("laisse", "gele")] == "non_classe"))
+  # lignes gelées : classe d'avant conservée, classe de la règle et surface renseignées
+  g <- t[t$origine == "gele", ]
+  expect_true(all(nzchar(g$classe_regle) & g$classe_regle != g$classe))
+  expect_equal(sum(t$origine == "table"), 8)
+  expect_true(all(g$surface_km2 > 0))
+  expect_true(all(c("t2a", "rD", "t3CMT", "GPx-y", "d-h2(1)") %in% g$notation))
+  expect_equal(t$classe[t$notation == "h2MK3(1)"], "roche_basique")  # décision de l'orchestrateur
+  expect_equal(t$classe[t$notation == "h2MK3(2)"], "volcanite")
+  expect_false("t1b" %in% t$notation)
+  expect_true(all(c("hydro", "Hydro", "X", "fm", "Q", "Fn", "my", "Tx-y", "Lz", "D") %in%
+                    t$notation[t$origine == "laisse"]))
+  # licence : aucun texte long (pas de description BRGM), chaque ligne porte sa source
+  expect_lt(max(nchar(c(t$notation, t$classe, t$source))), 120)
+  expect_true(all(nzchar(t$source)))
+  # classes : celles des règles + non_classe
+  expect_true(all(t$classe %in% c(read_lithology_rules()$classe, "non_classe")))
+  expect_true(all(c("volcanite", "schiste_grauwacke", "plutonite_intermediaire") %in% t$classe))
+  expect_error(read_lithology_notations("/nulle/part.csv"), "introuvable")
+})
+
+test_that("les règles sont triées, à priorités uniques, et les motifs compilent", {
+  r <- read_lithology_rules()
+  expect_false(is.unsorted(r$priorite))
+  expect_false(anyDuplicated(r$priorite) > 0)
+  expect_true(all(c(9.1, 10.1, 10.35, 10.9, 12.1) %in% r$priorite))
+  for (m in r$motif) expect_false(is.na(grepl(m, "texte", perl = TRUE)))
+})
+
+test_that("nouvelles règles : une description, une classe", {
+  expect_equal(classe_de("Epandages de piemont et limons de debordement"), "alluvions")
+  expect_equal(classe_de("Depots de gelifluxion et grouine"), "colluvions_eboulis")
+  expect_equal(classe_de("Depots glacio-lacustres"), "glaciaire")
+  expect_equal(classe_de("Grauwackes et pélites du Viséen"), "schiste_grauwacke")
+  expect_equal(classe_de("Série volcano-sédimentaire: pélites et grauwackes"), "schiste_grauwacke")
+  expect_equal(classe_de("Schistes de Steige (Ordovicien)"), "schiste_grauwacke")
+  expect_equal(classe_de("Diorites quartziques et syénodiorites"), "plutonite_intermediaire")
+  expect_equal(classe_de("Monzonite à biotite"), "plutonite_intermediaire")
+  expect_equal(classe_de("Granodiorite à biotite et amphibole du Champ-du-Feu"),
+               "plutonite_intermediaire")
+  expect_equal(classe_de("Complexe volcanique de laves et tufs (dolérites, spilites)"), "volcanite")
+  expect_equal(classe_de("Ignimbrites et tufs soudés"), "volcanite")
+  expect_equal(classe_de("Diabases et gabbros"), "roche_basique")
+  expect_equal(classe_de("Leucogranite Al-K à 2 micas"), "granite")
+  expect_equal(classe_de("Monzogranite de Senones"), "granite")
+  expect_equal(classe_de("Limons d'altération du Lias"), "marne_argile")
+  expect_equal(classe_de("Formation marno-gréseuse"), "marne_argile")
+  expect_equal(classe_de("Couches à cératites"), "calcaire")
+})
+
+test_that("ordre des règles : les pièges décrits par la proposition ne captent pas à tort", {
+  expect_equal(classe_de("Tufs calcaires et travertins"), "calcaire")
+  expect_equal(classe_de("Laves torrentielles"), "non_classe")
+  expect_equal(classe_de("Schistes de Steige, cornéennes au contact de la granodiorite du Hohwald"),
+               "schiste_grauwacke")
+  expect_equal(classe_de("Filons de diabases dans les Schistes de Steige"), "roche_basique")
+  r <- read_lithology_rules()
+  expect_false(grepl(r$motif[r$priorite == 10.3], "granodiorite", perl = TRUE))
+  for (d in c("Mylonites, brèches de faille", "Tourbe", "Remblais, crassiers", "Filons de quartz"))
+    expect_equal(classe_de(d), "non_classe", info = d)
+})
+
+test_that("défauts connus corrigés : t1b (grès conglomératique) et j2b2 (calcaires et marnes)", {
+  expect_equal(classe_de("Grès vosgien, souvent conglomératique", "t1b"), "gres")
+  expect_equal(classe_de("Conglomérats et grès", "c1"), "conglomerat")
+  expect_equal(classe_de("Poudingue de Ste Odile", "t1-2P"), "conglomerat")
+  expect_equal(classe_de("Calcaires oolithiques à Ammonites, marnes", "j2b2"), "calcaire")
+  expect_equal(classe_de("Marnes et calcaires du Lias"), "marne_argile")
+})
+
+test_that("recode_lithology : la table impose sa classe (statut table), pas aux autres notations", {
+  f <- data.frame(notation = c("Fv", "j1", "X", "ab"),
+                  description = c("Formation sans mot-clé", "Calcaires à opalinum",
+                                  "Remblais", "Granite du Bilstein"), stringsAsFactors = FALSE)
+  r <- suppressWarnings(recode_lithology(f))
+  expect_equal(r$classe, c("alluvions", "marne_argile", "non_classe", "granite"))
+  expect_equal(r$statut, c("table", "table", "non_classe", "regle"))
+  # sans table : la description seule décide
+  r0 <- suppressWarnings(recode_lithology(f, overrides = NULL))
+  expect_equal(r0$classe[1], "non_classe")
+  # les lignes `regle` de la table ne s'appliquent pas : les règles décident
+  ov <- read_lithology_notations()
+  expect_false("granite" %in% ov$classe[ov$origine == "table"])
+  # une notation laissée reste non_classe et est listée dans l'avertissement
+  expect_warning(recode_lithology(f), "X")
+})
+
+test_that("classe nouvelle de bout en bout : un point connu tombe dans la bonne cellule et la bonne classe", {
+  g <- synth_geol()
+  g$DESCR <- c("Complexe volcanique de laves et tufs", "Grès B")
+  tab <- suppressWarnings(recode_lithology(list_formations(g)))
+  expect_equal(tab$classe[tab$notation == "a"], "volcanite")
+  r <- rasterize_geol(g, synth_grille(), "classe", table = tab)
+  # x = est, y = nord : (1000250 ; 6800350) est dans A, cellule ligne 2, colonne 3
+  cel <- terra::cellFromXY(r, cbind(1000250, 6800350))
+  expect_equal(terra::rowColFromCell(r, cel), cbind(2, 3))
+  expect_equal(as.character(terra::extract(r, cbind(1000250, 6800350))[1, 1]), "volcanite")
+})
+
+test_that("lignes gelées : la classe d'avant est conservée, même si la règle dirait autre chose", {
+  f <- data.frame(notation = c("t2a", "d-h2(1)", "t1b", "j2b2"),
+                  description = c("Grès conglomératique", "Grès conglomératique",
+                                  "Grès vosgien, souvent conglomératique",
+                                  "Calcaires oolithiques, marnes"), stringsAsFactors = FALSE)
+  r <- suppressWarnings(recode_lithology(f))
+  expect_equal(r$classe, c("conglomerat", "conglomerat", "gres", "calcaire"))
+  r0 <- suppressWarnings(recode_lithology(f, overrides = NULL))
+  expect_equal(r0$classe[1:2], c("gres", "gres"))
+})
+
+test_that("lignes gelées : les règles d'avant s'appliquent à CHAQUE description (homonyme à deux variantes)", {
+  # « e » : même notation, deux descriptions (départements différents)
+  f <- data.frame(notation = c("e", "e"), dep = c("68", "67"),
+                  description = c("Calcaires oolithiques, marnes", "Marnes et argiles"),
+                  stringsAsFactors = FALSE)
+  # ligne gelée sur 67/68 : chaque variante garde ce que donnaient les règles d'avant
+  ov <- data.frame(notation = "e", dep = "67/68", classe = "marne_argile", origine = "gele",
+                   stringsAsFactors = FALSE)
+  r <- suppressWarnings(recode_lithology(f[1, ], overrides = ov))
+  r2 <- suppressWarnings(recode_lithology(f[2, ], overrides = ov))
+  av <- read_lithology_rules(system.file("extdata", "lithologie_regles_avant040.csv",
+                                         package = "sylvostation"))
+  expect_equal(r$classe, suppressWarnings(recode_lithology(f[1, ], av, overrides = NULL))$classe)
+  expect_equal(r2$classe, "marne_argile")
+  expect_equal(r$statut, "gele")
+  # la règle actuelle dirait calcaire pour la première : le gel la neutralise
+  expect_equal(suppressWarnings(recode_lithology(f[1, ], overrides = NULL))$classe, "calcaire")
+  expect_equal(r$classe, "marne_argile")
+})
+
+test_that("extrait réel : hors lignes de la table, aucune classe ne change par rapport aux règles d'avant", {
+  f <- list_formations(geol_reelle())
+  av <- read_lithology_rules(system.file("extdata", "lithologie_regles_avant040.csv",
+                                         package = "sylvostation"))
+  a <- suppressWarnings(recode_lithology(f, av, overrides = NULL))
+  n <- suppressWarnings(recode_lithology(f))
+  nt <- read_lithology_notations()
+  annonce <- c(nt$notation[nt$origine != "gele"], "t1b", "j2b2", "l1-2", "I1-2a")
+  chg <- n$classe != a$classe
+  expect_true(all(n$notation[chg] %in% annonce))
+  expect_true(all(n$classe[n$statut == "gele"] == a$classe[n$statut == "gele"]))
+})
+
+test_that("une ligne de la table ne vaut que dans ses départements (zéro de tête normalisé)", {
+  ov <- data.frame(notation = "Fv", dep = "54/88", classe = "alluvions", origine = "table",
+                   stringsAsFactors = FALSE)
+  f <- data.frame(notation = "Fv", description = "Formation sans mot-clé", stringsAsFactors = FALSE)
+  cl <- function(dep) {
+    g <- f
+    if (!is.null(dep)) g$dep <- dep
+    suppressWarnings(recode_lithology(g, overrides = ov))$classe
+  }
+  expect_equal(cl("088"), "alluvions")   # extrait : « 088 »
+  expect_equal(cl("54"), "alluvions")
+  expect_equal(cl("25"), "non_classe")   # autre SER : seules les règles
+  expect_equal(cl(NA_character_), "alluvions")  # département inconnu : la ligne vaut
+  expect_equal(cl(NULL), "alluvions")
+})
+
+test_that("une ligne `regle` qui contredit la règle ne l'emporte pas : la règle gagne", {
+  ov <- data.frame(notation = "ab", dep = "", classe = "calcaire", origine = "regle",
+                   stringsAsFactors = FALSE)
+  f <- data.frame(notation = "ab", description = "Granite du Bilstein", stringsAsFactors = FALSE)
+  r <- suppressWarnings(recode_lithology(f, overrides = ov))
+  expect_equal(r$classe, "granite")
+  expect_equal(r$statut, "regle")
+})
+

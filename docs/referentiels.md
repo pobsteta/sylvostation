@@ -1888,3 +1888,143 @@ RMSE de la validation croisée, 0,93) ; `essence_alerte_ratio` 0,5 ; `essence_al
 **Limites** : une seule répartition en plis ; le contrôle n'est pas une validation indépendante (essences
 liées au climat et à la roche que le modèle voit) ; les alertes pointent surtout l'absence de relief fin,
 attendue sous la règle des 700 m ; plantations (douglas, épicéa) lues « pauvres » : limite visée par l'ADR 0008.
+
+## 40. Table lithologique : 155 formations non classées de la GRECO D (mission 040, 2026-11-20)
+
+**Décision de Pascal (journal, 2026-11-20)** : table acceptée (option b) hors 7 cas tranchés
+un par un ; trois classes nouvelles ; règles complétées ; défauts `t1b` et `j2b2` corrigés ;
+10 formations laissées `non_classe`. Fichiers : `inst/extdata/lithologie_regles.csv` (27 règles,
+priorités décimales), `inst/extdata/lithologie_notations.csv` (156 notations + 42 gelées, voir 40.2 : codes, classes,
+origine, départements `dep`, source ; **aucune description BRGM**), `recode_lithology(overrides = )` et
+`read_lithology_notations()`. Source : BD Charm-50 (BRGM) ; les pages de l'annexe 1 de Piedallu
+et al. (2006) ne sont que citées. Les classes marquées « à vérifier » (notices départementales
+067, 068 non lues) restent à confirmer. Codage par `NOTATION` seule pour les règles (décision de l'orchestrateur :
+aucun gain mesuré à coder département + `NOTATION`) ; **les lignes `table` et `gele` ne valent que dans
+les départements de leur colonne `dep`** (54, 57, 67, 68, 70, 88, 90 selon la notation ; `list_formations()`
+porte le département du plus grand polygone, sans zéro de tête) : hors de ces départements,
+ou si le département est inconnu et la ligne vaut partout, seules les règles s'appliquent. Les 156 notations
+sont propres à la GRECO D (`dep` fourni par `read_geology()`, champ `dep` de la BD Charm-50).
+
+**Décompte final par origine (198 lignes) : table 8 ; regle 138 ; gele 42 ; laisse 10.**
+
+### 40.1 Rejeu des motifs (store du run réel 035, 667 formations)
+
+Chaque motif a été rejoué avec `recode_lithology()` sur les descriptions de `geol_classes_placettes`
+(description du plus grand polygone, comme dans le pipeline). **Résultat : les décomptes faits à
+la main de la proposition sont exacts** (règle gagnante, première qui correspond) : 10.1 : 27 ;
+10.2 : 7 ; 10.3 : 13 ; 10.4 : 51 ; 10.5 : 9 ; 9.1 : 8 ; 9.2 : 4 ; 9.3 : 3 ; 11.1 : 4 ; 11.2 : 2 ;
+12.1 : 2 ; 6 notations par la table (+ `j1`, `rB` fixées par la table, `h2MK3(1)` reste `roche_basique` par la règle 10.5, comme dans la proposition acceptée : la décision 1 de Pascal « h2PK3, h2MK3 → volcanite » ne vise que `h2MK3(2)` (arbitrage de l'orchestrateur, 2e aller-retour ; **question à poser à Pascal**) ; 10 laissées. **Seul écart** :
+10.6 (10 notations) est scindée par la décision de Pascal sur la granodiorite du Champ-du-Feu
+(Piedallu : c) : 5 `h2ã4*` vont à `plutonite_intermediaire` par une règle 10.35 `granodiorit`
+(placée après 10.2, pour que « granodiorite du Hohwald » des schistes de Steige reste dans
+`schiste_grauwacke`) ; 5 restent `granite`. Les motifs « seuls » (hors ordre) captent plus que
+leurs décomptes (ex. 10.4 : 59 dans la liste) : c'est l'ordre qui les départage.
+
+### 40.2 Effets hors de la liste des 156 notations : candidates soumises à Pascal
+
+Les règles s'appliquent à toutes les formations lues (667). Rejouées, elles changeraient la
+classe de **46 formations hors liste (2 557 km²)**, plus que la proposition ne l'annonçait
+(règle 10.9 : 22 formations de `marne_argile` à `calcaire`, 1 599 km² ; règle 11.2 : 9 de
+`calcaire` à `marne_argile`, 197 km² ; correction de la règle 1 : t1b, t2a, rD ; etc.).
+**Arbitrage de l'orchestrateur (délégation totale, choix prudent et réversible) : seuls les
+effets annoncés entrent**, soit t1b (décision de Pascal : grès vosgien, 522 km²), j2b2, l1-2 et
+I1-2a (annoncés pour 10.9). Les 42 autres formations **gardent la classe qu'elles avaient avant la mission 040** : elles sont
+« gelées » dans `lithologie_notations.csv` (`origine = gele`). Le gel n'impose pas une classe fixe :
+il applique à **la description de la formation** le jeu de règles d'avant,
+`inst/extdata/lithologie_regles_avant040.csv` (relecture, 2e aller-retour : une classe fixe, calculée
+sur la variante du plus grand polygone, aurait fait passer `e` de `calcaire` à `marne_argile` dans la 068, sur
+l'emprise de la carte). La colonne `classe` est indicative (variante dominante dans la GRECO D), `classe_regle`
+donne ce que dirait la règle actuelle, `surface_km2` la surface lue. Pour accepter
+un changement, supprimer la ligne de la notation. `d-h2(1)` (qui perdait sa classe,
+`conglomerat` → `non_classe`) garde `conglomerat`. Surfaces : emprise lue des 7 départements.
+
+| Notation | Classe actuelle (conservée, variante dominante) | Classe que donnerait la règle | Surface (km²) |
+|---|---|---|---|
+| `j2a-b` | marne_argile | calcaire | 271,77 |
+| `t2a` | conglomerat | gres | 160,48 |
+| `j3a` | marne_argile | calcaire | 141,51 |
+| `l3b` | calcaire | marne_argile | 82,01 |
+| `l2-3` | marne_argile | calcaire | 72,50 |
+| `j2OM` | marne_argile | calcaire | 46,20 |
+| `t3CMT` | gres | calcaire | 39,44 |
+| `t4b-c` | calcaire | marne_argile | 34,95 |
+| `j2c2` | marne_argile | calcaire | 29,36 |
+| `l3b-c` | marne_argile | calcaire | 27,67 |
+| `j5CH` | marne_argile | calcaire | 26,80 |
+| `t4c` | calcaire | marne_argile | 24,21 |
+| `rD` | conglomerat | gres | 23,81 |
+| `t3BG` | calcaire | marne_argile | 22,85 |
+| `j1b` | calcaire | marne_argile | 14,37 |
+| `l3a1` | marne_argile | calcaire | 14,16 |
+| `j5cC` | marne_argile | calcaire | 13,02 |
+| `j6a` | marne_argile | calcaire | 11,82 |
+| `l3c` | calcaire | marne_argile | 10,04 |
+| `j3-4` | marne_argile | calcaire | 9,41 |
+| `d7` | marne_argile | schiste_grauwacke | 8,34 |
+| `j5a1` | calcaire | marne_argile | 4,85 |
+| `j7` | marne_argile | calcaire | 3,64 |
+| `GPx-y` | glaciaire | colluvions_eboulis | 3,56 |
+| `j5c` | marne_argile | calcaire | 2,99 |
+| `t3B` | calcaire | marne_argile | 2,96 |
+| `j4` | marne_argile | calcaire | 2,94 |
+| `e` | marne_argile | calcaire | 1,60 |
+| `h2goO` | non_classe | schiste_grauwacke | 0,93 |
+| `rE-F` | gres | schiste_grauwacke | 0,92 |
+| `j3aC` | calcaire | marne_argile | 0,88 |
+| `d5br(ö)` | non_classe | volcanite | 0,88 |
+| `j6a-c` | marne_argile | calcaire | 0,85 |
+| `FJw-x` | non_classe | alluvions | 0,53 |
+| `dW` | non_classe | schiste_grauwacke | 0,25 |
+| `o-sÕ` | non_classe | schiste_grauwacke | 0,17 |
+| `g1-2` | marne_argile | calcaire | 0,11 |
+| `j6aC` | marne_argile | calcaire | 0,08 |
+| `g2CD` | marne_argile | calcaire | 0,06 |
+| `d-h2(1)` | conglomerat | non_classe | 0,04 |
+| `dS` | marne_argile | schiste_grauwacke | 0,01 |
+| `döq` | non_classe | volcanite | 0,01 |
+
+Total : 42 formations, 1113 km².
+
+Les 4 notations non gelées (t1b, j2b2, l1-2, I1-2a) changent bien : t1b `conglomerat` → `gres`,
+j2b2, l1-2 et I1-2a `marne_argile` → `calcaire`. Les 6 formations qui étaient `non_classe`
+hors des disques (h2goO, d5br(ö), FJw-x, dW, o-sÕ, döq) et qu'une règle classerait restent
+`non_classe`, listées ci-dessus.
+
+**Contrôle sur les deux emprises** (store `wt035run`, lecture seule) : rejeu du jeu de règles d'avant
+(sans table) contre la version actuelle. `geol_placettes` : 667 formations, 150 changent, **0 hors
+changements annoncés** ; `geol_sf` (emprise de la carte) : 108 formations, 7 changent, **0 hors
+annoncés** (`e` et `j1` y figurent, sur 0,05 km² chacune). Un test sur l'extrait réel vérifie le même
+invariant (`test-geologie.R`).
+
+### 40.3 Décompte `non_classe`, avant et après
+
+| | Avant | Après |
+|---|---|---|
+| Formations `non_classe` (667 lues, 25 774 km²) | 171 (1 466 km²) | 26 (205 km²), dont 6 gelées (voir 40.2) |
+| Formations `non_classe` dans les disques de 700 m | 155 (434,9 km²) | **10 (11,65 km²)** |
+| Placettes touchant ces formations (somme par formation) | 2 002 | 333 |
+| Placettes dont la classe dominante est `non_classe` | 296 | **0** |
+
+Les 10 restantes : `hydro` (183 placettes), `Hydro` (3), `X` (25), `fm` (59), `Q` (39), `Fn` (11),
+`my` (8), `Tx-y` (3), `Lz` (1), `D` (1).
+Classes dominantes dans 700 m après (2 893 placettes) : grès 1 034, granite 545, conglomérat 451,
+gneiss/migmatite 228, marne/argile 152, alluvions 144, volcanite 143, schiste/grauwacke 46,
+glaciaire 38, plutonite intermédiaire 37, calcaire 23, colluvions/éboulis 27, loess 17,
+roche basique 8.
+
+### 40.4 R² du trophique, avant et après
+
+Mesure hors pipeline (script du scratchpad), modèle final (climat + classe + formation + pH),
+2 893 placettes, même code que `_targets.R` (035), 3 graines d'affectation des plis.
+« Avant » reproduit le store (0,1938 et 0,2723, graine 1). « Après » : table et règles avec
+les 42 formations gelées de 40.2.
+
+| Blocs | Avant (graines 1, 2, 3 ; moyenne) | Après (graines 1, 2, 3 ; moyenne) | Écart |
+|---|---|---|---|
+| portée estimée, 22 121 m | 0,1938 ; 0,1925 ; 0,1914 ; **0,1926** | 0,2067 ; 0,2034 ; 0,2068 ; **0,2056** | +0,013 |
+| 8 358 m | 0,2723 ; 0,2721 ; 0,2729 ; **0,2724** | 0,2770 ; 0,2776 ; 0,2785 ; **0,2777** | +0,005 |
+
+Les gains restent **dans le bruit** (IC à 22 km : [0,087 ; 0,275], § 35.5) : la table ne dégrade
+pas le R² et n'en apporte pas de significatif. Son bénéfice est ailleurs : plus de placette à
+classe dominante `non_classe` (296 → 0), classes lisibles par un forestier. Les R² de § 35.5 ne
+sont pas remplacés (le run réel n'a pas été relancé).
