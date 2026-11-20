@@ -23,6 +23,12 @@
 #'   `hydric_node_res_m` (1000), `ru_min_placettes` (5), la calibration sur la GRECO
 #'   (mission 035, provisoires) : `litho_min_cover` (0,5), `litho_encoding_k` (10), `soilgrids_ph` (`TRUE`), `cv_block_m` (`NULL` : portée
 #'   estimée de la réponse) `cv_block_sensibilite_m` (8 358 m) et `cv_min_blocs_par_pli` (4),
+#'   les choix de la mission 039 : `climat_temperature` (`"corrigee"` ou `"bilineaire"`),
+#'   `trophique_climat` (`"actuel"`, `"corrige"` ou `"sans"`, défaut `"actuel"` jusqu'à la
+#'   décision de Pascal), `ru_carte` (`"apprise"` ou `"maille"`), `mnt_large_res_m` (250),
+#'   `bilan_lateral` (`FALSE`), `bilan_lateral_ru_mm` (−30, 0, 60) et `bilan_lateral_coef`
+#'   (`NULL` : tableau 20 de Piedallu et al. 2006, à vérifier), l'entrée optionnelle
+#'   `mnt_large_path` (MNT de 250 m local, mode hors ligne),
 #'   `ifn_archive_url` et `taxref_url` (sans valeur
 #'   par défaut : seule source, config.yml ; exigées en ligne), et les
 #'   entrées optionnelles `gnss_path`, `reference_path`, `soil_paths`, `tichy_path`
@@ -122,7 +128,12 @@ read_config <- function(path = "config.yml") {
   essence_alerte_ratio = 0.5, essence_alerte_pente = 0.2,
   bdforet_controle = FALSE, bdforet_tampon_m = 50, bdforet_min_polygones = 5L,
   # reprise sur incident reseau des telechargements (mission 026), provisoire
-  download_retries = 3L
+  download_retries = 3L,
+  # bioclimat et RU plus fins (mission 039, arbitrages du 2026-11-20) : temperature corrigee du
+  # relief par le gradient lu dans SAFRAN, MNT BD ALTI de 250 m, RU de carte apprise ; climat
+  # dans le trophique laisse a Pascal (defaut : etat d'avant 039) ; bilan lateral desactive
+  climat_temperature = "corrigee", trophique_climat = "actuel", ru_carte = "apprise",
+  mnt_large_res_m = 250, bilan_lateral = FALSE, bilan_lateral_ru_mm = c(-30, 0, 60)
 )
 
 .config_reel <- function(cfg) {
@@ -218,6 +229,41 @@ read_config <- function(path = "config.yml") {
     stop("`download_retries` doit \u00eatre un entier >= 1.", call. = FALSE)
   }
   cfg$download_retries <- as.integer(x)
+  logique("bilan_lateral")
+  choix <- list(climat_temperature = c("corrigee", "bilineaire"),
+                trophique_climat = c("actuel", "corrige", "sans"),
+                ru_carte = c("apprise", "maille"))
+  for (k in names(choix)) {
+    if (!est_chaine_cfg(cfg[[k]]) || !cfg[[k]] %in% choix[[k]]) {
+      stop("`", k, "` doit valoir ", paste(choix[[k]], collapse = ", "), ".", call. = FALSE)
+    }
+  }
+  x <- cfg$mnt_large_res_m
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 250) {
+    stop("`mnt_large_res_m` doit \u00eatre un nombre >= 250 (m, maille large).", call. = FALSE)
+  }
+  x <- unlist(cfg$bilan_lateral_ru_mm)
+  if (!is.numeric(x) || length(x) != 3L || anyNA(x)) {
+    stop("`bilan_lateral_ru_mm` doit donner trois valeurs (mm) : d\u00e9part, \u00e9quilibre, apports.",
+         call. = FALSE)
+  }
+  cfg$bilan_lateral_ru_mm <- as.numeric(x)
+  if (!is.null(cfg$bilan_lateral_coef)) {
+    cf <- cfg$bilan_lateral_coef
+    nm <- c("constante", "curv150", "idr_1500", "moore")
+    ok <- is.list(cf) && all(c("depart", "equilibre") %in% names(cf)) &&
+      all(vapply(cf[c("depart", "equilibre")], function(z) all(nm %in% names(z)) &&
+                   all(vapply(z[nm], is.numeric, logical(1))), logical(1)))
+    if (!ok) {
+      stop("`bilan_lateral_coef` doit donner depart et equilibre : ", paste(nm, collapse = ", "),
+           ".", call. = FALSE)
+    }
+    cfg$bilan_lateral_coef <- lapply(cf[c("depart", "equilibre")], function(z) unlist(z[nm]))
+  }
+  v <- cfg$mnt_large_path
+  if (!is.null(v) && (!is.character(v) || length(v) != 1L)) {
+    stop("`mnt_large_path` doit \u00eatre un chemin ou absent.", call. = FALSE)
+  }
   if (!cfg$emprise %in% c("test", "ser")) {
     stop("`emprise` doit valoir test ou ser.", call. = FALSE)
   }

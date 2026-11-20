@@ -187,6 +187,7 @@ real_sources <- function(cfg, extdata = system.file("extdata", package = "sylvos
   s$gnss <- opt(cfg$gnss_path, "gnss_path")
   s$reference <- opt(cfg$reference_path, "reference_path")
   s$soils <- opt(unlist(cfg$soil_paths), "soil_paths")
+  s$mnt_large <- opt(cfg$mnt_large_path, "mnt_large_path")
   s
 }
 
@@ -965,15 +966,21 @@ read_geology <- function(paths, emprise = NULL) {
 #' la température (« plus haut = plus chaud ») ; sans température, l'axe est
 #' `-(P - ETP)` réduit (« plus haut = plus sec »).
 #'
-#' @param data Tableau avec `coarse_p_etp_sv` et, si possible, `coarse_t_moy`.
+#' Depuis la mission 039, la température peut être la température corrigée du relief
+#' moyennée dans 700 m (`t_var = "coarse_t_corr_700m"`, [coarse_t_corr_layer()]) ; l'axe
+#' s'applique alors à la carte sur la température de la cellule (`t_corr`, variable fine)
+#' par l'argument `layers` de [apply_bioclim()].
+#'
+#' @param data Tableau avec `coarse_p_etp_sv` et, si possible, la température `t_var`.
+#' @param t_var Colonne de température (`"coarse_t_moy"` par défaut).
 #' @return Une liste : `vars`, `center`, `scale`, `loadings`, `sens`, `variance_expliquee`.
 #' @examples
 #' d <- data.frame(coarse_p_etp_sv = c(100, 300, 500), coarse_t_moy = c(10, 8, 6))
 #' bioclim_axis(d)$sens
 #' @export
-bioclim_axis <- function(data) {
+bioclim_axis <- function(data, t_var = "coarse_t_moy") {
   d <- .drop_geom(data)
-  vars <- intersect(c("coarse_p_etp_sv", "coarse_t_moy"), names(d))
+  vars <- intersect(c("coarse_p_etp_sv", t_var), names(d))
   vars <- vars[vapply(vars, function(v) any(!is.na(d[[v]])), logical(1))]
   if (!"coarse_p_etp_sv" %in% vars) stop("`coarse_p_etp_sv` absent ou vide.", call. = FALSE)
   m <- as.matrix(d[stats::complete.cases(d[, vars, drop = FALSE]), vars, drop = FALSE])
@@ -986,8 +993,8 @@ bioclim_axis <- function(data) {
     e <- eigen(stats::cov(z), symmetric = TRUE)
     l <- e$vectors[, 1]
     names(l) <- vars
-    if (l[["coarse_t_moy"]] < 0) l <- -l
-    if (l[["coarse_t_moy"]] == 0 && l[["coarse_p_etp_sv"]] > 0) l <- -l
+    if (l[[t_var]] < 0) l <- -l
+    if (l[[t_var]] == 0 && l[["coarse_p_etp_sv"]] > 0) l <- -l
     ve <- if (sum(e$values) > 0) e$values[1] / sum(e$values) else NA_real_
     sens <- "plus haut = plus chaud (axe 1 de P - ETP et T, centr\u00e9s-r\u00e9duits)"
   } else {
@@ -1003,16 +1010,21 @@ bioclim_axis <- function(data) {
 #'
 #' @param x Tableau ou `SpatRaster` portant les couches de `axis$vars`.
 #' @param axis Résultat de [bioclim_axis()].
+#' @param layers Raster seulement : vecteur nommé (variable de l'axe = couche de `x` qui la
+#'   remplace), par exemple `c(coarse_t_corr_700m = "t_corr")` pour appliquer à la cellule
+#'   un axe appris sur la température moyennée dans 700 m (mission 039). `NULL` : mêmes noms.
 #' @return Un vecteur numérique (tableau) ou un `SpatRaster` `bioclim`.
 #' @examples
 #' d <- data.frame(coarse_p_etp_sv = c(100, 300, 500), coarse_t_moy = c(10, 8, 6))
 #' apply_bioclim(d, bioclim_axis(d))
 #' @export
-apply_bioclim <- function(x, axis) {
+apply_bioclim <- function(x, axis, layers = NULL) {
   v <- axis$vars
   if (inherits(x, "SpatRaster")) {
-    if (!all(v %in% names(x))) stop("Couches absentes : ", paste(setdiff(v, names(x)), collapse = ", "), call. = FALSE)
-    out <- Reduce(`+`, lapply(v, function(k) (x[[k]] - axis$center[[k]]) / axis$scale[[k]] *
+    src <- stats::setNames(v, v)
+    if (!is.null(layers)) src[intersect(names(layers), v)] <- layers[intersect(names(layers), v)]
+    if (!all(src %in% names(x))) stop("Couches absentes : ", paste(setdiff(src, names(x)), collapse = ", "), call. = FALSE)
+    out <- Reduce(`+`, lapply(v, function(k) (x[[src[[k]]]] - axis$center[[k]]) / axis$scale[[k]] *
                                 axis$loadings[[k]]))
     names(out) <- "bioclim"
     return(out)
@@ -1041,6 +1053,9 @@ apply_bioclim <- function(x, axis) {
 #'   ou `"proche"` ([hydric_stress()]).
 #' @param exclude_cd_ref,abundance_weights Indice trophique sans les essences arborées et/ou
 #'   pondéré par l'abondance (mission 035) : voir [compute_gradients()].
+#' @param t_layer `NULL` ou `SpatRaster` `coarse_t_corr_700m` ([coarse_t_corr_layer()],
+#'   mission 039) : sa valeur aux placettes (règle des 700 m appelée) est ajoutée en colonne
+#'   et l'axe bioclimatique est appris sur elle au lieu de `coarse_t_moy`.
 #' @return Un `sf` (une ligne par placette retenue avec flore) : `id_placette`,
 #'   `source`, `loc_precision_m`, `grad_trophique`, `ru_mm`, `grad_hydrique`,
 #'   `is_biljou`, `coarse_p_etp_sv`, `coarse_t_moy`, `bioclim`, `trophic`, `hydric`.
@@ -1062,7 +1077,8 @@ apply_bioclim <- function(x, axis) {
 #' @export
 ifn_real_gradients <- function(ifn, indicateurs, climat, safran, ru_source = "euptf2",
                                annees = NULL, interpolation = "bilineaire",
-                               exclude_cd_ref = NULL, abundance_weights = FALSE) {
+                               exclude_cd_ref = NULL, abundance_weights = FALSE,
+                               t_layer = NULL) {
   ind <- as.data.frame(indicateurs)
   g <- compute_gradients(ifn, ind, climat, exclude_cd_ref = exclude_cd_ref,
                          abundance_weights = abundance_weights)
@@ -1070,7 +1086,12 @@ ifn_real_gradients <- function(ifn, indicateurs, climat, safran, ru_source = "eu
   g$ru_mm <- ru$ru_mm[match(g$id_placette, ru$id_placette)]
   g <- g[!is.na(g$grad_trophique), ]
   h <- hydric_stress(g, safran, ru_col = "ru_mm", annees = annees, interpolation = interpolation)
-  axis <- bioclim_axis(h)
+  t_var <- "coarse_t_moy"
+  if (!is.null(t_layer)) {
+    t_var <- names(t_layer)[1]
+    h <- layers_at_points(h, t_layer[[1]])
+  }
+  axis <- bioclim_axis(h, t_var = t_var)
   h$bioclim <- apply_bioclim(h, axis)
   h$trophic <- h$grad_trophique
   h$hydric <- h$grad_hydrique

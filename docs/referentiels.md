@@ -1889,6 +1889,132 @@ RMSE de la validation croisée, 0,93) ; `essence_alerte_ratio` 0,5 ; `essence_al
 liées au climat et à la roche que le modèle voit) ; les alertes pointent surtout l'absence de relief fin,
 attendue sous la règle des 700 m ; plantations (douglas, épicéa) lues « pauvres » : limite visée par l'ADR 0008.
 
+## 37. Bioclimat et réserve utile plus fins : température corrigée du relief, MNT de 250 m, RU apprise, bilan latéral (mission 039, 2026-11-20)
+
+- **Décision éclairée :** rendre au bioclimat et à la RU de la carte le relief et les sols, sans croiser de
+  variable fine avec les placettes IFN.
+- **Propriétaire :** Pascal (délégué à l'orchestrateur, arbitrages du 2026-11-20). **Rédigé par :** `dev`, mission 039.
+
+### 37.1 Sources
+
+| Élément | Source | État |
+|---|---|---|
+| MNT de 250 m | BD ALTI (IGN), fiche `IGNF_BD-ALTI` (`https://data.geopf.fr/csw?REQUEST=GetRecordById&SERVICE=CSW&VERSION=2.0.2&OUTPUTSCHEMA=http://standards.iso.org/iso/19115/-3/mdb/2.0&elementSetName=full&ID=IGNF_BD-ALTI`) : **Licence Ouverte / Open License** (Etalab) | **vérifié** le 2026-11-20 (fiche lue) |
+| Accès | WMS raster de la Géoplateforme, `https://data.geopf.fr/wms-r/wms`, couche `ELEVATION.ELEVATIONGRIDCOVERAGE` (titre « MNT BDAlti V1 », résumé « BDAlti V1 au pas de 25m »), `FORMAT=image/geotiff` : GeoTIFF Float32, `CRS=EPSG:2154`, `BBOX=xmin,ymin,xmax,ymax`, 5 010 pixels au plus par côté | **vérifié** (requête exécutée, `HTTP 200`, altitudes plausibles : 182 à 1 205 m autour de l'emprise test) |
+| Pas de 250 m | le flux de téléchargement `https://data.geopf.fr/telechargement/resource/BDALTI` ne propose que le pas de 25 m par département (106 entrées lues) : le 250 m est demandé au WMS à 125 m puis moyenné 2 × 2 (`fetch_mnt_large()`) | rééchantillonnage du service **non documenté, à vérifier** |
+| Volume, temps | GRECO D et emprise, marge 12 km : 701 × 852 cellules, **2,4 Mo, 6 s** | mesuré |
+| Contrôle | écart au MNT de 250 m des mesures du plan (provenance non tracée alors) : moyenne 0 m, écart-type 10 m | mesuré : c'était la BD ALTI |
+| Textures SoilGrids | SoilGrids 2.0 (ISRIC, CC BY 4.0), `clay`, `sand`, `silt` (g/kg, stockés × 10), `cfvo` (cm³/dm³, × 10), moyenne, six horizons (0-5 à 100-200 cm), `https://files.isric.org/soilgrids/latest/data/<propriété>/<couche>.vrt` (même accès que le pH, § 35.4) | **vérifié** (lu) ; 24 couches, 45 Mo pour la GRECO D ; exactitude sur la France **non évaluée** |
+| Fonction de pédotransfert | euptf2 PTF01 (FC_2 − WP, pF 2,0 − 4,2), comme `ru_from_texture()` (ADR 0006) | appliquée telle quelle ; environ 3,2 mm/cm pour un limon à 20 % d'argile sans cailloux (RU à 1 m de 212 à 261 mm sur l'emprise) : valeur haute, **à vérifier** |
+| Gradient de comparaison | −0,55 °C/100 m, Rolland (2003) | **à vérifier** (non lu ; repère seulement) |
+| Altitude de référence de SAFRAN | altitude moyenne de la maille (Vidal et al. 2010, doi 10.1002/joc.2003) | **à vérifier** sur le texte ; les mesures vont dans ce sens (§ 37.2) |
+| Bilan latéral | Piedallu et al. (2006), HAL `hal-00835906`, tableau 20 (p. 53 imprimée), tableau 21, équivalents −30 / 0 / +60 mm (p. 54) | lu (copie locale, non versée au dépôt) ; coefficients **à vérifier** (unités de la courbure, calcul de l'indice de Moore, MNT de 50 m non donnés) |
+
+### 37.2 Température : méthode retenue et écart à la fiche
+
+La fiche nommait meteoland (Thornton 1997). Mesure (validation croisée, une maille SAFRAN laissée de côté,
+erreur sur sa T moyenne, GRECO D) :
+
+| Méthode | RMSE, toutes mailles | RMSE, mailles en relief |
+|---|---|---|
+| Bilinéaire (avant 039) | 0,22 °C | 0,76 °C |
+| Gradient fixe −0,55 °C/100 m | 0,11 °C | 0,17 °C |
+| **Gradient lu dans SAFRAN, maille exclue** | **0,11 °C** | **0,16 °C** |
+| meteoland 2.2.8 (75 mailles à moins de 40 km, 2011-2020) | 0,12 °C | non séparé |
+
+(Mesures du plan, reproduites par `t_correction_validation()` sur la BD ALTI : 0,224 / 0,112 / 0,111 °C ;
+0,764 / 0,171 / 0,157 °C en relief, 16 mailles. CHELSA V2.1, 1 km, contrôle indépendant : écart-type de
+l'erreur 0,55 °C en bilinéaire contre 0,23 °C avec gradient.)
+
+**Retenu (arbitrage du 2026-11-20) :** `T = T_bilinéaire + G × (z − z_bilinéaire)`, G estimé par
+`T ~ z_moy + x + y` sur les mailles de la SER (`safran_lapse_rate()`) : **−0,486 °C/100 m** sur la GRECO D
+(erreur type 0,007, R² 0,92, 475 mailles). Altitude des mailles = **moyenne** du MNT sur la maille
+(`safran_cell_altitude()`) : RMSE 0,11 contre 0,34 °C avec l'altitude du centre. meteoland n'entre pas dans
+`DESCRIPTION` : même justesse, sans dépendance ni coefficient extérieur.
+
+### 37.3 Règle des 700 m
+
+| Couche | Rôle | Classe |
+|---|---|---|
+| `coarse_t_corr_700m` | T corrigée sur la BD ALTI 250 m, moyennée dans un disque de 700 m | **large** : placettes IFN (bioclimat, hydrique, trophique si `trophique_climat: corrige`) |
+| `t_corr` | T corrigée sur le MNT de la grille | **fine** (`FINE_VARIABLES`) : carte seulement (bioclimat appliqué à la cellule) |
+| `t_corr_250`, `mnt_250` | intermédiaires | **fines** |
+| `coarse_cu_*_700m` | capacité en eau SoilGrids par horizon, moyennée dans 700 m | **large** |
+| `curv150`, `idr_1500`, `moore`, `p_*`, `bilan_lateral`, `ru_bilan_lateral` | bilan latéral | **fines** |
+
+Coût du changement d'échelle (emprise test, cellules de 20 m) : la moyenne dans 700 m porte 94 % de la
+variance de la T corrigée (résidu : écart-type 0,26 °C) ; 0,29 % des cellules hors de la plage
+d'apprentissage. Tests : `coarse_t_corr_700m` passe l'assertion, `t_corr` la déclenche.
+
+### 37.4 RU de la carte
+
+RU SoilGrids brute (diagnostic seulement, `ru_soilgrids()`, `ru_soilgrids_diagnostic()`), 2 846 placettes :
+à 1 m, **biais +137 mm** (244 mm contre 107), RMSE 148 mm, corrélation 0,27, écart-type 13 mm contre 58 ;
+à 50 cm, biais +18 mm, corrélation 0,26. La RU IFN dépend surtout de la profondeur de sondage
+(corrélation 0,66 avec `PROF2`), que SoilGrids ignore. **Retenue :** RU des placettes apprise
+(`ru_learned_data()`, forêt aléatoire) sur la lithologie et la formation encodées dans 700 m et les six
+capacités SoilGrids moyennées dans 700 m ; cellules sans prédicteur complétées par la RU de la maille
+(`ru_fill_by_cell()`). R² par blocs : § 37.6.
+
+### 37.5 Bilan latéral (option C)
+
+Câblé (`lateral_balance()`), **désactivé par défaut** (`bilan_lateral: false`), jamais ajouté à la RU de
+BILJOU. Appliqué tel quel à l'emprise test (mesure de la mission 034) : **53 % d'apports** (+60 mm) et 0 à
+0,1 % de départs, contre **27,6 % d'apports** et 25,9 % de départs observés en calibration (tableau 21) ;
+le modèle d'origine ne reclasse bien que 57,4 % des relevés (pseudo-R² 0,112). Coefficients dans
+`config.yml` (`bilan_lateral_coef`), à vérifier ; à recalibrer sur les points GNSS (mission 029).
+
+### 37.6 Mesures avant / après (store du run réel 035, 5 graines)
+
+Deux séries de cinq graines, sur le store du run 035 (2 893 placettes trophique, 2 827 hydrique, 2 754
+bioclimat ; RU : 2 892). **Graines de la forêt seules** (plis fixes) : écart-type du R² 0,001 à 0,005,
+négligeable. **Graines et décalage de la grille des blocs** (origine décalée de 0, 1/5, ... 4/5 du bloc :
+les plis changent) : c'est la série qui permet de lire un écart sous 0,03.
+
+| Gradient | Variante | Bloc publié (portée) | Bloc 8 358 m |
+|---|---|---|---|
+| Trophique | sans climat | 0,235 ± 0,009 (22 121 m) | 0,274 ± 0,008 |
+| Trophique | climat actuel (bilinéaire) | 0,231 ± 0,023 | 0,272 ± 0,014 |
+| Trophique | climat corrigé | 0,245 ± 0,024 | 0,292 ± 0,011 |
+| Hydrique (réponse BILJOU des placettes inchangée) | T bilinéaire | 0,280 ± 0,009 (76 736 m) | 0,368 ± 0,009 |
+| Hydrique | T corrigée | **0,328 ± 0,004** | **0,381 ± 0,009** |
+| Bioclimat contre l'indice floristique T (Tichý 2023) | T bilinéaire | −0,060 ± 0,040 (47 373 m) | −0,004 ± 0,010 |
+| Bioclimat | T corrigée | **0,036 ± 0,020** | **0,079 ± 0,013** |
+| RU apprise (géologie + SoilGrids 700 m) | — | 0,114 ± 0,010 (41 030 m) | 0,141 ± 0,005 |
+
+Écarts appariés (même partition, cinq graines) : bioclimat corrigé − actuel +0,097 ± 0,038 (portée) et
++0,083 ± 0,013 (8 358 m) ; hydrique +0,048 ± 0,011 et +0,014 ± 0,009 ; trophique corrigé − sans climat
+**+0,009 ± 0,024** (de −0,026 à +0,040) au bloc publié, +0,018 ± 0,005 à 8 358 m ; trophique actuel − sans
+climat −0,005 ± 0,022 et −0,002 ± 0,007. Au bloc publié, les trois variantes du trophique ne se
+distinguent pas : l'écart de la mesure du plan (0,231 contre 0,194, une partition) tenait à la partition.
+La RU apprise est validée sans réencodage de la lithologie dans les plis (encodage par le trophique, comme
+la carte) : 0,114 à 0,141, contre 0,099 pour la médiane de la maille, placette exclue, non spatiale (optimiste).
+
+Cartes avant / après (emprise test) :
+
+| Couche | q5 / q50 / q95 | Écart-type |
+|---|---|---|
+| T annuelle, bilinéaire (avant) | 8,8 / 9,4 / 10,5 °C | 0,57 |
+| T annuelle corrigée, cellule (après) | 7,6 / 9,5 / 10,7 °C | 0,93 |
+| Bioclimat avant / après (corrélation 0,84) | −1,1 / −0,07 / 1,6 ; −1,7 / 0,07 / 1,6 | 0,93 ; 1,00 |
+| RU de la carte : maille (avant) / apprise (après) | 49 / 64 / 110 mm ; 70 / 94 / 115 mm | 23 ; 14 |
+| Istress avant / T corrigée seule / T corrigée et RU apprise | 13 / 35 / 51 ; 12 / 34 / 50 ; 12 / 27 / 47 | 11,1 ; 11,2 ; 10,4 |
+
+La T corrigée suit les vallées et les crêtes, sans rectangle de maille. Sur l'emprise, le décalage de T
+des nœuds BILJOU de 1 km va de −1,7 à +1,2 °C ; la variation d'Istress due à la seule correction de T
+est corrélée à 0,89 avec le décalage de T (+2,9 points d'Istress par °C). La RU apprise n'a plus les
+rectangles de 8 km mais montre des motifs circulaires (moyennes dans 700 m apprises par la forêt
+aléatoire) et des limites franches de formations géologiques ; elle est plus haute (médiane 94 contre
+64 mm), d'où un Istress plus bas (médiane 27 contre 35). Calcul BILJOU avec la RU apprise : 2 927 s sur
+une machine chargée, contre 583 s pour le run 035 (dix valeurs de RU par nœud au lieu d'une).
+
+### 37.7 À vérifier
+
+- Rééchantillonnage du WMS BD ALTI ; Vidal et al. (2010) pour l'altitude de référence de SAFRAN ; Rolland (2003).
+- Gradient constant chaque jour dans BILJOU : inversions hivernales ignorées.
+- Capacités euptf2 à pF 2,0 (environ 3,2 mm/cm pour un limon) ; exactitude de SoilGrids en France.
+- Coefficients du tableau 20 (unités, indice de Moore lu comme le TWI).
+
 ## 40. Table lithologique : 155 formations non classées de la GRECO D (mission 040, 2026-11-20)
 
 **Décision de Pascal (journal, 2026-11-20)** : table acceptée (option b) hors 7 cas tranchés

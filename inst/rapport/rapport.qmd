@@ -587,6 +587,52 @@ if (synth) {
 }
 ```
 
+### Température corrigée du relief et réserve utile de la carte (mission 039)
+
+```{r}
+#| results: asis
+tg <- lire("temperature_gradient")
+tv <- lire("temperature_validation")
+if (is.null(tg)) {
+  cat("(température corrigée non calculée dans ce run : MNT de 250 m absent, ou ",
+      "`climat_temperature: bilineaire` ; la température reste l'interpolation bilinéaire ",
+      "entre les centres des mailles SAFRAN)\n\n")
+} else {
+  cat("La température SAFRAN est corrigée du relief : T = T bilinéaire + G × (z − z des ",
+      "mailles), G lu entre les mailles SAFRAN de la SER (T ~ altitude moyenne + x + y) : ",
+      "**", formatC(tg$gradient_100m[1], format = "f", digits = 2, decimal.mark = ","),
+      " °C/100 m** (R² ", formatC(tg$r2[1], format = "f", digits = 2, decimal.mark = ","),
+      ", ", tg$n_mailles[1], " mailles ; repère publié −0,55 °C/100 m, Rolland 2003, à vérifier). ",
+      "Ce choix remplace meteoland, nommé par la fiche de mission : à justesse égale ",
+      "(validation de la mission 039 sur la GRECO D : 0,12 °C pour meteoland), il n'ajoute ",
+      "ni dépendance ni coefficient extérieur. Validation croisée de ce run, une maille ",
+      "laissée de côté (erreur sur sa T moyenne, °C ; « relief » : maille à plus de 100 m de ",
+      "l'altitude moyenne de ses voisines) :\n\n", sep = "")
+  print(tab(tv))
+  cat("\nLe bioclimat est appris sur cette température moyennée dans un disque de 700 m ",
+      "(placettes IFN, règle des 700 m) et appliqué à la température de chaque cellule.\n\n")
+}
+rv <- lire("ru_apprise_validation")
+rd <- lire("ru_soilgrids_diagnostic")
+if (!is.null(rv)) {
+  cat("Réserve utile de la carte hydrique : RU des placettes IFN **apprise** sur la géologie et ",
+      "les textures SoilGrids (euptf2) moyennées dans 700 m ; validation par blocs :\n\n")
+  print(tab(rv[, setdiff(names(rv), "variables"), drop = FALSE]))
+}
+if (!is.null(rd)) {
+  cat("\nRU SoilGrids brute (profondeur fixe), **diagnostic seulement, non utilisée** : ",
+      "SoilGrids ignore la profondeur du sol ; écart à la RU des placettes IFN :\n\n")
+  print(tab(rd[, setdiff(names(rd), "statut"), drop = FALSE]))
+}
+bl <- lire("bilan_lateral_parts")
+if (!is.null(bl)) {
+  cat("\nBilan latéral (Piedallu et al. 2006, tableau 20 ; carte de contrôle, coefficients à ",
+      "vérifier, jamais ajouté à la RU) : part des cellules par classe ; en calibration, ",
+      "25,9 % de départs, 46,4 % d'équilibre, 27,6 % d'apports.\n\n")
+  print(tab(bl))
+}
+```
+
 ### Contrôle par essence et sensibilité (hors carte)
 
 ```{r}

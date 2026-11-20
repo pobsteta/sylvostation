@@ -366,10 +366,37 @@ if (!isTRUE(cfg$demo)) {
     # climat kilometrique : interpolation bilineaire entre centres de mailles (mission 033)
     tar_target(climat, sylvostation::safran_climate(safran, months = mois_sv,
                                                     interpolation = cfg$safran_interpolation)),
+    # --- temperature corrigee du relief (mission 039) -------------------------------------
+    # MNT BD ALTI de 250 m (IGN, Licence Ouverte) sur les placettes et l'emprise ; altitude
+    # moyenne des mailles SAFRAN ; gradient lu entre les mailles (T ~ z + x + y) ; T corrigee
+    # moyennee dans 700 m (couche large, apprentissage) et a la cellule (t_corr, fine, carte).
+    # Hors ligne sans mnt_large_path, ou climat_temperature: bilineaire : NULL (avertissement).
+    tar_target(mnt_large_file, {
+      if (!identical(cfg$climat_temperature, "corrigee")) return(NULL)
+      if (!is.null(src$mnt_large)) return(src$mnt_large)
+      if (hors_ligne) {
+        warning("climat_temperature: corrigee, mais aucun MNT de 250 m hors ligne ",
+                "(mnt_large_path absent) : temp\u00e9rature bilin\u00e9aire gard\u00e9e.", call. = FALSE)
+        return(NULL)
+      }
+      sylvostation::fetch_mnt_large(
+        sf::st_bbox(sf::st_union(c(sf::st_as_sfc(sf::st_bbox(ifn$placettes)),
+                                   sf::st_as_sfc(sf::st_bbox(emprise))))),
+        file.path(cache, "bdalti"), res = cfg$mnt_large_res_m, margin_m = 12000)
+    }),
+    tar_target(alt_mailles, if (is.null(mnt_large_file)) NULL else
+      sylvostation::safran_cell_altitude(safran, terra::rast(mnt_large_file))),
+    tar_target(t_lapse, if (is.null(alt_mailles)) NULL else
+      sylvostation::safran_lapse_rate(safran, alt_mailles)),
+    tar_target(t_validation, if (is.null(alt_mailles)) NULL else
+      sylvostation::t_correction_validation(safran, alt_mailles)),
+    tar_target(t_coarse, if (is.null(t_lapse)) NULL else
+      sylvostation::coarse_t_corr_layer(terra::rast(mnt_large_file), safran, alt_mailles,
+                                        t_lapse, radius = cfg$ifn_precision_m)),
     # gradients des placettes : maille large seulement (regle des 700 m)
     tar_target(ifn_gradients, sylvostation::ifn_real_gradients(
       ifn, indicateurs, climat, safran, ru_source = cfg$ru_source, annees = annees,
-      interpolation = cfg$safran_interpolation)),
+      interpolation = cfg$safran_interpolation, t_layer = t_coarse)),
 
     # --- carte hydrique (mission 021) : k r.sun, RU par maille, BILJOU --------
     # k = rayonnement r.sun (ciel clair) de la pente / plat ; variable fine, grille seule
@@ -384,11 +411,17 @@ if (!isTRUE(cfg$demo)) {
     tar_target(ru_mailles, sylvostation::ru_by_safran_cell(
       ifn_gradients, safran, emprise = sf::st_bbox(terra::ext(grid), crs = sf::st_crs(2154)),
       min_placettes = cfg$ru_min_placettes)),
+    # RU de la carte (mission 039) : RU apprise (geologie et SoilGrids dans 700 m) si
+    # disponible, sinon RU uniforme par maille ; T corrigee du relief dans BILJOU si disponible
     tar_target(hydric_grid, {
+      ru <- if (is.null(ru_map)) ru_mailles else sylvostation::ru_fill_by_cell(
+        terra::resample(ru_map, solar_k$k[[1]], method = "bilinear"), ru_mailles, safran)
+      corr <- !is.null(t_lapse) && identical(cfg$safran_interpolation, "bilineaire")
       h <- sylvostation::hydric_stress_grid(
-        solar_k$k, ru_mailles, safran, altitude = terrain[["altitude"]], annees = annees,
+        solar_k$k, ru, safran, altitude = terrain[["altitude"]], annees = annees,
         pas_k = cfg$hydric_pas_k, n_controle = cfg$hydric_n_controle, k_methode = solar_k$methode,
-        interpolation = cfg$safran_interpolation, node_res = cfg$hydric_node_res_m)
+        interpolation = cfg$safran_interpolation, node_res = cfg$hydric_node_res_m,
+        t_lapse = if (corr) t_lapse, alt_mailles = if (corr) alt_mailles)
       list(r = h, methode = attr(h, "methode"), ecart = attr(h, "ecart"),
            mailles = attr(h, "mailles"), repli = attr(h, "repli"))
     }),
@@ -398,8 +431,73 @@ if (!isTRUE(cfg$demo)) {
       sylvostation::stack_soil_layers(src$soils, grid)),
     # predicteurs a maille large : climat (SAFRAN) ; coarse_vars ne depend pas de la
     # lithologie encodee (qui depend de l'apprentissage) : pas de cycle (mission 035)
-    tar_target(predictors_climat, sylvostation::coarse_predictors(climat, grid)),
-    tar_target(coarse_vars, intersect(names(predictors_climat), c("coarse_p_etp_sv", "coarse_t_moy"))),
+    tar_target(predictors_climat, {
+      p <- sylvostation::coarse_predictors(climat, grid)
+      if (!is.null(t_coarse)) {
+        p <- c(p, terra::resample(terra::crop(t_coarse, terra::ext(grid) + 2000, snap = "out"),
+                                  grid, method = "bilinear"))
+      }
+      p
+    }),
+    # variables climatiques des modeles (mission 039) : climat_temperature et trophique_climat
+    # de config.yml ; sans T corrigee disponible, la T bilineaire (avertissement si demandee)
+    tar_target(clim_vars, {
+      tro <- cfg$trophique_climat
+      if (identical(tro, "corrige") && is.null(t_coarse)) {
+        warning("trophique_climat: corrige sans temp\u00e9rature corrig\u00e9e disponible : ",
+                "climat actuel gard\u00e9.", call. = FALSE)
+        tro <- "actuel"
+      }
+      v <- sylvostation::model_climate_vars(
+        if (is.null(t_coarse)) "bilineaire" else cfg$climat_temperature, tro)
+      for (k in c("trophic", "hydric", "toutes")) v[[k]] <- intersect(v[[k]], names(predictors_climat))
+      v
+    }),
+    tar_target(coarse_vars, clim_vars$toutes),
+    # t_corr a la cellule (MNT fin) : variable fine, carte seulement (bioclimat)
+    tar_target(t_corr_grid, if (is.null(t_lapse)) NULL else
+      sylvostation::t_corrected(terrain[["altitude"]], safran, alt_mailles, t_lapse)),
+    # --- RU apprise (mission 039) : SoilGrids (texture, cailloux) + euptf2, dans 700 m ---
+    tar_target(soilgrids_texture_files, if (hors_ligne || !identical(cfg$ru_carte, "apprise")) NULL else
+      sylvostation::fetch_soilgrids_texture(
+        sf::st_bbox(sf::st_union(c(sf::st_as_sfc(sf::st_bbox(ifn$placettes)),
+                                   sf::st_as_sfc(sf::st_bbox(emprise))))),
+        file.path(cache, "soilgrids"))),
+    tar_target(cu700, if (is.null(soilgrids_texture_files)) NULL else
+      sylvostation::coarse_cu_layers(sylvostation::soilgrids_cu(soilgrids_texture_files),
+                                     radius = cfg$ifn_precision_m)),
+    tar_target(ru_learn, if (is.null(cu700)) NULL else
+      sylvostation::ru_learned_data(trophic_enc$data, cu700)),
+    tar_target(ru_model, if (is.null(ru_learn)) NULL else
+      sylvostation::fit_gradient(ru_learn$data, "ru_mm", ru_learn$vars, points_source = "ifn",
+                                 ifn_precision_m = cfg$ifn_precision_m, num_trees = 500, seed = 1)),
+    tar_target(ru_cv, if (is.null(ru_learn)) NULL else stats::setNames(lapply(
+      list(cfg$cv_block_m, cfg$cv_block_sensibilite_m), function(b) tryCatch(
+        sylvostation::spatial_cv(ru_learn$data, "ru_mm", ru_learn$vars, k = 5, points_source = "ifn",
+                                 block_size = b, ifn_precision_m = cfg$ifn_precision_m,
+                                 num_trees = 500, seed = 1),
+        error = function(e) {
+          warning("ru_cv : ", conditionMessage(e), call. = FALSE)
+          NULL
+        })), c("principal", "sensibilite"))),
+    tar_target(ru_map, if (is.null(ru_model)) NULL else {
+      lay <- c(litho_layer, formation_layer,
+               terra::resample(terra::crop(cu700, terra::ext(grid) + 2000, snap = "out"), grid,
+                               method = "bilinear"))
+      r <- sylvostation::predict_raster(ru_model, lay, aoa = FALSE)[["pred"]]
+      names(r) <- "ru_apprise"
+      r
+    }),
+    tar_target(ru_sg_diagnostic, if (is.null(cu700)) NULL else
+      sylvostation::ru_soilgrids_diagnostic(
+        ifn_gradients[is.finite(ifn_gradients$ru_mm), c("id_placette", "source", "loc_precision_m", "ru_mm")],
+        cu700)),
+    # bilan lateral (Piedallu et al. 2006, tableau 20) : carte de controle, desactive par defaut
+    tar_target(lateral, if (!isTRUE(cfg$bilan_lateral)) NULL else {
+      b <- sylvostation::lateral_balance(dtm, coef = cfg$bilan_lateral_coef,
+                                         offsets = cfg$bilan_lateral_ru_mm)
+      list(r = b[[c("bilan_lateral", "ru_bilan_lateral")]], parts = attr(b, "parts"))
+    }),
     # pH SoilGrids 0-5 cm (250 m, CC BY 4.0) moyenne dans 700 m : maille large. Hors ligne
     # ou soilgrids_ph: false : absent (jamais remplace). Exactitude sur la France non evaluee.
     tar_target(soilgrids_file, if (hors_ligne || !isTRUE(cfg$soilgrids_ph)) NULL else
@@ -476,9 +574,9 @@ if (!isTRUE(cfg$demo)) {
       geol_sf, grid, trophic_enc$encoding_formation, radius = cfg$ifn_precision_m)),
     tar_target(train, list(trophic = trophic_enc$data, hydric = train_climat$hydric)),
     tar_target(vars_modele, list(
-      trophic = c(coarse_vars, "coarse_litho_enc", "coarse_formation_enc",
+      trophic = c(clim_vars$trophic, "coarse_litho_enc", "coarse_formation_enc",
                   if (!is.null(ph_layer)) "coarse_ph_soilgrids_700m"),
-      hydric = coarse_vars)),
+      hydric = clim_vars$hydric)),
     tar_target(calibration_effectifs, sylvostation::calibration_counts(
       ifn, ifn_gradients, train_climat, litho_placettes, trophic_enc$data)),
     tar_target(models, stats::setNames(lapply(grad_reg, function(g) {
@@ -588,7 +686,12 @@ if (!isTRUE(cfg$demo)) {
       m
     }),
     tar_target(gradient_map, {
-      b <- sylvostation::apply_bioclim(predictors, attr(ifn_gradients, "bioclim_axis"))
+      ax <- attr(ifn_gradients, "bioclim_axis")
+      # mission 039 : axe appris sur la T moyennee dans 700 m, applique a la T de la cellule
+      b <- if (!is.null(t_corr_grid) && "coarse_t_corr_700m" %in% ax$vars) {
+        sylvostation::apply_bioclim(c(predictors, t_corr_grid), ax,
+                                    layers = c(coarse_t_corr_700m = "t_corr"))
+      } else sylvostation::apply_bioclim(predictors, ax)
       # hydrique : -Istress calcule (mission 021) ; le modele regional hydrique
       # (placettes IFN) ne sert qu'a la validation croisee
       r <- c(maps$trophic[["pred"]], hydric_grid$r[["grad_hydrique_carte"]], b)
@@ -729,6 +832,23 @@ if (!isTRUE(cfg$demo)) {
       if (NROW(hydric_grid$ecart)) tabs$hydrique_ecart_table <- hydric_grid$ecart
       tabs$hydrique_mailles <- if (is.null(hydric_grid$mailles)) ru_mailles else
         merge(ru_mailles, hydric_grid$mailles, by = "maille", all.x = TRUE)
+      # mission 039 : temperature corrigee, RU apprise, RU SoilGrids (diagnostic), bilan lateral
+      if (!is.null(t_lapse)) tabs$temperature_gradient <- data.frame(
+        gradient_100m = t_lapse$gradient_100m, erreur_type_100m = t_lapse$erreur_type_100m,
+        r2 = t_lapse$r2, sigma = t_lapse$sigma, n_mailles = t_lapse$n, formule = t_lapse$formule,
+        repere = "-0,55 degC/100 m (Rolland 2003, a verifier)")
+      if (!is.null(t_validation)) tabs$temperature_validation <- t_validation
+      if (!is.null(ru_cv)) tabs$ru_apprise_validation <- do.call(rbind, lapply(names(ru_cv), function(n) {
+        cv <- ru_cv[[n]]
+        if (is.null(cv)) return(NULL)
+        data.frame(validation = n, bloc_m = cv$block_size, r2 = cv$global[["r2"]],
+                   rmse = cv$global[["rmse"]], n = length(cv$plis),
+                   variables = paste(ru_learn$vars, collapse = ", "))
+      }))
+      if (!is.null(ru_sg_diagnostic)) tabs$ru_soilgrids_diagnostic <- ru_sg_diagnostic
+      if (!is.null(lateral)) tabs$bilan_lateral_parts <- data.frame(
+        classe = names(lateral$parts), part = as.numeric(lateral$parts),
+        statut = "carte de contr\u00f4le, coefficients \u00e0 v\u00e9rifier")
       w <- sylvostation::write_outputs(
         out_dir = cfg$out_dir, ser_code = cfg$ser_code,
         types = type_map$raster, type_legend = type_legend,
@@ -739,7 +859,11 @@ if (!isTRUE(cfg$demo)) {
       # couches de la carte hydrique (Istress de la pente et du plat, k_sv, RU de la maille)
       wh <- sylvostation::write_hydric_grid(hydric_grid$r, cfg$out_dir, cfg$ser_code,
                                             forest = forest, synthetic = FALSE)
-      c(w$fichier, wh$fichier)
+      wl <- sylvostation::write_layers(list(
+        temperature_corrigee = t_corr_grid, ru_apprise = ru_map,
+        bilan_lateral = if (!is.null(lateral)) lateral$r),
+        cfg$out_dir, cfg$ser_code, synthetic = FALSE)
+      c(w$fichier, wh$fichier, wl$fichier)
     }, format = "file"),
     # comparaison a la reference : seulement si reference_path est fourni
     tar_target(comparison_table, if (is.null(src$reference)) NULL else {

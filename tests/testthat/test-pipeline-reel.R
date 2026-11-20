@@ -549,6 +549,20 @@ test_that("bioclim_axis et apply_bioclim : axe orienté « plus haut = plus chau
   expect_error(bioclim_axis(data.frame(coarse_t_moy = 1:3)), "coarse_p_etp_sv")
 })
 
+test_that("bioclimat (mission 039) : axe appris sur la T moyennee dans 700 m, applique a t_corr", {
+  d <- data.frame(coarse_p_etp_sv = c(100, 300, 500, 700), coarse_t_corr_700m = c(10, 9, 7, 6))
+  a <- bioclim_axis(d, t_var = "coarse_t_corr_700m")
+  expect_identical(a$vars, c("coarse_p_etp_sv", "coarse_t_corr_700m"))
+  expect_gt(a$loadings[["coarse_t_corr_700m"]], 0)
+  r <- terra::rast(nrows = 1, ncols = 4, nlyrs = 2, crs = "EPSG:2154",
+                   xmin = 1007000, xmax = 1007100, ymin = 6790000, ymax = 6790025)
+  terra::values(r) <- as.matrix(d)
+  names(r) <- c("coarse_p_etp_sv", "t_corr")
+  b <- apply_bioclim(r, a, layers = c(coarse_t_corr_700m = "t_corr"))
+  expect_equal(as.vector(terra::values(b)), apply_bioclim(d, a), tolerance = 1e-9)
+  expect_error(apply_bioclim(r, a), "coarse_t_corr_700m")
+})
+
 # --- placettes IFN -----------------------------------------------------------------------
 test_that("filter_greco : GRECO = première lettre du code SER", {
   ifn <- load_ifn(ex(""))

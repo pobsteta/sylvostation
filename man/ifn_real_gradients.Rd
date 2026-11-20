@@ -13,7 +13,8 @@ ifn_real_gradients(
   annees = NULL,
   interpolation = "bilineaire",
   exclude_cd_ref = NULL,
-  abundance_weights = FALSE
+  abundance_weights = FALSE,
+  t_layer = NULL
 )
 }
 \arguments{
@@ -34,6 +35,10 @@ ou \code{"proche"} (\code{\link[=hydric_stress]{hydric_stress()}}).}
 
 \item{exclude_cd_ref, abundance_weights}{Indice trophique sans les essences arborées et/ou
 pondéré par l'abondance (mission 035) : voir \code{\link[=compute_gradients]{compute_gradients()}}.}
+
+\item{t_layer}{\code{NULL} ou \code{SpatRaster} \code{coarse_t_corr_700m} (\code{\link[=coarse_t_corr_layer]{coarse_t_corr_layer()}},
+mission 039) : sa valeur aux placettes (règle des 700 m appelée) est ajoutée en colonne
+et l'axe bioclimatique est appris sur elle au lieu de \code{coarse_t_moy}.}
 }
 \value{
 Un \code{sf} (une ligne par placette retenue avec flore) : \code{id_placette},

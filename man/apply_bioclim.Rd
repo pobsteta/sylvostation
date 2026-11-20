@@ -4,12 +4,16 @@
 \alias{apply_bioclim}
 \title{Appliquer l'axe bioclimatique à un tableau ou à un raster}
 \usage{
-apply_bioclim(x, axis)
+apply_bioclim(x, axis, layers = NULL)
 }
 \arguments{
 \item{x}{Tableau ou \code{SpatRaster} portant les couches de \code{axis$vars}.}
 
 \item{axis}{Résultat de \code{\link[=bioclim_axis]{bioclim_axis()}}.}
+
+\item{layers}{Raster seulement : vecteur nommé (variable de l'axe = couche de \code{x} qui la
+remplace), par exemple \code{c(coarse_t_corr_700m = "t_corr")} pour appliquer à la cellule
+un axe appris sur la température moyennée dans 700 m (mission 039). \code{NULL} : mêmes noms.}
 }
 \value{
 Un vecteur numérique (tableau) ou un \code{SpatRaster} \code{bioclim}.

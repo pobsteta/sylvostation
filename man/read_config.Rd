@@ -29,6 +29,12 @@ provisoires) : \code{solar_linke} (3), \code{solar_albedo} (0,2), \code{solar_st
 \code{hydric_node_res_m} (1000), \code{ru_min_placettes} (5), la calibration sur la GRECO
 (mission 035, provisoires) : \code{litho_min_cover} (0,5), \code{litho_encoding_k} (10), \code{soilgrids_ph} (\code{TRUE}), \code{cv_block_m} (\code{NULL} : portée
 estimée de la réponse) \code{cv_block_sensibilite_m} (8 358 m) et \code{cv_min_blocs_par_pli} (4),
+les choix de la mission 039 : \code{climat_temperature} (\code{"corrigee"} ou \code{"bilineaire"}),
+\code{trophique_climat} (\code{"actuel"}, \code{"corrige"} ou \code{"sans"}, défaut \code{"actuel"} jusqu'à la
+décision de Pascal), \code{ru_carte} (\code{"apprise"} ou \code{"maille"}), \code{mnt_large_res_m} (250),
+\code{bilan_lateral} (\code{FALSE}), \code{bilan_lateral_ru_mm} (−30, 0, 60) et \code{bilan_lateral_coef}
+(\code{NULL} : tableau 20 de Piedallu et al. 2006, à vérifier), l'entrée optionnelle
+\code{mnt_large_path} (MNT de 250 m local, mode hors ligne),
 \code{ifn_archive_url} et \code{taxref_url} (sans valeur
 par défaut : seule source, config.yml ; exigées en ligne), et les
 entrées optionnelles \code{gnss_path}, \code{reference_path}, \code{soil_paths}, \code{tichy_path}
