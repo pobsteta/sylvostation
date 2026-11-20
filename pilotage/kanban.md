@@ -14,7 +14,9 @@
 
 ## Validé
 
-- [039-bioclimat-ru-fins](missions/039-bioclimat-ru-fins.md) · depuis le cycle 5 · dev (opus, plan d'abord)
+- [039-bioclimat-ru-fins](missions/039-bioclimat-ru-fins.md) · depuis le cycle 5 · dev (opus, plan d'abord) · mesures faites, plan en rédaction
+- [040-table-lithologique](missions/040-table-lithologique.md) · cycle 5 · dev (sonnet)
+- 037d local contre régional ([fiche 037](missions/037-ancrages-gbif-bdforet.md)) · cycle 5 · dev · code écrit, tests et commit à faire
 
 
 
