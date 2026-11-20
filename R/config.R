@@ -127,6 +127,10 @@ read_config <- function(path = "config.yml") {
   essence_part_pure = 0.75, essence_min_placettes = 15L, essence_alerte_ecart = 0.5,
   essence_alerte_ratio = 0.5, essence_alerte_pente = 0.2,
   bdforet_controle = FALSE, bdforet_tampon_m = 50, bdforet_min_polygones = 5L,
+  # carte trophique locale (ancrages GBIF) : ne remplace la regionale que si elle fait mieux en
+  # validation croisee (mission 037) ; valeurs provisoires, sans source, a verifier
+  local_gain_min = 0.02, local_min_ancrages = 20L, local_min_blocs = 10L, local_ic_niveau = 0.95,
+  local_bootstrap = 1000L,
   # reprise sur incident reseau des telechargements (mission 026), provisoire
   download_retries = 3L,
   # bioclimat et RU plus fins (mission 039, arbitrages du 2026-11-20) : temperature corrigee du
@@ -219,6 +223,18 @@ read_config <- function(path = "config.yml") {
     if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0) {
       stop("`", k, "` doit \u00eatre un nombre >= 0.", call. = FALSE)
     }
+  }
+  x <- cfg$local_gain_min
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0) {
+    stop("`local_gain_min` doit \u00eatre un nombre >= 0.", call. = FALSE)
+  }
+  x <- cfg$local_ic_niveau
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0 || x >= 1) {
+    stop("`local_ic_niveau` doit \u00eatre un nombre dans ]0, 1[.", call. = FALSE)
+  }
+  for (k in c("local_min_ancrages", "local_min_blocs", "local_bootstrap")) {
+    entier_pos(k)
+    cfg[[k]] <- as.integer(cfg[[k]])
   }
   for (k in c("essence_min_placettes", "bdforet_min_polygones")) {
     entier_pos(k)

@@ -111,6 +111,17 @@ essence_alerte_pente: 0.2
 bdforet_controle: false
 bdforet_tampon_m: 50
 bdforet_min_polygones: 5
+# Carte trophique locale (ancrages GBIF, en ligne) : elle ne remplace la carte régionale que si, sur les
+# mêmes ancrages et les mêmes plis, la borne basse de l'IC (bootstrap de blocs) du gain de R² du local
+# sur le régional dépasse local_gain_min. TOUTES CES VALEURS : provisoire, sans source, à vérifier.
+# local_gain_min : marge minimale (0,02, environ le bruit de répartition des plis vu en 037) ;
+# local_min_ancrages, local_min_blocs : en dessous, la comparaison est impossible (carte régionale
+# gardée, avertissement) ; local_ic_niveau : niveau de l'IC bilatéral ; local_bootstrap : tirages.
+local_gain_min: 0.02
+local_min_ancrages: 20
+local_min_blocs: 10
+local_ic_niveau: 0.95
+local_bootstrap: 1000
 # Téléchargements (SER, dalles LiDAR, WFS, TOPAGE, SAFRAN, IFN) : nombre total de tentatives
 # avant arrêt (attentes 5, 20, 60 s). Provisoire (mission 026).
 download_retries: 3

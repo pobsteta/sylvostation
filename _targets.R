@@ -671,20 +671,36 @@ if (!isTRUE(cfg$demo)) {
       if (is.null(anchors)) return(NULL)
       v <- setdiff(names(predictors), character(0))
       d <- anchors[stats::complete.cases(sf::st_drop_geometry(anchors)[, c("trophic", v)]), ]
-      if (nrow(d) < 20) return(NULL)
-      list(model = sylvostation::fit_gradient(d, "trophic", v, num_trees = 500, seed = 1),
-           cv = sylvostation::spatial_cv(d, "trophic", v, k = 5, num_trees = 500, seed = 1))
+      if (nrow(d) < cfg$local_min_ancrages) return(NULL)
+      # un echec (trop peu de blocs pour 5 plis, par exemple) : avertissement avec sa raison, pas de
+      # modele local, carte regionale gardee (jamais un arret ni un silence)
+      tryCatch(list(model = sylvostation::fit_gradient(d, "trophic", v, num_trees = 500, seed = 1),
+                    cv = sylvostation::spatial_cv(d, "trophic", v, k = 5, num_trees = 500, seed = 1),
+                    data = d),
+               error = function(e) {
+                 warning("local_trophic : ", conditionMessage(e), " ; mod\u00e8le local omis.", call. = FALSE)
+                 NULL
+               })
     }),
-    tar_target(maps, {
-      m <- stats::setNames(lapply(grad_reg, function(g) {
-        sylvostation::predict_raster(models[[g]], predictors, cv = cvs[[g]])
-      }), grad_reg)
-      if (!is.null(local_trophic)) {
-        m$trophic <- sylvostation::predict_raster(local_trophic$model, predictors,
-                                                  cv = local_trophic$cv)
-      }
-      m
-    }),
+    # cartes du modele REGIONAL (IFN) : jamais remplacees ici ; le local n'entre que par maps
+    tar_target(maps_regional, stats::setNames(lapply(grad_reg, function(g) {
+      sylvostation::predict_raster(models[[g]], predictors, cv = cvs[[g]])
+    }), grad_reg)),
+    tar_target(local_map, if (is.null(local_trophic)) NULL else
+      sylvostation::predict_raster(local_trophic$model, predictors, cv = local_trophic$cv)),
+    # le local ne remplace le regional que s'il fait mieux en validation croisee sur les memes
+    # ancrages et les memes plis (borne basse de l'IC du gain > local_gain_min). Hors ligne (pas
+    # d'ancrage cherche) : pas de comparaison, carte regionale.
+    tar_target(comparaison_locale, if (is.null(anchors)) NULL else
+      sylvostation::compare_local_regional(
+        local_trophic, maps_regional$trophic[["pred"]], n_anchors = nrow(anchors),
+        gain_min = cfg$local_gain_min, min_anchors = cfg$local_min_ancrages,
+        min_blocks = cfg$local_min_blocs, level = cfg$local_ic_niveau,
+        n_boot = cfg$local_bootstrap,
+        aoa_part = if (is.null(local_map) || !"aoa" %in% names(local_map)) NA_real_ else
+          as.numeric(terra::global(local_map[["aoa"]], "mean", na.rm = TRUE)[1, 1]))),
+    tar_target(maps, sylvostation::select_trophic_map(maps_regional, local_map,
+                                                      comparaison_locale)$maps),
     tar_target(gradient_map, {
       ax <- attr(ifn_gradients, "bioclim_axis")
       # mission 039 : axe appris sur la T moyennee dans 700 m, applique a la T de la cellule
@@ -824,6 +840,13 @@ if (!isTRUE(cfg$demo)) {
       # chaque table est publiee si son resultat existe (un NULL est deja signale par un avertissement)
       tabs <- c(tabs, sylvostation::essence_tables(controle_essence, cv_essence))
       if (!is.null(controle_bdforet)) tabs$controle_bdforet_classes <- controle_bdforet
+      # comparaison local / regional (ancrages GBIF) : quelle carte trophique est publiee, et pourquoi
+      if (!is.null(comparaison_locale)) {
+        tabs$comparaison_trophique_locale <- comparaison_locale$resume
+        if (NROW(comparaison_locale$par_pli)) {
+          tabs$comparaison_trophique_locale_par_pli <- comparaison_locale$par_pli
+        }
+      }
       if (!is.null(gnss_validation)) tabs$validation_gnss <- gnss_validation
       if (!is.null(comparison_table)) {
         tabs$comparaison_gradients <- comparison_table
