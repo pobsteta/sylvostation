@@ -1837,3 +1837,54 @@ disponible (`compute_gradients(exclude_cd_ref = read_tree_cd_ref(), abundance_we
 - Codes `ROCHED0` (2005-2024) et `ROCHED2` (2025) : mêmes codes à trois exceptions (312, 316, 932
   absents de `ROCHED2`, rares) : joints tels quels.
 - Placette `DEP` 52 : sans géologie (département 052 non lu).
+
+
+## 36. Contrôle par essence et sensibilité : sources, seuils, mesures (mission 037, 2026-11-20)
+
+- **Décision éclairée :** vérifier que le trophique prédit ne contredit pas les essences en place, et
+  chiffrer ce que l'essence ajouterait, sans jamais la mettre dans la carte (ADR 0008).
+- **Propriétaire :** Pascal (délégué à l'orchestrateur). **Rédigé par :** `dev`, mission 037, partie 2.
+
+### 36.1 Sources
+
+| Élément | Source | État |
+|---|---|---|
+| Essence et pondération | IGN, IFN, table `ARBRE` : `ESPAR`, `C13` (circonférence, m), `W` (coefficient de pondération), `VEGET` (0 vivant, 1 chablis vivant) | **vérifié** (`metadonnees.csv`) |
+| Dictionnaire ESPAR | `espar-cdref13.csv` (`ifn_espar_cdref.csv`, code d'essence sans zéro de tête → `CD_REF`) pour les jointures ; lignes `ESPAR1` de `metadonnees.csv` (campagnes 2009 et suivantes) : `inst/extdata/ifn_espar_codes.csv`, 195 lignes, Licence Ouverte 2.0, qui en complète le nom latin de l'unité ESPAR1 (`inst/extdata/SOURCES.md`) | **vérifié** ; le code `332G` de `ARBRE` n'y figure pas ; les campagnes 2005-2008 (unités `ESPAR`, `ESPAR0`) : même codage constaté sur la GRECO D, **à vérifier** |
+| Optimum de l'essence, repère | Tichý et al. (valeurs d'indicateur, Zenodo), `ph` et `azote` de l'espèce arborée dans la table qui sert au trophique | **indicatif seulement, jamais la base d'une alerte** : Spearman 0,15 par placette, 0,29 à 0,38 par essence, contre 0,25 et 0,60 pour le trophique observé ; hêtre 5,7 contre 4,2 observé sans les arbres ; douglas et chêne rouge absents ; chêne sessile sans `ph` ni `azote` |
+| Optimum forestier publié | Rameau et al., *Flore forestière française* ; EcoPlant ; Landmann | **à vérifier, non lus** |
+| Alerte | moyenne d'essence apprise hors pli sur le trophique observé sans les essences : **47 taxons** des 344 de la table de Tichý, retirés par jointure sur `CD_REF` avec `read_tree_cd_ref()` (`espar-cdref13.csv`, TAXREF v13.0 ; cette table liste les arbres et quelques arbustes, dont *Juniperus communis*) | mesure du dépôt (pas une source externe) |
+| Regroupements BD Forêt | `FF1G01-01` (chênes décidus), `FF2G61-61` (sapin ou épicéa) ; `FF2G53-53` et `FF2-90-90` fusionnés | correspondance ESPAR **hypothèse, à vérifier** (§ 33, plan 037) |
+| Licence BD Forêt | Licence Ouverte (data.gouv.fr, `lov2`) contre « conditions générales d'utilisation des fichiers IGN » (métadonnées livrées, 2022-09-14) | **contradictoire** : option désactivée, cache hors dépôt, seules des moyennes par classe publiées |
+
+### 36.2 Seuils : valeur provisoire, sans source, à vérifier
+
+`essence_part_pure` 0,75 ; `essence_min_placettes` 15 ; `essence_alerte_ecart` 0,5 point (environ la moitié du
+RMSE de la validation croisée, 0,93) ; `essence_alerte_ratio` 0,5 ; `essence_alerte_pente` 0,2 ;
+`bdforet_tampon_m` 50. Choisis par le `dev`, modifiables dans `config.yml` ; aucune source ne les fonde.
+
+### 36.3 Mesures sur le run réel 035 (store `wt035run`, blocs 22 121 m et 8 358 m)
+
+- **Effectifs** : 2 893 placettes d'apprentissage, 2 795 avec arbres vivants, 98 sans arbre, **1 323 pures**,
+  1 472 mixtes ; 10 essences à au moins 15 placettes pures (1 246 placettes) : sapin pectiné 383, hêtre 276,
+  épicéa 264, chêne sessile 101, pin sylvestre 71, douglas 64, aulne glutineux 28, bouleau verruqueux 26,
+  chêne pédonculé 18, érable sycomore 15.
+- **Contrôle** : accord d'ordre (Spearman prédit hors pli contre moyenne d'essence apprise hors pli) 0,344
+  (blocs de 22 121 m) et 0,338 (8 358 m), contre **0,357 et 0,376** pour le trophique observé (ratio 0,96 et 0,90) ; **pente prévu contre observé par essence
+  0,31 / 0,36 : prédictions écrasées vers la moyenne** ; trois essences en alerte d'écart (> 0,5) aux deux
+  tailles : pin sylvestre (+0,89), aulne glutineux (-1,02), érable sycomore (-0,86). R² de la prédiction
+  par l'essence (essences à au moins 15 placettes) 0,17 / 0,15 contre 0,22 pour le trophique sans arbres.
+- **Sensibilité** (essence encodée dans chaque pli) : R² 0,194 -> 0,255 (**+0,061**) aux blocs de 22 121 m
+  et 0,272 -> 0,330 (**+0,058**, groupes BD Forêt : 0,326, +0,054) aux blocs de 8 358 m ; **placebo**
+  (essences mélangées) : +0,010 et +0,007, soit un gain net de l'ordre de 0,05. Le gain est positif dans les
+  cinq plis des deux tailles. C'est bien moins que les -0,1 à -0,25 que chiffrait l'ADR 0008.
+  **La cible de la sensibilité (`y0`, trophique du pipeline) contient les arbres** : le gain est donc un peu
+  circulaire ; l'effet reste faible (retirer les essences de l'indice change peu l'indice, corrélation 0,96,
+  § 35.6).
+- **Comparaison à la carte (BD Forêt)**, emprise de 15 km, intérieur à 50 m, 295 polygones purs : moyennes par
+  classe de 4,69 (pin sylvestre) à 5,07 (autres feuillus), Spearman 0,94 avec la moyenne IFN sur 6 classes
+  seulement ; le hêtre y est placé sous le sapin-épicéa, à l'inverse des placettes. Lecture, pas validation.
+
+**Limites** : une seule répartition en plis ; le contrôle n'est pas une validation indépendante (essences
+liées au climat et à la roche que le modèle voit) ; les alertes pointent surtout l'absence de relief fin,
+attendue sous la règle des 700 m ; plantations (douglas, épicéa) lues « pauvres » : limite visée par l'ADR 0008.

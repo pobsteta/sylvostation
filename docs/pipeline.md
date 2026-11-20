@@ -80,6 +80,7 @@ hydrique ».
 | `soilgrids_file`, `ph_layer` | `fetch_soilgrids_ph()` : pH SoilGrids 2.0 0-5 cm (250 m, CC BY 4.0), fenêtre de la GRECO, cache par emprise ; `soilgrids_disk_mean()` : moyenne dans 700 m (`soilgrids_ph: true`) | files.isric.org | **absent** (jamais remplacé) |
 | `train_climat`, `trophic_enc`, `litho_layer`, `formation_layer`, `calibration_effectifs` | placettes avec climat complet ; `encode_by_blocks()` : lithologie (classe) et formation encodées par le trophique moyen rétréci (`litho_encoding_k`) : la **classe** avec toute la partie d'apprentissage (`oof = FALSE`), la **formation** hors pli (blocs spatiaux, `oof = TRUE`) ; `lithology_encoded_layer()` et `formation_encoded_layer()` (mode du disque calculé à 100 m) pour la carte ; `calibration_counts()` : entonnoir des effectifs | | |
 | `models`, `cvs`, `maps` | `fit_gradient()`, `spatial_cv()`, `predict_raster()` (trophique, hydrique) ; bioclimat = `apply_bioclim()` ; couche `hydric` de `gradient_map` = `-is_topo` de `hydric_grid` (le modèle régional hydrique ne sert qu'à la validation croisée) ; `incertitude.tif` : trophique seul | | régional seul |
+| `espar_codes`, `ifn_dir`, `espar_cdref`, `arbres_cd_ref`, `essence_dominante`, `controle_essence`, `cv_essence`, `controle_bdforet` | `read_espar_codes()`, `read_espar_cdref()` et `read_tree_cd_ref()` (retrait des essences de l'indice par jointure sur `CD_REF`), `dominant_species()` (surface terrière pondérée par `W`), `essence_control()` (trophique prédit hors pli contre essence en place, alertes), `essence_sensitivity()` (gain de R² avec l'essence + placebo), `bdforet_class_means()` (option) | `essence_*` et `bdforet_*` de `config.yml` (valeurs provisoires, sans source) | extrait IFN du dépôt (`ifn_espar_codes.csv`) ; BD Forêt : **réel et facultatif seulement** |
 | typologie | `default_thresholds()`, `discretise()`, `merge_rare(plots = types des placettes)`, `type_raster()`, `real_type_legend()` (`azonal = FALSE`) | | |
 | fiches, clé | `indicator_species()`, `real_fertility()`, `build_key()` sur `obs_pente`, `obs_topo`, `obs_humus` (notés par l'IFN) | | |
 | `gnss_validation` | `load_gnss()`, `gnss_field_gradients()`, `validate_maps()` | si `gnss_path` | absent |
@@ -391,3 +392,28 @@ garde fait échouer le build si une page interne (`CLAUDE`, `pilotage/`, `.claud
   release (la release ne porte que le tarball du paquet).
 - Construction locale : `pkgdown::check_pkgdown()` puis
   `pkgdown::build_site()` sur une copie du dépôt privée de `CLAUDE.md` (sortie dans `site/`, ignoré par git).
+
+
+## Contrôle par essence et modèle de sensibilité (mission 037, ADR 0008)
+
+Cibles du mode réel, **hors carte** : `controle_essence`, `cv_essence` et, si `bdforet_controle`,
+`controle_bdforet` produisent `controle_essence.csv`, `controle_essence_par_essence.csv`,
+`sensibilite_essence.csv` (et `controle_bdforet_classes.csv`) dans les sorties. Aucune n'est une
+entrée de `train`, `vars_modele`, `models`, `cvs`, `maps`, `gradient_map` ni des types (un test lit
+`_targets.R` pour le vérifier). L'essence dominante vient de la table ARBRE (observée sur la placette,
+non extraite d'un raster : la règle des 700 m n'est pas en cause) ; le préfixe `coarse_` de
+`coarse_essence_enc` ne sert qu'à passer `assert_no_fine_extract_on_ifn()`.
+
+- **Contrôle** : placettes pures (au moins `essence_part_pure` de la surface terrière pondérée par `W`) ;
+  trophique prédit **hors pli** (prédictions de `cvs` et de `cv_sensibilite`) contre la moyenne d'essence
+  apprise hors pli sur le trophique **sans les arbres**. Trois mesures : accord d'ordre (ratio sous
+  `essence_alerte_ratio`), écart par essence (au-dessus de `essence_alerte_ecart`), amplitude (pente sous
+  `essence_alerte_pente`) ; Tichý en repère indicatif. Les alertes s'affichent, elles ne bloquent pas. Une validation croisée ou une taille de blocs impossible donne un avertissement avec sa raison et la partie manquante est omise (jamais un silence) ; `bloc_m` est arrondi au mètre.
+  Le **défaut d'amplitude** (prédictions écrasées vers la moyenne) est en tête du rapport.
+- **Sensibilité** : même validation croisée spatiale du trophique, plus l'essence dominante encodée dans
+  chaque pli (variantes : essence fine, groupes de la BD Forêt, placebo). Publiée avec la mention
+  « ne pas lire comme la carte ».
+- **Seuils** : valeur provisoire, sans source, à vérifier (`config.yml`).
+- **BD Forêt** (`bdforet_controle: false` par défaut) : télécharge la couche WFS dans `data/cache/bdforet`
+  (hors dépôt, licence contradictoire, `docs/referentiels.md` § 33.5 bis et § 36) ; seules les moyennes par
+  classe sont publiées.

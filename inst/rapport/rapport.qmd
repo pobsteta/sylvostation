@@ -587,6 +587,67 @@ if (synth) {
 }
 ```
 
+### Contrôle par essence et sensibilité (hors carte)
+
+```{r}
+#| results: asis
+ce <- lire("controle_essence")
+if (is.null(ce)) {
+  cat("(contrôle par essence non calculé dans ce run)\n\n")
+} else {
+  pen <- ce$pente_amplitude
+  if (all(is.na(pen))) {
+    cat("**Défaut d'amplitude, en tête :** non évaluable dans ce run (moins de trois essences ",
+        "avec assez de placettes pures).\n\n", sep = "")
+  } else {
+    cat("**Défaut d'amplitude, en tête :** par essence, la pente de la moyenne prédite hors pli ",
+        "sur la moyenne observée est de ",
+        paste(sprintf("%.2f (blocs de %.0f m)", pen[!is.na(pen)], ce$bloc_m[!is.na(pen)]),
+              collapse = " ; "),
+        " (1 serait fidèle ; en dessous, les prédictions sont **écrasées vers la moyenne**). L'accord ",
+        "d'ordre entre essences est donné dans le tableau ci-dessous.\n\n", sep = "")
+  }
+  cat("Ce contrôle compare le trophique prédit hors pli aux essences en place (placettes IFN ",
+      "pures, au moins ", ce$part_pure[1] * 100, " % de la surface terrière pondérée par W). **Ce n'est ",
+      "pas une validation indépendante** : les essences sont liées au climat et à la roche que le ",
+      "modèle voit. L'essence n'entre dans aucune carte, aucun type, aucun modèle (ADR 0008). ",
+      "Seuils d'alerte : valeur provisoire, sans source, à vérifier. Les optimums de Tichý sont ",
+      "un repère indicatif ; les optimums forestiers publiés (Rameau, EcoPlant) sont à vérifier, ",
+      "non lus.\n\n", sep = "")
+}
+```
+
+```{r}
+tab(ce)
+```
+
+```{r}
+tab(lire("controle_essence_par_essence"))
+```
+
+```{r}
+#| results: asis
+se <- lire("sensibilite_essence")
+if (!is.null(se)) {
+  cat("**Sensibilité : modèle avec l'essence dominante (ne pas lire comme la carte).** Gain de R² ",
+      "du modèle du trophique quand on lui ajoute l'essence, par taille de blocs ; le placebo ",
+      "(essences mélangées au hasard) mesure ce que le gain doit à la seule variable ajoutée. ",
+      "Publié à part : ce modèle n'est jamais celui de la carte.\n\n", sep = "")
+  print(tab(se[is.na(se$pli), setdiff(names(se), c("pli", "n", "avertissement"))]))
+}
+```
+
+```{r}
+#| results: asis
+cb <- lire("controle_bdforet_classes")
+if (!is.null(cb)) {
+  cat("**Option BD Forêt v2 (moyennes par classe de peuplement pur, intérieur des polygones).** ",
+      "Lecture, pas validation. Licence de la BD Forêt contradictoire (referentiels § 33.5 bis et § 36) : ",
+      "seules des moyennes par classe sont publiées.\n\n", sep = "")
+  print(tab(cb))
+}
+```
+
 ### Thématique : types prédits contre types de terrain
 
 ```{r}
