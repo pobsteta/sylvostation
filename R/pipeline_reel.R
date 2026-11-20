@@ -696,7 +696,11 @@ read_safran <- function(paths) {
 #' `QUOT_SIM2_<année>.csv.gz` de meteo.data.gouv.fr (docs/referentiels.md, § 23,
 #' Licence Ouverte 2.0, « Source : Météo-France »), garde les mailles dont le centre est
 #' à moins d'une demi-diagonale de maille (5,7 km) de l'emprise, et écrit
-#' `emprise_<année>.csv` dans le cache.
+#' `emprise_<année>_<emprise>.csv` dans le cache. **Le nom du fichier porte l'emprise**
+#' (`.cle_emprise_safran()`) : un fichier filtré pour une autre emprise n'est jamais
+#' resservi (mission 035 : l'ancien nom `emprise_<année>.csv`, sans emprise, avait resservi
+#' 12 mailles pour toute la GRECO D). Seules les colonnes lues par [read_safran()] sont
+#' écrites.
 #'
 #' @param years Années (vecteur d'entiers).
 #' @param emprise Emprise (bbox, sf ou `c(xmin, ymin, xmax, ymax)`, EPSG:2154).
@@ -705,7 +709,7 @@ read_safran <- function(paths) {
 #' @param downloader Voir [fetch_cached()].
 #' @param lignes_par_bloc Lignes lues à la fois : le fichier (environ 137 Mo compressé,
 #'   toute la France) est filtré à la lecture, jamais chargé en entier.
-#' @return Les chemins des fichiers `emprise_<année>.csv`.
+#' @return Les chemins des fichiers `emprise_<année>_<emprise>.csv`.
 #' @examples
 #' \dontrun{
 #' fetch_safran(1996:2025, c(1007000, 6790000, 1022000, 6805000), "data/cache/safran")
@@ -716,11 +720,18 @@ fetch_safran <- function(years, emprise, cache_dir, offline = FALSE,
   b <- .as_bbox(emprise)
   m <- 8000 * sqrt(2) / 2
   vapply(as.integer(years), function(y) {
-    out <- file.path(cache_dir, sprintf("emprise_%d.csv", y))
+    out <- file.path(cache_dir, sprintf("emprise_%d_%s.csv", y, .cle_emprise_safran(b, m)))
     if (file.exists(out)) return(out)
     gz <- fetch_cached(sprintf(.URL_SAFRAN, y), cache_dir, offline, downloader)
     .filtrer_safran(gz, out, b, m, lignes_par_bloc)
   }, character(1))
+}
+
+# Cle d'emprise du fichier SAFRAN filtre : boite (m, arrondie au metre) et marge. Deux
+# emprises differentes donnent deux noms differents.
+.cle_emprise_safran <- function(b, marge) {
+  paste0("x", paste(round(c(b[["xmin"]], b[["ymin"]], b[["xmax"]], b[["ymax"]])), collapse = "_"),
+         "_m", round(marge))
 }
 
 # Lit un fichier SIM2 par blocs de lignes et n'ecrit que les mailles proches de la bbox
@@ -729,9 +740,13 @@ fetch_safran <- function(years, emprise, cache_dir, offline = FALSE,
   con <- gzfile(gz, "r")
   on.exit(close(con), add = TRUE)
   entete <- readLines(con, n = 1L)
+  # colonnes gardees (celles de read_safran) : fichier 3 fois plus petit
+  noms <- strsplit(entete, ";", fixed = TRUE)[[1]]
+  col <- match(intersect(c("LAMBX", "LAMBY", "DATE", "PRENEI", "PRELIQ", "ETP", "T", "FF", "HU", "SSI"),
+                         noms), noms)
   tmp <- paste0(out, ".part")
   sortie <- file(tmp, "w")
-  writeLines(entete, sortie)
+  writeLines(paste(noms[col], collapse = ";"), sortie)
   decision <- logical(0)  # maille -> garder ?
   repeat {
     l <- readLines(con, n = lignes_par_bloc)
@@ -746,7 +761,11 @@ fetch_safran <- function(years, emprise, cache_dir, offline = FALSE,
       decision <- c(decision, stats::setNames(ok, nouv))
     }
     garde <- unname(decision[cle])
-    if (any(garde)) writeLines(l[garde], sortie)
+    if (any(garde)) {
+      # sentinelle ";x" : strsplit ne perd pas les champs vides de fin de ligne
+      k <- do.call(rbind, strsplit(paste0(l[garde], ";x"), ";", fixed = TRUE))
+      writeLines(do.call(paste, c(as.data.frame(k[, col, drop = FALSE]), sep = ";")), sortie)
+    }
   }
   close(sortie)
   file.rename(tmp, out)
@@ -768,7 +787,9 @@ fetch_safran <- function(years, emprise, cache_dir, offline = FALSE,
 #'   Lissé à l'échelle de 8 km, il reste un climat kilométrique (variable large),
 #'   croisable avec les placettes IFN. Aucune correction d'altitude.
 #' * `interpolation = "proche"` : plus proche voisin (comportement d'avant 033), la
-#'   valeur de la maille est uniforme sur ses 8 km.
+#'   valeur de la maille est uniforme sur ses 8 km. **Attention** : la maille d'une placette
+#'   est lue dans un raster de 1 km reprojeté ; sur la GRECO D, 3,8 % des placettes (109 sur
+#'   2 894) reçoivent la maille voisine, avec jusqu'à 2,5 °C d'écart (mission 035).
 #'
 #' @param safran `data.frame` de [read_safran()].
 #' @param months Mois de la saison de végétation (4:9).
@@ -866,7 +887,7 @@ filter_greco <- function(ifn, greco) {
 #'
 #' Archive `export_dataifn_*.zip` (docs/referentiels.md § 7, Licence Ouverte 2.0),
 #' mise en cache, puis extraction de `PLACETTE.csv`, `ECOLOGIE.csv`, `FLORE.csv` et
-#' `ARBRE.csv` dans `cache_dir/ifn`.
+#' `ARBRE.csv`, ainsi que `espar-cdref13.csv` (essences et leur `CD_REF`), dans `cache_dir/ifn`.
 #'
 #' @param url Adresse de l'archive (`cfg$ifn_archive_url`).
 #' @param cache_dir Dossier de cache.
@@ -880,9 +901,15 @@ filter_greco <- function(ifn, greco) {
 fetch_ifn <- function(url, cache_dir, offline = FALSE, downloader = utils::download.file) {
   zip <- fetch_cached(url, cache_dir, offline, downloader)
   dir <- file.path(cache_dir, "ifn")
+  # espar-cdref13.csv (code d'essence -> CD_REF) sert a exclure les essences arborees de
+  # l'indice trophique (mission 035)
   fichiers <- c("PLACETTE.csv", "ECOLOGIE.csv", "FLORE.csv", "ARBRE.csv")
   if (!all(file.exists(file.path(dir, fichiers)))) {
     utils::unzip(zip, files = fichiers, exdir = dir)
+  }
+  # optionnel : absent de l'archive = exclusion des essences impossible (erreur claire plus tard)
+  if (!file.exists(file.path(dir, "espar-cdref13.csv"))) {
+    suppressWarnings(utils::unzip(zip, files = "espar-cdref13.csv", exdir = dir))
   }
   dir
 }
@@ -1012,6 +1039,8 @@ apply_bioclim <- function(x, axis) {
 #' @param annees Années SAFRAN gardées (`NULL` : toutes).
 #' @param interpolation Séries SAFRAN aux placettes : `"bilineaire"` (défaut, mission 033)
 #'   ou `"proche"` ([hydric_stress()]).
+#' @param exclude_cd_ref,abundance_weights Indice trophique sans les essences arborées et/ou
+#'   pondéré par l'abondance (mission 035) : voir [compute_gradients()].
 #' @return Un `sf` (une ligne par placette retenue avec flore) : `id_placette`,
 #'   `source`, `loc_precision_m`, `grad_trophique`, `ru_mm`, `grad_hydrique`,
 #'   `is_biljou`, `coarse_p_etp_sv`, `coarse_t_moy`, `bioclim`, `trophic`, `hydric`.
@@ -1032,9 +1061,11 @@ apply_bioclim <- function(x, axis) {
 #' }
 #' @export
 ifn_real_gradients <- function(ifn, indicateurs, climat, safran, ru_source = "euptf2",
-                               annees = NULL, interpolation = "bilineaire") {
+                               annees = NULL, interpolation = "bilineaire",
+                               exclude_cd_ref = NULL, abundance_weights = FALSE) {
   ind <- as.data.frame(indicateurs)
-  g <- compute_gradients(ifn, ind, climat)
+  g <- compute_gradients(ifn, ind, climat, exclude_cd_ref = exclude_cd_ref,
+                         abundance_weights = abundance_weights)
   ru <- ru_from_texture(ifn$placettes, ru_source = ru_source)
   g$ru_mm <- ru$ru_mm[match(g$id_placette, ru$id_placette)]
   g <- g[!is.na(g$grad_trophique), ]
@@ -1501,4 +1532,57 @@ geology_coverage <- function(geol, emprise, departements = character(0), tol = 0
                     100 * part, paste(departements, collapse = ", ")), call. = FALSE)
   }
   invisible(part)
+}
+
+#' Effectifs de la calibration : où se perdent les placettes
+#'
+#' Tableau de l'entonnoir de la mission 035, de toutes les lignes `PLACETTE` de la GRECO
+#' aux placettes d'apprentissage : chaque étape, son effectif, ce qui est perdu et la cause.
+#' Une chute brutale à l'étape « climat » signale une emprise SAFRAN trop petite (cause de
+#' l'effectif de 187 de la mission 018).
+#'
+#' @param ifn Résultat de [filter_releves()] (`placettes` avec `en_saison`, `retenu`).
+#' @param ifn_gradients Résultat de [ifn_real_gradients()] (`coarse_t_moy`).
+#' @param train Liste par gradient (`trophic`, `hydric`) des placettes d'apprentissage avant
+#'   la lithologie (climat complet).
+#' @param litho Résultat de [lithology_at_points()] (`NULL` : étape omise).
+#' @param final Placettes du modèle trophique final (avec lithologie ; `NULL` : omis).
+#' @return Un `data.frame` : `etape`, `n`, `perdues`, `cause`.
+#' @examples
+#' ifn <- filter_releves(load_ifn(system.file("extdata", package = "sylvostation")))
+#' calibration_counts(ifn, data.frame(coarse_t_moy = c(1, NA)), list(trophic = 1, hydric = 1))
+#' @export
+calibration_counts <- function(ifn, ifn_gradients, train, litho = NULL, final = NULL) {
+  pl <- sf::st_drop_geometry(ifn$placettes)
+  n <- function(x) if (is.data.frame(x)) nrow(x) else length(x)
+  e <- list(
+    list("lignes PLACETTE de la GRECO", nrow(pl), "une ligne par visite"),
+    list("avec relev\u00e9 ECOLOGIE", sum(!is.na(pl$DATEECO)),
+         "la 2e visite n'a ni \u00e9cologie ni flore"),
+    list("relev\u00e9 en saison", sum(pl$en_saison), "mois de relev\u00e9 hors de la saison"),
+    list("sans incident r\u00e9cent", sum(pl$retenu), "placette perturb\u00e9e (NINCID, INCID)"),
+    list("trophique calculable", nrow(ifn_gradients),
+         "aucune esp\u00e8ce \u00e0 valeur indicatrice apr\u00e8s filtrage de la flore"),
+    list("avec climat SAFRAN", sum(!is.na(ifn_gradients$coarse_t_moy)),
+         "hors de l'emprise SAFRAN lue (une emprise trop petite fait chuter cet effectif)"))
+  if (!is.null(litho)) {
+    e <- c(e, list(list("avec lithologie (disque couvert)", sum(!is.na(litho$coarse_litho_700m)),
+                        "disque de 700 m hors des d\u00e9partements BD Charm-50 lus")))
+  }
+  if (!is.null(final)) {
+    e <- c(e, list(list("apprentissage trophique", n(final),
+                        "climat, lithologie (et pH) requis")))
+  }
+  out <- data.frame(etape = vapply(e, `[[`, "", 1), n = vapply(e, `[[`, 0L, 2),
+                    stringsAsFactors = FALSE)
+  out$perdues <- c(NA_integer_, -diff(out$n))
+  out$cause <- vapply(e, `[[`, "", 3)
+  # branche hydrique : comparee a l'effectif avec climat (elle ne passe pas par la lithologie)
+  hyd <- n(train$hydric)
+  ncl <- out$n[out$etape == "avec climat SAFRAN"]
+  out <- rbind(out, data.frame(etape = "apprentissage hydrique", n = as.integer(hyd),
+                               perdues = as.integer(ncl - hyd),
+                               cause = "r\u00e9serve utile ou BILJOU manquant (branche hydrique)",
+                               stringsAsFactors = FALSE))
+  out
 }

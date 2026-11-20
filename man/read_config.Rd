@@ -26,7 +26,10 @@ défaut \code{resolution_m} ; provisoire, à vérifier, mission 027), \code{lida
 provisoires) : \code{solar_linke} (3), \code{solar_albedo} (0,2), \code{solar_step_h} (0,5),
 \code{hydric_pas_k} (0,02), \code{hydric_n_controle} (30), la descente d'échelle du climat
 (mission 033, provisoires) : \code{safran_interpolation} (\code{"bilineaire"} ou \code{"proche"}),
-\code{hydric_node_res_m} (1000), \code{ru_min_placettes} (5), \code{ifn_archive_url} et \code{taxref_url} (sans valeur
+\code{hydric_node_res_m} (1000), \code{ru_min_placettes} (5), la calibration sur la GRECO
+(mission 035, provisoires) : \code{litho_min_cover} (0,5), \code{litho_encoding_k} (10), \code{soilgrids_ph} (\code{TRUE}), \code{cv_block_m} (\code{NULL} : portée
+estimée de la réponse) et \code{cv_block_sensibilite_m} (8 358 m),
+\code{ifn_archive_url} et \code{taxref_url} (sans valeur
 par défaut : seule source, config.yml ; exigées en ligne), et les
 entrées optionnelles \code{gnss_path}, \code{reference_path}, \code{soil_paths}, \code{tichy_path}
 (\code{NULL} si absentes : jamais remplacées).

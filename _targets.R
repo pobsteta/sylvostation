@@ -396,14 +396,30 @@ if (!isTRUE(cfg$demo)) {
     # --- predicteurs, ancrages GBIF (en ligne), modeles ---------------------------------
     tar_target(soils, if (is.null(src$soils)) NULL else
       sylvostation::stack_soil_layers(src$soils, grid)),
+    # predicteurs a maille large : climat (SAFRAN) ; coarse_vars ne depend pas de la
+    # lithologie encodee (qui depend de l'apprentissage) : pas de cycle (mission 035)
+    tar_target(predictors_climat, sylvostation::coarse_predictors(climat, grid)),
+    tar_target(coarse_vars, intersect(names(predictors_climat), c("coarse_p_etp_sv", "coarse_t_moy"))),
+    # pH SoilGrids 0-5 cm (250 m, CC BY 4.0) moyenne dans 700 m : maille large. Hors ligne
+    # ou soilgrids_ph: false : absent (jamais remplace). Exactitude sur la France non evaluee.
+    tar_target(soilgrids_file, if (hors_ligne || !isTRUE(cfg$soilgrids_ph)) NULL else
+      sylvostation::fetch_soilgrids_ph(
+        sf::st_bbox(sf::st_union(c(sf::st_as_sfc(sf::st_bbox(ifn$placettes)),
+                                   sf::st_as_sfc(sf::st_bbox(emprise))))),
+        file.path(cache, "soilgrids"))),
+    tar_target(ph_layer, if (is.null(soilgrids_file)) NULL else
+      sylvostation::soilgrids_disk_mean(terra::rast(soilgrids_file), cfg$ifn_precision_m)),
     tar_target(predictors, {
-      p <- sylvostation::coarse_predictors(climat, grid)
+      out <- c(predictors_climat, litho_layer, formation_layer)
+      if (!is.null(ph_layer)) {
+        out <- c(out, terra::resample(terra::crop(ph_layer, terra::ext(grid) + 2000, snap = "out"),
+                                      grid, method = "bilinear"))
+      }
       fines <- setdiff(names(terrain), sylvostation::empty_layers(terrain))
-      out <- c(p, terrain[[fines]])
+      out <- c(out, terrain[[fines]])
       if (!is.null(soils)) out <- c(out, soils)
       out
     }),
-    tar_target(coarse_vars, intersect(names(predictors), c("coarse_p_etp_sv", "coarse_t_moy"))),
     tar_target(anchors, if (hors_ligne) NULL else {
       occ <- sylvostation::get_gbif(emprise, method = if (cfg$gbif_method == "download" && gbif_ok())
         "download" else "search", path = file.path(cache, "gbif"))
@@ -412,18 +428,85 @@ if (!isTRUE(cfg$demo)) {
       sylvostation::gbif_anchors(sylvostation::grid_bioindication(cl, indicateurs_noms), cl,
                                  predictors)
     }),
-    tar_target(train, stats::setNames(lapply(grad_reg, function(g) {
+    # lithologie dominante dans 700 m aux placettes (mission 035) : BD Charm-50 de tous les
+    # departements de la GRECO lus ; disque a moins de litho_min_cover couvert = pas de
+    # lithologie (placette retiree et comptee, jamais completee)
+    tar_target(geol_placettes, sylvostation::read_geology(
+      if (hors_ligne) src$geol$paths else
+        vapply(src$geol$urls, sylvostation::fetch_cached, "", dir = file.path(cache, "bdcharm")),
+      emprise = sf::st_bbox(sf::st_buffer(sf::st_as_sfc(sf::st_bbox(ifn_gradients)),
+                                          cfg$ifn_precision_m + 1000)))),
+    tar_target(geol_classes_placettes, suppressWarnings(
+      sylvostation::recode_lithology(sylvostation::list_formations(geol_placettes)))),
+    tar_target(litho_placettes, sylvostation::lithology_at_points(
+      ifn_gradients[, c("id_placette", "source", "loc_precision_m")], geol_placettes,
+      geol_classes_placettes,
+      radius = cfg$ifn_precision_m, min_cover = cfg$litho_min_cover)),
+    tar_target(train_climat, stats::setNames(lapply(grad_reg, function(g) {
       d <- ifn_gradients[!is.na(ifn_gradients[[g]]), ]
       d[stats::complete.cases(sf::st_drop_geometry(d)[, coarse_vars, drop = FALSE]), ]
     }), grad_reg)),
+    # trophique : lithologie (classe) et formation dominantes dans 700 m, encodees par le
+    # trophique moyen retreci, hors pli pour l'apprentissage ; les encodages complets servent
+    # a la carte (couches litho_layer et formation_layer)
+    tar_target(trophic_enc, {
+      d <- train_climat$trophic
+      i <- match(d$id_placette, litho_placettes$id_placette)
+      d$coarse_litho_700m <- litho_placettes$coarse_litho_700m[i]
+      d$coarse_formation_700m <- litho_placettes$coarse_formation_700m[i]
+      if (!is.null(ph_layer)) {
+        ph <- sylvostation::raster_at_points(d[, c("id_placette", "source", "loc_precision_m")], ph_layer)
+        d$coarse_ph_soilgrids_700m <- ph$coarse_ph_soilgrids_700m[match(d$id_placette, ph$id_placette)]
+        d <- d[!is.na(d$coarse_ph_soilgrids_700m), ]
+      }
+      # classe (12 niveaux, des centaines de placettes par niveau) : encodage avec toute la partie
+      # d'apprentissage (R2 par blocs 0,15 contre 0,09 hors pli) ; formation (centaines de
+      # niveaux, certains rares) : hors pli, qui limite le surapprentissage (mission 035)
+      e1 <- sylvostation::encode_by_blocks(d, "trophic", "coarse_litho_700m", "coarse_litho_enc",
+                                           k = cfg$litho_encoding_k, oof = FALSE,
+                                           block_size = cfg$cv_block_m)
+      e2 <- sylvostation::encode_by_blocks(e1$data, "trophic", "coarse_formation_700m",
+                                           "coarse_formation_enc", k = cfg$litho_encoding_k,
+                                           block_size = cfg$cv_block_m)
+      list(data = e2$data, encoding = e1$encoding, encoding_formation = e2$encoding,
+           retirees = e1$retirees)
+    }),
+    tar_target(litho_layer, sylvostation::lithology_encoded_layer(geol_dom, trophic_enc$encoding)),
+    tar_target(formation_layer, sylvostation::formation_encoded_layer(
+      geol_sf, grid, trophic_enc$encoding_formation, radius = cfg$ifn_precision_m)),
+    tar_target(train, list(trophic = trophic_enc$data, hydric = train_climat$hydric)),
+    tar_target(vars_modele, list(
+      trophic = c(coarse_vars, "coarse_litho_enc", "coarse_formation_enc",
+                  if (!is.null(ph_layer)) "coarse_ph_soilgrids_700m"),
+      hydric = coarse_vars)),
+    tar_target(calibration_effectifs, sylvostation::calibration_counts(
+      ifn, ifn_gradients, train_climat, litho_placettes, trophic_enc$data)),
     tar_target(models, stats::setNames(lapply(grad_reg, function(g) {
-      sylvostation::fit_gradient(train[[g]], g, coarse_vars, points_source = "ifn",
+      sylvostation::fit_gradient(train[[g]], g, vars_modele[[g]], points_source = "ifn",
                                  ifn_precision_m = cfg$ifn_precision_m, num_trees = 500, seed = 1)
     }), grad_reg)),
+    # CV : l'encodage est refait dans chaque pli (reponse du pli de test jamais utilisee)
     tar_target(cvs, stats::setNames(lapply(grad_reg, function(g) {
-      sylvostation::spatial_cv(train[[g]], g, coarse_vars, k = 5, points_source = "ifn",
-                               ifn_precision_m = cfg$ifn_precision_m, num_trees = 500, seed = 1)
+      sylvostation::spatial_cv(train[[g]], g, vars_modele[[g]], k = 5, points_source = "ifn",
+                               block_size = cfg$cv_block_m,
+                               ifn_precision_m = cfg$ifn_precision_m, num_trees = 500, seed = 1,
+                               encode = if (g == "trophic") list(
+                                 list(var = "coarse_litho_700m", name = "coarse_litho_enc",
+                                      k = cfg$litho_encoding_k, oof = FALSE),
+                                 list(var = "coarse_formation_700m", name = "coarse_formation_enc",
+                                      k = cfg$litho_encoding_k, oof = TRUE)))
     }), grad_reg)),
+    # sensibilite : meme validation croisee du trophique avec des blocs de cv_block_sensibilite_m
+    # (8 358 m par defaut) ; publiee a cote du chiffre principal (blocs de cv_block_m)
+    # (NULL si le jeu est trop petit pour 5 plis de cette taille, par exemple en mode hors ligne)
+    tar_target(cv_sensibilite, tryCatch(sylvostation::spatial_cv(
+      train$trophic, "trophic", vars_modele$trophic, k = 5, points_source = "ifn",
+      block_size = cfg$cv_block_sensibilite_m, ifn_precision_m = cfg$ifn_precision_m,
+      num_trees = 500, seed = 1,
+      encode = list(
+        list(var = "coarse_litho_700m", name = "coarse_litho_enc", k = cfg$litho_encoding_k, oof = FALSE),
+        list(var = "coarse_formation_700m", name = "coarse_formation_enc", k = cfg$litho_encoding_k,
+             oof = TRUE))), error = function(e) NULL)),
     # composante locale (en ligne seulement) : trophique sur les ancrages GBIF
     tar_target(local_trophic, {
       if (is.null(anchors)) return(NULL)
@@ -527,6 +610,11 @@ if (!isTRUE(cfg$demo)) {
     # --- validation ---------------------------------------------------------------------
     tar_target(val_stats, {
       v <- sylvostation::validate_stats(cvs)
+      if (!is.null(cv_sensibilite)) {
+        s <- sylvostation::validate_stats(list(trophic = cv_sensibilite))
+        s$gradient <- "trophic (sensibilit\u00e9 : blocs de taille fixe)"
+        v <- rbind(v, s)
+      }
       if (!is.null(local_trophic)) {
         l <- sylvostation::validate_stats(list(trophic = local_trophic$cv))
         l$gradient <- "trophic (local, ancrages GBIF)"
@@ -574,7 +662,11 @@ if (!isTRUE(cfg$demo)) {
                    validation_stats = val_stats,
                    fusions_types = attr(merged, "merges"),
                    taxons_non_apparies = attr(indicateurs, "non_apparies"),
-                   geologie_dominante = terra::freq(geol_dom))
+                   geologie_dominante = terra::freq(geol_dom),
+                   effectifs_calibration = calibration_effectifs,
+                   encodage_lithologie = trophic_enc$encoding,
+                   encodage_formations = trophic_enc$encoding_formation,
+                   formations_non_classees = attr(litho_placettes, "formations_non_classees"))
       if (!is.null(gnss_validation)) tabs$validation_gnss <- gnss_validation
       if (!is.null(comparison_table)) {
         tabs$comparaison_gradients <- comparison_table

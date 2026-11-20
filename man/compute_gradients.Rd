@@ -9,7 +9,9 @@ compute_gradients(
   indicateurs = NULL,
   climat = NULL,
   ru_table = ru_coefficients(),
-  min_res_ifn_m = 1000
+  min_res_ifn_m = 1000,
+  exclude_cd_ref = NULL,
+  abundance_weights = FALSE
 )
 }
 \arguments{
@@ -30,6 +32,15 @@ si \code{verifie} est vrai et si \code{correspondance_verifiee} n'est pas faux ;
 
 \item{min_res_ifn_m}{Maille minimale (m) d'une couche croisée avec des placettes
 IFN : 1000 (brief technique, étape 5 : climat et pH agrégés à 1 km).}
+
+\item{exclude_cd_ref}{\code{NULL} ou vecteur de \code{CD_REF} (TAXREF v13) \strong{exclus} de l'indice
+trophique, par exemple les essences arborées (\code{\link[=read_tree_cd_ref]{read_tree_cd_ref()}}) : l'indice ne
+décrit alors plus le peuplement (mission 035, ADR 0008). \code{NULL} : aucune exclusion
+(comportement historique).}
+
+\item{abundance_weights}{\code{TRUE} : moyenne des valeurs indicatrices pondérée par
+l'abondance-dominance \code{ABOND} (classes 1 à 5, milieux de classes 2,5 ; 15 ; 37,5 ; 62,5 ;
+87,5 \% : \strong{à vérifier}) ; \code{FALSE} : moyenne simple (historique).}
 }
 \value{
 Un \code{sf} (Lambert-93) : \code{id_placette}, \code{CAMPAGNE}, \code{IDP}, \code{source},

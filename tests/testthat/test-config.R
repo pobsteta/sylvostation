@@ -94,6 +94,28 @@ test_that("cles de la descente d'echelle du climat (mission 033) : defauts et co
   expect_identical(cf$ru_min_placettes, 5L)
 })
 
+test_that("cles de la calibration GRECO (mission 035) : defauts et controles", {
+  cfg <- read_config(ecrire_config())
+  expect_equal(cfg$litho_min_cover, 0.5)
+  expect_equal(cfg$litho_encoding_k, 10)
+  expect_true(cfg$soilgrids_ph)
+  expect_null(cfg$cv_block_m)                      # portee estimee par defaut
+  expect_equal(cfg$cv_block_sensibilite_m, 8358)
+  expect_equal(read_config(ecrire_config(list(cv_block_m = 8358)))$cv_block_m, 8358)
+  expect_error(read_config(ecrire_config(list(cv_block_m = -5))), "cv_block_m")
+  expect_error(read_config(ecrire_config(list(cv_block_sensibilite_m = "a"))), "cv_block_sensibilite_m")
+  expect_false(read_config(ecrire_config(list(soilgrids_ph = FALSE)))$soilgrids_ph)
+  expect_error(read_config(ecrire_config(list(soilgrids_ph = "oui"))), "soilgrids_ph")
+  expect_equal(read_config(ecrire_config(list(litho_min_cover = 0.8)))$litho_min_cover, 0.8)
+  expect_error(read_config(ecrire_config(list(litho_min_cover = 1.5))), "litho_min_cover")
+  expect_error(read_config(ecrire_config(list(litho_encoding_k = -1))), "litho_encoding_k")
+  f <- testthat::test_path("..", "..", "config.yml")
+  skip_if_not(file.exists(f), "config.yml absent du paquet installe")
+  expect_null(read_config(f)$cv_block_m)
+  expect_identical(read_config(f)$bdcharm_departements,
+                   c("054", "057", "067", "068", "070", "088", "090"))
+})
+
 test_that("config.yml du depot : grille de 20 m (mission 025, ADR 0007)", {
   f <- testthat::test_path("..", "..", "config.yml")
   skip_if_not(file.exists(f))

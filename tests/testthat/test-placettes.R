@@ -265,3 +265,49 @@ test_that("réserve utile : OBSPEDO R -> 0, texture H -> NA ; table provisoire n
   expect_equal(g$ru_mm[3], 70)
   expect_false(attr(g, "ru_verifie"))
 })
+
+# --- indice trophique sans essences, pondere par l'abondance (mission 035) ---------------
+test_that("compute_gradients : exclure des taxons (essences) retire leur contribution", {
+  ifn <- make_synth_ifn()
+  base <- compute_gradients(ifn, make_synth_indic())
+  g <- compute_gradients(ifn, make_synth_indic(), exclude_cd_ref = 10)
+  i <- function(x, id) which(x$id_placette == id)
+  # placette 1 : cd_ref 20 (ph 6, azote 4) et 40 (ph 5, azote 5) restent
+  expect_equal(g$grad_ph[i(g, "2020_1")], 5.5)
+  expect_equal(g$grad_azote[i(g, "2020_1")], 4.5)
+  expect_equal(g$grad_trophique[i(g, "2020_1")], 5)
+  expect_equal(g$n_taxa_indic[i(g, "2020_1")], 2L)
+  # placette 5 : seul cd_ref 10 -> plus aucune espece, trophique NA (jamais invente)
+  expect_true(is.na(g$grad_trophique[i(g, "2020_5")]))
+  # defaut inchange : avec 10, la placette 5 a un trophique
+  expect_false(is.na(base$grad_trophique[i(base, "2020_5")]))
+  expect_equal(base$grad_ph[i(base, "2020_1")], mean(c(4, 6, 5)))
+  # un taxon exclu n'est pas liste comme non apparie
+  expect_error(compute_gradients(ifn, make_synth_indic(), exclude_cd_ref = "10"), "exclude_cd_ref")
+})
+
+test_that("compute_gradients : moyenne ponderee par l'abondance (classes ABOND 1 a 5)", {
+  ifn <- make_synth_ifn()
+  ifn$flore$ABOND <- c(1, 1, 1, 5, 1, 1, 1, 1, 1)    # placette 1 : 10 -> 1, 20 -> 5, 40 -> 1
+  ifn$flore$ABOND[1] <- 1
+  g <- compute_gradients(ifn, make_synth_indic(), abundance_weights = TRUE)
+  ph1 <- (4 * 2.5 + 6 * 87.5 + 5 * 2.5) / (2.5 + 87.5 + 2.5)
+  expect_equal(g$grad_ph[g$id_placette == "2020_1"], ph1)
+  # poids tous egaux : retrouve la moyenne simple
+  ifn$flore$ABOND <- 3
+  g3 <- compute_gradients(ifn, make_synth_indic(), abundance_weights = TRUE)
+  expect_equal(g3$grad_trophique, compute_gradients(ifn, make_synth_indic())$grad_trophique)
+  expect_error(compute_gradients(ifn, make_synth_indic(), abundance_weights = NA), "abundance_weights")
+})
+
+test_that("read_tree_cd_ref : table des essences de l'IFN, CD_REF numeriques", {
+  v <- read_tree_cd_ref(system.file("extdata", package = "sylvostation"))
+  expect_true(is.numeric(v))
+  expect_false(is.unsorted(v))
+  expect_equal(length(v), length(unique(v)))
+  expect_true(79319 %in% v)    # Abies alba (Sapin pectine), espar 61
+  expect_error(read_tree_cd_ref(tempfile()), "introuvable")
+  d <- tempfile()
+  dir.create(d)
+  expect_error(read_tree_cd_ref(d), "introuvable")
+})

@@ -202,3 +202,111 @@ test_that("check_geol_joins sur l'extrait réel repère les contacts 67/68", {
   d <- r[r$champ == "dep", ]
   expect_true(all(c("067", "068") %in% c(d$groupe_a, d$groupe_b)))
 })
+
+# --- lithology_at_points (mission 035) -----------------------------------------------
+pt_sf <- function(x, y, id = "p", ifn = FALSE) {
+  p <- sf::st_sf(id_placette = id, geometry = sf::st_sfc(sf::st_point(c(x, y)), crs = 2154))
+  if (ifn) mark_ifn(p) else { p$loc_precision_m <- 10; p }   # point precis (10 m) hors IFN
+}
+tab_synth <- data.frame(notation = c("a", "b"), classe = c("granite", "gres"))
+
+test_that("lithology_at_points : un point connu tombe dans la bonne classe (Lambert-93, x = est)", {
+  g <- synth_geol()
+  # carre A : x 1000000-1000500 (granite) ; carre B : x 1000500-1001000 (gres)
+  expect_equal(lithology_at_points(pt_sf(1000100, 6800250), g, tab_synth, radius = 100)$coarse_litho_700m,
+               "granite")
+  expect_equal(lithology_at_points(pt_sf(1000900, 6800250), g, tab_synth, radius = 100)$coarse_litho_700m,
+               "gres")
+  # x et y inverses : refus (coordonnees implausibles en Lambert-93), jamais un resultat
+  expect_error(lithology_at_points(pt_sf(6800250, 1000100), g, tab_synth, radius = 100))
+})
+
+test_that("lithology_at_points : classe modale par surface, couverture et seuil", {
+  g <- synth_geol()
+  # disque de 300 m centre en x = 1000400 : 2/3 environ cote A (granite)
+  r <- lithology_at_points(pt_sf(1000400, 6800250), g, tab_synth, radius = 300)
+  expect_equal(r$coarse_litho_700m, "granite")
+  expect_gt(r$litho_part_dominante, 0.5)
+  expect_lte(r$litho_couverture, 1)
+  # point hors de toute geologie : pas de classe, couverture nulle
+  h <- lithology_at_points(pt_sf(1005000, 6805000), g, tab_synth, radius = 300)
+  expect_true(is.na(h$coarse_litho_700m))
+  expect_equal(h$litho_couverture, 0)
+  # disque a moins de la moitie couvert : NA ; avec min_cover = 0 : une classe
+  c1 <- lithology_at_points(pt_sf(1000250, 6800250), g, tab_synth, radius = 700)
+  expect_lt(c1$litho_couverture, 0.5)
+  expect_true(is.na(c1$coarse_litho_700m))
+  c0 <- lithology_at_points(pt_sf(1000250, 6800250), g, tab_synth, radius = 700, min_cover = 0)
+  expect_false(is.na(c0$coarse_litho_700m))
+})
+
+test_that("lithology_at_points : notation sans classe -> non_classe, listee ; jamais par defaut", {
+  g <- synth_geol()
+  r <- lithology_at_points(pt_sf(1000900, 6800250), g, tab_synth[1, ], radius = 100)
+  expect_equal(r$coarse_litho_700m, "non_classe")
+  f <- attr(r, "formations_non_classees")
+  expect_equal(f$notation, "b")
+  expect_equal(f$n_points, 1L)
+  expect_gt(f$surface_km2, 0)
+  expect_equal(nrow(attr(lithology_at_points(pt_sf(1000100, 6800250), g, tab_synth, radius = 100),
+                         "formations_non_classees")), 0)
+})
+
+test_that("lithology_at_points : la regle des 700 m bloque un rayon inferieur a la precision IFN", {
+  g <- synth_geol()
+  p <- pt_sf(1000250, 6800250, ifn = TRUE)
+  expect_error(lithology_at_points(p, g, tab_synth, radius = 100), "précision|fine")
+  expect_error(lithology_at_points(p, g, tab_synth, radius = 699), "précision")
+  expect_error(lithology_at_points(p, g, tab_synth, radius = 700, min_cover = 0), NA)
+  # placette IFN dont loc_precision_m a ete retire ou vaut NA : au moins 700 m s'applique,
+  # un rayon de 50 m est refuse (jamais un contournement par colonne absente)
+  q <- p
+  q$loc_precision_m <- NULL
+  expect_error(lithology_at_points(q, g, tab_synth, radius = 50, min_cover = 0), "pr\u00e9cision")
+  expect_error(suppressWarnings(lithology_at_points(q, g, tab_synth, radius = 700, min_cover = 0)), NA)
+  q2 <- p
+  q2$loc_precision_m <- NA_real_
+  expect_error(lithology_at_points(q2, g, tab_synth, radius = 50, min_cover = 0), "pr\u00e9cision")
+  # hors IFN : precision absente ou NA refusee
+  n1 <- pt_sf(1000250, 6800250)
+  n1$loc_precision_m <- NULL
+  expect_error(lithology_at_points(n1, g, tab_synth, radius = 700), "loc_precision_m")
+  n2 <- pt_sf(1000250, 6800250)
+  n2$loc_precision_m <- NA_real_
+  expect_error(lithology_at_points(n2, g, tab_synth, radius = 700), "loc_precision_m")
+  # validations
+  expect_error(lithology_at_points(p, g, tab_synth, radius = -1), "radius")
+  expect_error(lithology_at_points(p, g, tab_synth, min_cover = 2), "min_cover")
+  expect_error(lithology_at_points(p, g, data.frame(a = 1)), "table")
+  expect_error(lithology_at_points(sf::st_transform(p, 4326), g, tab_synth), "2154|Syst")
+  expect_error(lithology_at_points(data.frame(a = 1), g, tab_synth), "sf")
+})
+
+test_that("lithology_encoded_layer : chaque classe prend sa valeur encodee, NA reste NA", {
+  r <- terra::rast(nrows = 2, ncols = 3, xmin = 1000000, xmax = 1000300, ymin = 6800000,
+                   ymax = 6800200, crs = "EPSG:2154")
+  terra::values(r) <- c(1, 2, 1, 2, 3, NA)
+  levels(r) <- data.frame(id = 1:3, classe = c("granite", "gres", "loess"))
+  e <- target_encoding(c("granite", "granite", "gres"), c(5, 5, 3), k = 0)
+  o <- lithology_encoded_layer(r, e)
+  expect_identical(names(o), "coarse_litho_enc")
+  expect_equal(terra::values(o, mat = FALSE), c(5, 3, 5, 3, attr(e, "generale"), NA))
+  expect_error(lithology_encoded_layer(1, e), "SpatRaster")
+  expect_error(lithology_encoded_layer(terra::rast(r, vals = 1), e), "cat")
+})
+
+test_that("formation_encoded_layer : valeur de la formation dominante, a la maille de 100 m puis sur la grille", {
+  g <- synth_geol()   # A : x 1000000-1000500, B : x 1000500-1001000 ; NOTATION a et b
+  grid <- terra::rast(xmin = 1000000, xmax = 1001000, ymin = 6800000, ymax = 6800500,
+                      resolution = 50, crs = "EPSG:2154")
+  e <- target_encoding(c("a", "a", "b", "b"), c(2, 2, 8, 8), k = 0)
+  r <- formation_encoded_layer(g, grid, e, radius = 700, res = 100)
+  expect_identical(names(r), "coarse_formation_enc")
+  expect_equal(terra::res(r), c(50, 50))
+  v <- function(x, y) terra::extract(r, cbind(x, y))[[1]]     # x = est, y = nord
+  # rayon 700 m : toutes les cellules voient les deux carres ; la modale depend de la position
+  expect_equal(v(1000050, 6800250), 2)    # extremite ouest : A domine
+  expect_equal(v(1000950, 6800250), 8)    # extremite est : B domine
+  expect_error(formation_encoded_layer(g, grid, e, res = 75), "multiple")
+  expect_error(formation_encoded_layer(g[, "dep"], grid, e), "NOTATION")
+})

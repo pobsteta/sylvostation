@@ -19,7 +19,7 @@ Le dossier des CSV, à passer à \code{\link[=load_ifn]{load_ifn()}}.
 \description{
 Archive \code{export_dataifn_*.zip} (docs/referentiels.md § 7, Licence Ouverte 2.0),
 mise en cache, puis extraction de \code{PLACETTE.csv}, \code{ECOLOGIE.csv}, \code{FLORE.csv} et
-\code{ARBRE.csv} dans \code{cache_dir/ifn}.
+\code{ARBRE.csv}, ainsi que \code{espar-cdref13.csv} (essences et leur \code{CD_REF}), dans \code{cache_dir/ifn}.
 }
 \examples{
 \dontrun{
