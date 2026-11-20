@@ -1939,16 +1939,33 @@ leurs décomptes (ex. 10.4 : 59 dans la liste) : c'est l'ordre qui les départag
 t3BG et j1b (`calcaire`), rE-F (`gres`), d-h2(1) (`conglomerat`). Leurs lignes portent aussi
 « Pascal 2026-11-20 ».
 
-**Limite : la décision porte sur la classe de la formation, pas de chaque description.** Une formation est
-classée sur la description de son plus grand polygone. Pour 8 variantes départementales non dominantes
-(9 variantes avec `rD` en 90, conforme à la décision), la règle actuelle donne une autre classe que celle décidée ; ces
-variantes ne sont lues que si leur département devient dominant dans l'emprise :
-l3b en 54 (règle : `calcaire`, décidé `marne_argile`) ; j3a en 57, j4 en 67, j2a-b en 67 et en 68, l2-3 en 90
-(règle : `marne_argile`, décidé `calcaire`) ; **e en 70** (règle : `conglomerat`, décidé `calcaire` ; les
-variantes 68 et 90 donnent `calcaire`) ; d7 en 70 (règle : `non_classe`, décidé `schiste_grauwacke`). Sur
-l'emprise de la carte (`geol_sf`, 068 seule), j2a-b y est donc `marne_argile` par la règle, comme avant la
-mission 040 ; `e` y est `calcaire`. **À trancher par Pascal** (aucune de ces variantes n'a été imposée) :
-imposer la classe décidée par une ligne `table` limitée au département, ou laisser la règle décider.
+**Limite, tranchée par Pascal le 2026-11-20 : la classe est celle de la formation, pas de chaque
+description.** Une formation est classée sur la description de son plus grand polygone, et cette classe vaut
+pour tous ses polygones, quel que soit le département. Le principe de Pascal (« on applique le premier terme de
+chaque description ») s'applique donc à la **description dominante** de chaque formation : la règle décide,
+sans ligne ajoutée, pour l3b (54), j3a (54), j4 (90) et l2-3 (54). Aucune ligne `table` n'est ajoutée pour les
+variantes non dominantes (codage par NOTATION seule gardé).
+
+Variantes non dominantes dont la propre description donnerait une autre classe que celle de la formation
+(surface sur chaque emprise ; classe de la formation -> classe que donnerait la description de la variante) :
+
+| Formation | Dép. | `geol_sf` (carte, 067/068/088) | `geol_placettes` | Formation -> variante |
+|---|---|---|---|---|
+| j2a-b | 67 | absente | 8,37 km² | `calcaire` -> `marne_argile` |
+| j2a-b | 68 | absente | 0,62 km² | `calcaire` -> `marne_argile` |
+| j3a | 57 | absente | 5,31 km² | `calcaire` -> `marne_argile` |
+| j4 | 67 | absente | 0,13 km² | `calcaire` -> `marne_argile` |
+| l2-3 | 90 | absente | 0,05 km² | `calcaire` -> `marne_argile` |
+| l3b | 57 | absente | 23,72 km² | `calcaire` -> `marne_argile` |
+| l3b | 88 | absente | 17,98 km² | `calcaire` -> `marne_argile` |
+| e | 70 | absente | 0,01 km² | `calcaire` -> `conglomerat` |
+| d7 | 70 | absente | 0,22 km² | `schiste_grauwacke` -> `non_classe` |
+
+Total : 56,4 km² sur `geol_placettes` (dont l3b en 57 et 88 : 41,7 km²), aucune sur `geol_sf`. Sur la carte,
+seule `e` est présente (068, 0,05 km², dominante, `calcaire`) ; j2a-b n'y figure pas. Les autres variantes non
+dominantes (`rD` en 90, `e` en 68 et en 90, etc.) donnent déjà la classe décidée. Un codage par notation et
+département (une classe par couple) lèverait cette limite ; il changerait la clé de jointure de tout le
+pipeline et demanderait une ADR.
 
 Historique : les 42 candidates et ce qu'elles donneraient (avant décision).
 
