@@ -80,7 +80,7 @@
 "Fz3V","7","Alluvions récentes des rivières Vosgiennes FzV (Holocène)",1,0.076,"alluvions","regle",FALSE
 "F","19","Alluvions anciennes d'âge indéterminé, cailloutis  (Pléistocène)",1,0.0583,"alluvions","regle",FALSE
 "I3a","107","Marnes à Zeill. Numismalis et Calc. à Davoei (Pliensbachien inférieur)",2,0.0551,"marne_argile","regle",FALSE
-"e","77","Eocène indifférencié calcaire lacustre, parfois bréchiques et grains sidérolithique (Eocène)",1,0.0497,"calcaire","gele",FALSE
+"e","77","Eocène indifférencié calcaire lacustre, parfois bréchiques et grains sidérolithique (Eocène)",1,0.0497,"calcaire","regle",FALSE
 "FJ","25","Cônes de déjection indivisés (Pléistocène à Holocène)",2,0.0448,"alluvions","regle",FALSE
 "j2bB","95","Marnes et calcaires à T. blagdeni et S. humphriesianum.  (Bajocien moyen)",1,0.0354,"marne_argile","regle",FALSE
 "FJG","26","Cône de déjection remaniant du matériel glaciaire (Pléistocène à Holocène)",2,0.0348,"alluvions","regle",FALSE

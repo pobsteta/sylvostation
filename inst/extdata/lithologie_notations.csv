@@ -15,15 +15,22 @@
 "d4-5vs","88","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",
 "d5-6Ph","67","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",
 "d5br(ö-q)","67","volcanite","regle","10.4","basse","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
+"d5br(ö)","67","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
 "d5brsâ","67/88","roche_basique","regle","10.5","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",
 "d5gM","88","schiste_grauwacke","regle","10.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",
 "d5îìa","67","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "d5îìq","67","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",
 "d5öq","67/88","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",
+"d7","70/90","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"döq","54","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"dS","54","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"dW","67","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"e","68/70/90","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
 "ë1-2","70","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "ë3","70","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "ëô","70","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",
 "ëô(1)","70","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",
+"FJw-x","88","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
 "FJx-y","68/88","alluvions","regle","9.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "FJy-z","67/68/88","alluvions","regle","9.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "fm","67/68/70/88","non_classe","laisse","NA","moyenne","BD Charm-50 (BRGM)","non","",
@@ -31,11 +38,14 @@
 "Fp-v","67","alluvions","regle","9.1","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "Fv","54/57/88","alluvions","table","NA","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "FzI","67/68","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
+"g1-2","68","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
 "g1P","67","marne_argile","regle","11.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88 ; lithologie à vérifier","oui","",
 "g1Sp","67/68","marne_argile","regle","11.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88 ; lithologie à vérifier","oui","",
+"g2CD","68","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
 "GLx-y","88","glaciaire","regle","9.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "GLy","88","glaciaire","regle","9.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "GP","54/90","colluvions_eboulis","regle","9.2","moyenne","BD Charm-50 (BRGM) ; recherche web : grouine = équivalent des grèzes (source non ouverte : à vérifier)","non","",
+"GPx-y","88","colluvions_eboulis","regle","9.2","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
 "h2","67/70","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",
 "h2-3ã3Sn","88","granite","regle","10.6","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",
 "h2-3LãER","88","granite","regle","10.6","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","oui","",
@@ -82,6 +92,7 @@
 "h2Gó3(1)","90","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",
 "h2Góá","90","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",
 "h2Göâ","90","volcanite","regle","10.4","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
+"h2goO","68","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
 "h2GPi","90","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",
 "h2GPm","90","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",
 "h2GPs","90","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",
@@ -127,8 +138,28 @@
 "Hydro","88","non_classe","laisse","NA","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",
 "îë","67","plutonite_intermediaire","regle","10.3","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",
 "j1","67/68/90","marne_argile","table","NA","basse","BD Charm-50 (BRGM) ; à vérifier","oui","",
+"j2a-b","54/57/67/68/88/90","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j2c2","88","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j2OM","70","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j3-4","70","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j3a","54/57/88","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j3aC","57","marne_argile","regle","11.2","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j4","67/90","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j5a1","54","marne_argile","regle","11.2","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j5c","90","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j5cC","90","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j5CH","70","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j6a","70","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j6a-c","90","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j6aC","90","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"j7","70","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
 "JA","68","colluvions_eboulis","regle","9.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "JAy-z","88","colluvions_eboulis","regle","9.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
+"l2-3","54/70/88/90","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"l3a1","88","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"l3b","54/57/88","marne_argile","regle","11.2","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"l3b-c","70","calcaire","regle","10.9","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
+"l3c","57","marne_argile","regle","11.2","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
 "LGy","68","glaciaire","regle","9.3","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "Lz","88","non_classe","laisse","NA","moyenne","BD Charm-50 (BRGM)","non","",
 "my","68","non_classe","laisse","NA","moyenne","BD Charm-50 (BRGM)","non","",
@@ -136,6 +167,7 @@
 "o-sC","67","schiste_grauwacke","regle","10.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "o-sCë","67","schiste_grauwacke","regle","10.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "o-sN","67/88","schiste_grauwacke","regle","10.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
+"o-sÕ","88","schiste_grauwacke","regle","10.2","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
 "P","67","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "Pv","67","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
 "Pw","67/68","alluvions","regle","9.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
@@ -146,7 +178,9 @@
 "r2öá","88","volcanite","regle","10.4","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",
 "r3bF","88","calcaire","table","NA","basse","BD Charm-50 (BRGM)","non","",
 "rB","70/90","schiste_grauwacke","table","NA","basse","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui","",
+"rD","70/90","gres","regle","13","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
 "rE","70","schiste_grauwacke","regle","10.1","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","oui","",
+"t2a","57","gres","regle","2","moyenne","BD Charm-50 (BRGM) ; candidate de la mission 040, acceptée par Pascal","Pascal 2026-11-20","",
 "t3C-D","67/68","calcaire","table","NA","basse","BD Charm-50 (BRGM) ; à vérifier (notice non lue)","non","",
 "t3T","67","calcaire","regle","12.1","moyenne","BD Charm-50 (BRGM) ; recherche web (source non ouverte : à vérifier)","non","",
 "t4a-b","57/88","marne_argile","regle","11.2","moyenne","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.88","non","",
@@ -155,45 +189,11 @@
 "Tx-y","88","non_classe","laisse","NA","moyenne","BD Charm-50 (BRGM)","non","",
 "Ûâ","67","roche_basique","regle","10.5","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.89","non","",
 "X","54/57/67/68/70/88/90","non_classe","laisse","NA","haute","BD Charm-50 (BRGM) ; Piedallu 2006 annexe 1 p.87","non","",
-"d-h2(1)","70","conglomerat","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","non_classe",0.041
-"d5br(ö)","67","non_classe","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","volcanite",0.875
-"d7","70/90","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","schiste_grauwacke",8.336
-"döq","54","non_classe","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","volcanite",0.008
-"dS","54","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","schiste_grauwacke",0.015
-"dW","67","non_classe","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","schiste_grauwacke",0.253
-"e","68/70/90","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",1.599
-"FJw-x","88","non_classe","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","alluvions",0.525
-"g1-2","68","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",0.108
-"g2CD","68","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",0.061
-"GPx-y","88","glaciaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","colluvions_eboulis",3.556
-"h2goO","68","non_classe","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","schiste_grauwacke",0.935
-"j1b","67/68","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",14.366
-"j2a-b","54/57/67/68/88/90","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",271.771
-"j2c2","88","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",29.362
-"j2OM","70","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",46.203
-"j3-4","70","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",9.406
-"j3a","54/57/88","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",141.506
-"j3aC","57","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",0.883
-"j4","67/90","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",2.941
-"j5a1","54","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",4.847
-"j5c","90","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",2.987
-"j5cC","90","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",13.024
-"j5CH","70","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",26.795
-"j6a","70","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",11.819
-"j6a-c","90","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",0.852
-"j6aC","90","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",0.083
-"j7","70","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",3.641
-"l2-3","54/70/88/90","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",72.495
-"l3a1","88","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",14.165
-"l3b","54/57/88","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",82.006
-"l3b-c","70","marne_argile","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",27.672
-"l3c","57","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",10.042
-"o-sÕ","88","non_classe","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","schiste_grauwacke",0.17
-"rD","70/90","conglomerat","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","gres",23.813
-"rE-F","70","gres","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","schiste_grauwacke",0.922
-"t2a","57","conglomerat","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","gres",160.476
-"t3B","67","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",2.961
-"t3BG","67","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",22.851
-"t3CMT","67","gres","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","calcaire",39.441
-"t4b-c","57/88","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",34.95
-"t4c","57/70/88","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","non","marne_argile",24.211
+"d-h2(1)","70","conglomerat","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","Pascal 2026-11-20","non_classe",0.041
+"j1b","67/68","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","Pascal 2026-11-20","marne_argile",14.366
+"rE-F","70","gres","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","Pascal 2026-11-20","schiste_grauwacke",0.922
+"t3B","67","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","Pascal 2026-11-20","marne_argile",2.961
+"t3BG","67","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","Pascal 2026-11-20","marne_argile",22.851
+"t3CMT","67","gres","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","Pascal 2026-11-20","calcaire",39.441
+"t4b-c","57/88","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","Pascal 2026-11-20","marne_argile",34.95
+"t4c","57/70/88","calcaire","gele","","","BD Charm-50 (BRGM) ; classe d'avant la mission 040 conservée","Pascal 2026-11-20","marne_argile",24.211
