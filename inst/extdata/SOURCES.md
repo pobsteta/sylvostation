@@ -278,7 +278,8 @@ respecter : aucune donnee reelle. Ne dit rien sur la vraie carte.
   (`fetch_mnt_large()`, rééchantillonnage du service à vérifier ; `docs/referentiels.md` § 37).
 - **Emprise :** x (est) de 1 000 250 à 1 028 750 m, y (nord) de 6 777 000 à 6 813 500 m,
   Lambert-93 (EPSG:2154) : les 12 mailles SAFRAN de `safran_sim2_12mailles_extrait.csv`
-  et 6 km de marge. 114 × 146 cellules de 250 m, altitude en m (arrondie au dixième), 172 à
+  avec une marge de 6 km comptée depuis les centres des mailles, soit environ 2 km au-delà de
+  leurs bords (demi-côté de 4 km). 114 × 146 cellules de 250 m, altitude en m (arrondie au dixième), 172 à
   1 297 m ; 40 Ko. Sert au mode réel hors ligne (`mnt_large_path`) : altitude des mailles,
   température corrigée du relief.
 - **Licence :** Licence Ouverte / Open License (Etalab), champ licence de la fiche CSW

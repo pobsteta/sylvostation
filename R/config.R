@@ -272,18 +272,16 @@ read_config <- function(path = "config.yml") {
          call. = FALSE)
   }
   cfg$bilan_lateral_ru_mm <- as.numeric(x)
-  {
-    cf <- cfg$bilan_lateral_coef
-    nm <- c("constante", "curv150", "idr_1500", "moore")
-    ok <- is.list(cf) && all(c("depart", "equilibre") %in% names(cf)) &&
-      all(vapply(cf[c("depart", "equilibre")], function(z) all(nm %in% names(z)) &&
-                   all(vapply(z[nm], is.numeric, logical(1))), logical(1)))
-    if (!ok) {
-      stop("`bilan_lateral_coef` doit donner depart et equilibre : ", paste(nm, collapse = ", "),
-           ".", call. = FALSE)
-    }
-    cfg$bilan_lateral_coef <- lapply(cf[c("depart", "equilibre")], function(z) unlist(z[nm]))
+  cf <- cfg$bilan_lateral_coef
+  nm <- c("constante", "curv150", "idr_1500", "moore")
+  ok <- is.list(cf) && all(c("depart", "equilibre") %in% names(cf)) &&
+    all(vapply(cf[c("depart", "equilibre")], function(z) all(nm %in% names(z)) &&
+                 all(vapply(z[nm], is.numeric, logical(1))), logical(1)))
+  if (!ok) {
+    stop("`bilan_lateral_coef` doit donner depart et equilibre : ", paste(nm, collapse = ", "),
+         ".", call. = FALSE)
   }
+  cfg$bilan_lateral_coef <- lapply(cf[c("depart", "equilibre")], function(z) unlist(z[nm]))
   for (k in c("mnt_large_path", "soilgrids_texture_path")) {
     v <- cfg[[k]]
     if (!is.null(v) && (!is.character(v) || length(v) != 1L)) {

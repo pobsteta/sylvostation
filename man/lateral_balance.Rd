@@ -36,9 +36,15 @@ lus dans \code{config.yml} (\code{bilan_lateral_coef}, mission 039b). Toutes les
 (\code{FINE_VARIABLES}).
 }
 \examples{
+# coefficients du tableau 20 (à vérifier) : valeur par défaut de read_config()
+y <- tempfile(fileext = ".yml")
+writeLines(c('ser_code: "D11"',
+  "emprise_test: {xmin: 1007000, ymin: 6790000, xmax: 1022000, ymax: 6805000, crs: 2154}",
+  "buffer_m: 5000", "resolution_m: 20", "crs: 2154", "data_dir: data",
+  "laz_dir: data/laz", "out_dir: data/sorties", "ifn_precision_m: 700"), y)
+cf <- read_config(y)$bilan_lateral_coef
 f <- system.file("extdata", "synth_dtm.tif", package = "sylvostation")
 if (nzchar(f)) {
-  cf <- sylvostation:::.CONFIG_REEL_DEFAUTS$bilan_lateral_coef   # tableau 20, à vérifier
   b <- lateral_balance(terra::rast(f), cf)
   attr(b, "parts")
 }

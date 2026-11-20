@@ -308,8 +308,11 @@ fetch_soilgrids_texture <- function(bbox, cache_dir, margin_m = 2000, offline = 
 #' [ru_from_texture()], réduite par les cailloux : capacité `cu_<horizon>` en mm d'eau par cm
 #' de sol. La réserve utile jusqu'à une profondeur est la somme des capacités × épaisseurs
 #' ([ru_soilgrids()]). Valeur obtenue : environ 3,2 mm/cm pour un limon à 20 % d'argile sans
-#' cailloux, haute pour une eau disponible (pF 2,0 au lieu de 2,5) : **à vérifier**. Calcul mesuré sur la GRECO D : 231 s pour 447 044 cellules × 6
-#' horizons, 1,4 Go.
+#' cailloux, haute pour une eau disponible (pF 2,0 au lieu de 2,5) : **à vérifier**. Calcul
+#' mesuré sur la GRECO D : 231 s pour 447 044 cellules × 6 horizons, 1,4 Go.
+#'
+#' Un GeoTIFF unique sans balise `echelle = 10` doit être en % : argile + sable + limon doit
+#' valoir 100 à ± 2 près, sinon arrêt (unités natives de SoilGrids, × 10, sans la balise).
 #'
 #' @param files Chemins de [fetch_soilgrids_texture()] (ou `SpatRaster` à 24 couches nommées
 #'   `clay_0-5cm_mean`, ...), en %, EPSG:2154 ; ou un seul GeoTIFF à 24 couches nommées
@@ -338,12 +341,28 @@ soilgrids_cu <- function(files) {
     # un seul GeoTIFF a 24 couches nommees (extrait hors ligne, mission 039b) ; balise
     # `echelle = 10` : unites natives de SoilGrids x 10, ramenees en %
     r <- terra::rast(files)
-    mt <- terra::metags(r)
-    ech <- if (is.data.frame(mt)) mt$value[mt$name == "echelle"] else mt[names(mt) == "echelle"]
+    m <- terra::metags(r)
+    # selon la version de terra : data.frame (name, value) ou matrice nommee par ligne (comme
+    # assert_not_synthetic())
+    ech <- if (is.data.frame(m) && all(c("name", "value") %in% names(m))) {
+      m$value[m$name == "echelle"]
+    } else if (length(m) && "echelle" %in% rownames(m)) m["echelle", 1] else character(0)
     if (length(ech) && identical(as.character(ech[1]), "10")) {
       nm <- names(r)
       r <- r / 10
       names(r) <- nm
+    } else {
+      # sans balise : les textures doivent etre en % (somme argile + sable + limon = 100)
+      ps <- paste0(c("clay", "sand", "silt"), "_0-5cm_mean")
+      if (all(ps %in% names(r))) {
+        tot <- terra::values(r[[ps[1]]] + r[[ps[2]]] + r[[ps[3]]], mat = FALSE)
+        tot <- tot[is.finite(tot)]
+        if (length(tot) && abs(stats::median(tot) - 100) > 2) {
+          stop("Textures SoilGrids : argile + sable + limon = ", round(stats::median(tot)),
+               " (100 attendu, \u00b1 2) ; unit\u00e9s natives \u00d7 10 sans la balise `echelle = 10` ?",
+               call. = FALSE)
+        }
+      }
     }
   } else {
     r <- terra::rast(unname(files))

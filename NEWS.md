@@ -5,6 +5,12 @@ Versionnage calendaire `AAAA.MM.N` : voir `README.md` (« Versions et releases �
 en développement ; la release automatique y écrit le compteur du mois dans le tarball. Le
 changelog de chaque release est généré à partir des commits depuis le tag précédent.
 
+## Mission 039 : bioclimat et RU plus fins
+
+- **Changement d'interface :** `lateral_balance()` exige désormais `coef` (sans valeur par
+  défaut) ; les coefficients du tableau 20 de Piedallu et al. (2006), à vérifier, sont lus dans
+  `config.yml` (`bilan_lateral_coef`, valeur par défaut de `read_config()`). Mission 039b.
+
 ## Mission 025 : grille de 20 m (ADR 0007)
 
 - `resolution_m: 20` (au lieu de 25), grille en Lambert-93 dont les bords sont des multiples de 20 m.
