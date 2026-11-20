@@ -321,11 +321,11 @@ classe_de <- function(descr, notation = "zz", ...) {
   suppressWarnings(recode_lithology(f, ...))$classe
 }
 
-test_that("read_lithology_notations : codes et classes seulement, 156 notations + 42 gelées, 10 laissées non_classe", {
+test_that("read_lithology_notations : codes et classes seulement, 156 notations + 42 candidates (8 restent gelées), 10 laissées non_classe", {
   t <- read_lithology_notations()
   expect_equal(nrow(t), 198)
-  expect_equal(sum(t$origine == "gele"), 42)
-  expect_equal(sum(t$origine != "gele"), 156)
+  expect_equal(sum(t$origine == "gele"), 8)
+  expect_equal(sum(t$origine != "gele"), 190)
   expect_false(anyDuplicated(t$notation) > 0)
   expect_setequal(names(t), c("notation", "classe", "origine", "regle", "confiance", "source",
                               "decision_pascal", "classe_regle", "surface_km2", "dep"))
@@ -343,7 +343,14 @@ test_that("read_lithology_notations : codes et classes seulement, 156 notations 
   expect_true(all(nzchar(g$classe_regle) & g$classe_regle != g$classe))
   expect_equal(sum(t$origine == "table"), 8)
   expect_true(all(g$surface_km2 > 0))
-  expect_true(all(c("t2a", "rD", "t3CMT", "GPx-y", "d-h2(1)") %in% g$notation))
+  expect_setequal(g$notation, c("t3CMT", "t4c", "t3B", "t4b-c", "t3BG", "j1b", "rE-F", "d-h2(1)"))
+  # décisions de Pascal du 2026-11-20 sur les 42 candidates : 34 sorties du gel, 8 gelées
+  sortis <- c("j2a-b", "j3a", "l2-3", "j2OM", "j2c2", "l3b-c", "j5CH", "l3a1", "j5cC", "j6a", "j3-4",
+              "j7", "j5c", "j4", "e", "j6a-c", "g1-2", "j6aC", "g2CD", "l3b", "l3c", "j5a1", "j3aC",
+              "t2a", "rD", "d7", "dS", "h2goO", "dW", "o-sÕ", "d5br(ö)", "döq", "GPx-y", "FJw-x")
+  expect_length(sortis, 34)
+  expect_true(all(t$origine[t$notation %in% sortis] == "regle"))
+  expect_true(all(t$decision_pascal[t$notation %in% c(sortis, g$notation)] == "Pascal 2026-11-20"))
   expect_equal(t$classe[t$notation == "h2MK3(1)"], "roche_basique")  # décision de l'orchestrateur
   expect_equal(t$classe[t$notation == "h2MK3(2)"], "volcanite")
   expect_false("t1b" %in% t$notation)
@@ -436,13 +443,14 @@ test_that("classe nouvelle de bout en bout : un point connu tombe dans la bonne 
   expect_equal(as.character(terra::extract(r, cbind(1000250, 6800350))[1, 1]), "volcanite")
 })
 
-test_that("lignes gelées : la classe d'avant est conservée, même si la règle dirait autre chose", {
+test_that("lignes gelées : la classe d'avant est conservée ; t2a, sorti du gel, prend la règle actuelle", {
   f <- data.frame(notation = c("t2a", "d-h2(1)", "t1b", "j2b2"),
                   description = c("Grès conglomératique", "Grès conglomératique",
                                   "Grès vosgien, souvent conglomératique",
                                   "Calcaires oolithiques, marnes"), stringsAsFactors = FALSE)
   r <- suppressWarnings(recode_lithology(f))
-  expect_equal(r$classe, c("conglomerat", "conglomerat", "gres", "calcaire"))
+  expect_equal(r$classe, c("gres", "conglomerat", "gres", "calcaire"))
+  expect_equal(r$statut, c("regle", "gele", "regle", "regle"))
   r0 <- suppressWarnings(recode_lithology(f, overrides = NULL))
   expect_equal(r0$classe[1:2], c("gres", "gres"))
 })
