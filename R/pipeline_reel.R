@@ -188,6 +188,7 @@ real_sources <- function(cfg, extdata = system.file("extdata", package = "sylvos
   s$reference <- opt(cfg$reference_path, "reference_path")
   s$soils <- opt(unlist(cfg$soil_paths), "soil_paths")
   s$mnt_large <- opt(cfg$mnt_large_path, "mnt_large_path")
+  s$soilgrids_texture <- opt(cfg$soilgrids_texture_path, "soilgrids_texture_path")
   s
 }
 

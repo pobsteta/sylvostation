@@ -458,7 +458,9 @@ if (!isTRUE(cfg$demo)) {
     tar_target(t_corr_grid, if (is.null(t_lapse)) NULL else
       sylvostation::t_corrected(terrain[["altitude"]], safran, alt_mailles, t_lapse)),
     # --- RU apprise (mission 039) : SoilGrids (texture, cailloux) + euptf2, dans 700 m ---
-    tar_target(soilgrids_texture_files, if (hors_ligne || !identical(cfg$ru_carte, "apprise")) NULL else
+    # hors ligne : soilgrids_texture_path (GeoTIFF a 24 couches, mission 039b), sinon absent
+    tar_target(soilgrids_texture_files, if (!identical(cfg$ru_carte, "apprise")) NULL else
+      if (!is.null(src$soilgrids_texture)) src$soilgrids_texture else if (hors_ligne) NULL else
       sylvostation::fetch_soilgrids_texture(
         sf::st_bbox(sf::st_union(c(sf::st_as_sfc(sf::st_bbox(ifn$placettes)),
                                    sf::st_as_sfc(sf::st_bbox(emprise))))),

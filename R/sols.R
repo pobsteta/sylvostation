@@ -312,7 +312,9 @@ fetch_soilgrids_texture <- function(bbox, cache_dir, margin_m = 2000, offline = 
 #' horizons, 1,4 Go.
 #'
 #' @param files Chemins de [fetch_soilgrids_texture()] (ou `SpatRaster` à 24 couches nommées
-#'   `clay_0-5cm_mean`, ...), en %, EPSG:2154.
+#'   `clay_0-5cm_mean`, ...), en %, EPSG:2154 ; ou un seul GeoTIFF à 24 couches nommées
+#'   (`soilgrids_texture_path`, mode hors ligne), divisé par 10 s'il porte la balise
+#'   `echelle = 10` (unités natives de SoilGrids).
 #' @return `SpatRaster` à six couches `cu_0_5`, `cu_5_15`, ..., `cu_100_200` (mm/cm).
 #' @examples
 #' \donttest{
@@ -330,8 +332,23 @@ fetch_soilgrids_texture <- function(bbox, cache_dir, margin_m = 2000, offline = 
 #' }
 #' @export
 soilgrids_cu <- function(files) {
-  r <- if (inherits(files, "SpatRaster")) files else terra::rast(unname(files))
-  if (!inherits(files, "SpatRaster")) names(r) <- paste0(names(files), "_mean")
+  if (inherits(files, "SpatRaster")) {
+    r <- files
+  } else if (length(files) == 1L && is.null(names(files))) {
+    # un seul GeoTIFF a 24 couches nommees (extrait hors ligne, mission 039b) ; balise
+    # `echelle = 10` : unites natives de SoilGrids x 10, ramenees en %
+    r <- terra::rast(files)
+    mt <- terra::metags(r)
+    ech <- if (is.data.frame(mt)) mt$value[mt$name == "echelle"] else mt[names(mt) == "echelle"]
+    if (length(ech) && identical(as.character(ech[1]), "10")) {
+      nm <- names(r)
+      r <- r / 10
+      names(r) <- nm
+    }
+  } else {
+    r <- terra::rast(unname(files))
+    names(r) <- paste0(names(files), "_mean")
+  }
   assert_crs_2154(r)
   # ranger : charge l'espace de noms (methode predict des objets d'euptf2)
   for (pk in c("euptf2", "ranger")) {

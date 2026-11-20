@@ -269,3 +269,33 @@ respecter : aucune donnee reelle. Ne dit rien sur la vraie carte.
   `gele` aux départements où la classe a été établie (GRECO D : 54, 57, 67, 68, 70, 88, 90).
 - **`lithologie_regles_avant040.csv` :** copie du jeu de règles en vigueur avant la mission 040
   (13 règles de mots-clés, aucune donnée BRGM), appliquée aux lignes `gele`.
+
+## `bdalti_250m_extrait.tif` (mission 039b, RÉEL)
+
+- **Source :** IGN, BD ALTI (fiche `IGNF_BD-ALTI`), lue le 2026-11-20 par le WMS raster de la
+  Géoplateforme `https://data.geopf.fr/wms-r/wms`, couche `ELEVATION.ELEVATIONGRIDCOVERAGE`
+  (« MNT BDAlti V1 », pas de 25 m), GeoTIFF Float32 demandé à 125 m puis moyenné 2 × 2
+  (`fetch_mnt_large()`, rééchantillonnage du service à vérifier ; `docs/referentiels.md` § 37).
+- **Emprise :** x (est) de 1 000 250 à 1 028 750 m, y (nord) de 6 777 000 à 6 813 500 m,
+  Lambert-93 (EPSG:2154) : les 12 mailles SAFRAN de `safran_sim2_12mailles_extrait.csv`
+  et 6 km de marge. 114 × 146 cellules de 250 m, altitude en m (arrondie au dixième), 172 à
+  1 297 m ; 40 Ko. Sert au mode réel hors ligne (`mnt_large_path`) : altitude des mailles,
+  température corrigée du relief.
+- **Licence :** Licence Ouverte / Open License (Etalab), champ licence de la fiche CSW
+  `IGNF_BD-ALTI` ; mention « Source : IGN, BD ALTI ».
+
+## `soilgrids_texture_extrait.tif` (mission 039b, RÉEL)
+
+- **Source :** ISRIC, SoilGrids 2.0, couches `clay`, `sand`, `silt`, `cfvo`, statistique
+  `mean`, six horizons (0-5, 5-15, 15-30, 30-60, 60-100, 100-200 cm),
+  `https://files.isric.org/soilgrids/latest/data/<propriété>/<propriété>_<horizon>_mean.vrt`,
+  lues le 2026-11-20 (`fetch_soilgrids_texture()`), reprojetées en Lambert-93 à 250 m
+  (bilinéaire). Attribution : « SoilGrids 2.0, ISRIC – World Soil Information » (Poggio et al.
+  2021, *SOIL* 7 : 217-240, doi 10.5194/soil-7-217-2021).
+- **Emprise :** boîte des 100 placettes de l'extrait IFN et 2 km de marge : x (est) de
+  1 005 500 à 1 024 000 m, y (nord) de 6 788 750 à 6 807 000 m, EPSG:2154 ; 74 × 73 cellules,
+  24 couches nommées `<propriété>_<horizon>_mean`. **Unités natives de SoilGrids, × 10**
+  (g/kg pour les textures, cm³/dm³ pour les cailloux), entiers 16 bits ; balise `echelle = 10`
+  lue par `soilgrids_cu()`, qui divise par 10. 151 Ko. Sert au mode réel hors ligne
+  (`soilgrids_texture_path`) : RU apprise de la carte.
+- **Licence :** CC BY 4.0 (ISRIC) ; attribution ci-dessus obligatoire.

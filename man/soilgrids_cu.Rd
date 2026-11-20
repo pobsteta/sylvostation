@@ -8,7 +8,9 @@ soilgrids_cu(files)
 }
 \arguments{
 \item{files}{Chemins de \code{\link[=fetch_soilgrids_texture]{fetch_soilgrids_texture()}} (ou \code{SpatRaster} à 24 couches nommées
-\verb{clay_0-5cm_mean}, ...), en \%, EPSG:2154.}
+\verb{clay_0-5cm_mean}, ...), en \%, EPSG:2154 ; ou un seul GeoTIFF à 24 couches nommées
+(\code{soilgrids_texture_path}, mode hors ligne), divisé par 10 s'il porte la balise
+\code{echelle = 10} (unités natives de SoilGrids).}
 }
 \value{
 \code{SpatRaster} à six couches \code{cu_0_5}, \code{cu_5_15}, ..., \code{cu_100_200} (mm/cm).

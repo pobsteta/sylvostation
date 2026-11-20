@@ -152,3 +152,6 @@ reference_path: null
 soil_paths: null
 # MNT de 250 m local (mode hors ligne) ; absent en ligne : BD ALTI lue par le WMS de l'IGN.
 mnt_large_path: null
+# Textures et cailloux SoilGrids locaux (mode hors ligne, mission 039b) : un GeoTIFF à 24 couches
+# nommées <propriété>_<horizon>_mean ; absent en ligne : SoilGrids lu sur files.isric.org.
+soilgrids_texture_path: null

@@ -28,7 +28,9 @@
 #'   options `"actuel"` et `"corrige"`), `ru_carte` (`"apprise"` ou `"maille"`), `mnt_large_res_m` (250),
 #'   `bilan_lateral` (`FALSE`), `bilan_lateral_ru_mm` (−30, 0, 60) et `bilan_lateral_coef`
 #'   (coefficients du tableau 20 de Piedallu et al. 2006, à vérifier), l'entrée optionnelle
-#'   `mnt_large_path` (MNT de 250 m local, mode hors ligne),
+#'   `mnt_large_path` (MNT de 250 m local, mode hors ligne), l'entrée optionnelle
+#'   `soilgrids_texture_path` (`NULL` par défaut : GeoTIFF à 24 couches de textures et
+#'   cailloux SoilGrids, mode hors ligne, mission 039b),
 #'   `ifn_archive_url` et `taxref_url` (sans valeur
 #'   par défaut : seule source, config.yml ; exigées en ligne), et les
 #'   entrées optionnelles `gnss_path`, `reference_path`, `soil_paths`, `tichy_path`
@@ -266,9 +268,11 @@ read_config <- function(path = "config.yml") {
     }
     cfg$bilan_lateral_coef <- lapply(cf[c("depart", "equilibre")], function(z) unlist(z[nm]))
   }
-  v <- cfg$mnt_large_path
-  if (!is.null(v) && (!is.character(v) || length(v) != 1L)) {
-    stop("`mnt_large_path` doit \u00eatre un chemin ou absent.", call. = FALSE)
+  for (k in c("mnt_large_path", "soilgrids_texture_path")) {
+    v <- cfg[[k]]
+    if (!is.null(v) && (!is.character(v) || length(v) != 1L)) {
+      stop("`", k, "` doit \u00eatre un chemin ou absent.", call. = FALSE)
+    }
   }
   if (!cfg$emprise %in% c("test", "ser")) {
     stop("`emprise` doit valoir test ou ser.", call. = FALSE)
