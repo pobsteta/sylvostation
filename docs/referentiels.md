@@ -2178,6 +2178,8 @@ sont pas remplacés (le run réel n'a pas été relancé).
 - **Variables égales :** le local prend les mêmes variables larges que le régional (`vars_modele$trophic`,
   donc il suit `trophique_climat` ; avec `sans`, aucun climat, pas de `coarse_t_corr_700m`) plus des variables fines
   nommées (`vars_fines` : terrain fin non vide, sols), écrites dans `variables_locales` (`local_trophic_vars()`).
+  Une couche de sol préfixée `coarse_` (maille de 90 m ou plus, `stack_soil_layers`) est **large** : elle
+  n'entre dans le local que si le régional l'a ; `vars_fines` ne contient que des couches non `coarse_`.
 - **Asymétries :** (a) décalage de domaine (flore IFN sur 700 m contre listes de 50 m) : défavorise le
   régional ; un régional recalibré hors pli est rendu pour information, **jamais comme critère** ; (b) fuite
   possible en faveur du régional (placettes IFN d'apprentissage voisines des ancrages) : règle plus dure pour

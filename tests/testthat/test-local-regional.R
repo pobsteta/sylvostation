@@ -234,6 +234,12 @@ test_that("local_trophic_vars : memes variables larges que le regional, plus des
   expect_equal(setdiff(v2, fines), reg2)
   expect_false("coarse_t_moy" %in% v2)
   expect_false(anyDuplicated(local_trophic_vars(reg2, c(fines, "pente"))) > 0)
+  # sols : une couche coarse_ absente du regional reste HORS du local ; presente dans le regional, elle y est
+  sols <- c("coarse_argile_250m", "teneur_eau_30m")
+  v3 <- local_trophic_vars(reg_sans, c(fines, sols))
+  expect_false("coarse_argile_250m" %in% v3)
+  expect_true("teneur_eau_30m" %in% v3)
+  expect_true("coarse_argile_250m" %in% local_trophic_vars(c(reg_sans, "coarse_argile_250m"), c(fines, sols)))
 })
 
 test_that("variables_locales : ecrites dans la table de comparaison", {
@@ -262,5 +268,6 @@ test_that("_targets.R : local_trophic prend ses variables de local_trophic_vars 
   expect_match(b, "local_trophic_vars(vars_modele$trophic, vars_fines)", fixed = TRUE)
   expect_false(grepl("names(predictors)", b, fixed = TRUE))     # jamais tous les predicteurs
   expect_match(bloc_cible("vars_fines"), "terrain", fixed = TRUE)
+  expect_match(bloc_cible("vars_fines"), "startsWith(v, \"coarse_\")", fixed = TRUE)   # fines = non coarse_
   expect_false(grepl("coarse_t_corr", b))                       # jamais nomme en dur
 })

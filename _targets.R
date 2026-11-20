@@ -670,8 +670,13 @@ if (!isTRUE(cfg$demo)) {
     # Variables du local : les MEMES variables larges que le regional (vars_modele$trophic : il suit
     # trophique_climat de lui-meme, coarse_t_corr_700m n'y entre que si le regional l'a) plus des
     # variables FINES nommees (terrain fin non vide, sols) ; jamais names(predictors).
-    tar_target(vars_fines, c(setdiff(names(terrain), sylvostation::empty_layers(terrain)),
-                             if (!is.null(soils)) names(soils))),
+    # une couche coarse_ (maille >= 90 m, stack_soil_layers) est LARGE : elle n'entre dans le local que
+    # si le regional l'a (vars_modele$trophic) ; vars_fines ne garde que le terrain fin non coarse_
+    tar_target(vars_fines, {
+      v <- c(setdiff(names(terrain), sylvostation::empty_layers(terrain)),
+             if (!is.null(soils)) names(soils))
+      v[!startsWith(v, "coarse_")]
+    }),
     # Toujours une liste quand des ancrages ont ete cherches : `model`/`cv`/`data`, ou `n_complets`
     # (effectif insuffisant) ou `erreur` (echec de l'ajustement, message d'origine).
     tar_target(local_trophic, {

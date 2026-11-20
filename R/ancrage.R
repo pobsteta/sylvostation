@@ -783,11 +783,13 @@ select_trophic_map <- function(maps_regional, local_map = NULL, comparison = NUL
 #' `trophique_climat` de lui-même.
 #'
 #' @param regional Variables du modèle trophique régional (`vars_modele$trophic`).
-#' @param fines Noms des variables fines ajoutées (couches de terrain fin non vides, sols).
+#' @param fines Noms des variables fines ajoutées (couches de terrain fin non vides, sols). Une couche
+#'   préfixée `coarse_` (maille de 90 m ou plus, [stack_soil_layers()]) est **large** : elle est écartée
+#'   ici et n'entre dans le local que si le régional l'a (`regional`).
 #' @return Vecteur de noms de variables du modèle local (sans doublon), les larges d'abord.
 #' @examples
 #' local_trophic_vars(c("coarse_litho_enc", "coarse_formation_enc"), c("pente", "twi"))
 #' @export
 local_trophic_vars <- function(regional, fines) {
-  unique(c(regional, fines))
+  unique(c(regional, fines[!startsWith(fines, "coarse_")]))
 }

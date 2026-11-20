@@ -9,7 +9,9 @@ local_trophic_vars(regional, fines)
 \arguments{
 \item{regional}{Variables du modèle trophique régional (\code{vars_modele$trophic}).}
 
-\item{fines}{Noms des variables fines ajoutées (couches de terrain fin non vides, sols).}
+\item{fines}{Noms des variables fines ajoutées (couches de terrain fin non vides, sols). Une couche
+préfixée \code{coarse_} (maille de 90 m ou plus, \code{\link[=stack_soil_layers]{stack_soil_layers()}}) est \strong{large} : elle est écartée
+ici et n'entre dans le local que si le régional l'a (\code{regional}).}
 }
 \value{
 Vecteur de noms de variables du modèle local (sans doublon), les larges d'abord.
