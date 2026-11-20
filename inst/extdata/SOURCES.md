@@ -233,6 +233,13 @@ respecter : aucune donnee reelle. Ne dit rien sur la vraie carte.
   20/11/2026. Fichier `metadonnees.csv` de l'archive
   `https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip`
   (export du 2026-10-07).
+- **Rôle, en complément de `ifn_espar_cdref.csv` :** `ifn_espar_cdref.csv` (fichier
+  `espar-cdref13.csv`) relie le code d'essence **sans zéro de tête** (`9`) à son `CD_REF`
+  (TAXREF v13.0) et au nom du taxon accepté ; ce fichier-ci donne le code **tel que noté dans
+  `ARBRE`** (`09`), le nom français et le **nom latin de l'unité ESPAR1** des métadonnées (avec
+  sous-espèce ou variété : « Quercus petraea subsp. petraea »). La jointure sur les taxons se
+  fait toujours par `CD_REF` (`ifn_espar_cdref.csv`) ; ce fichier n'ajoute que le nom latin
+  ESPAR1 (colonne `latin_espar1`) et sert de dictionnaire des codes d'`ARBRE`.
 - **Traitement :** lignes `ESPAR1` (unité des campagnes 2009 et suivantes) du bloc « Définition
   des modalités pour chaque unité » : colonnes `code;nom;latin`, 195 lignes, texte d'origine.
   Le code `332G`, présent dans la table ARBRE de la GRECO D, n'y figure pas.

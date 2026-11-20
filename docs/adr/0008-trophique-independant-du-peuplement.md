@@ -54,9 +54,27 @@ vis-à-vis de la gestion passée.
 
 ## Addendum (mission 037, partie 2, 2026-11-20) : gain mesuré
 
-Le modèle de sensibilité mesuré sur le run réel 035 donne +0,061 de R² (blocs de 22 121 m) et +0,058
-(8 358 m) quand on ajoute l'essence dominante ; le placebo (essences mélangées) donne +0,010 et +0,007,
-soit un gain net de l'ordre de 0,05. La « perte possible de ≈ 0,1 à 0,25 » du crible était une
-surestimation : la lithologie, le pH et le climat captent déjà une partie du signal d'essence. Le contrôle
-par essence relève trois alertes (pin sylvestre prédit trop riche, aulne et érable trop pauvres) et un
-défaut d'amplitude (pente 0,31). Voir `docs/referentiels.md` § 36.
+Le modèle de sensibilité, mesuré sur le run réel 035, ajoute l'essence dominante à la validation
+croisée du trophique, sous deux formes : **essence fine** (essences à au moins 15 placettes pures,
+sinon `autre`, plus `mixte` et `sans_arbre`) et **groupes de la BD Forêt** (TFV, hypothèse de
+regroupement à vérifier). Un **placebo** (niveaux de l'essence fine mélangés au hasard) mesure ce que
+le gain doit à la seule variable ajoutée.
+
+| Blocs | R² de base | essence fine | groupes TFV | placebo |
+|---|---|---|---|---|
+| 22 121 m | 0,194 | 0,255 (+0,061) | 0,255 (+0,061) | 0,204 (+0,010) |
+| 8 358 m | 0,272 | 0,330 (+0,058) | 0,326 (+0,054) | 0,279 (+0,007) |
+
+Le gain net de l'essence est donc de l'ordre de 0,05. La « perte possible de ≈ 0,1 à 0,25 » du
+crible était une surestimation : la lithologie, le pH et le climat captent déjà une partie du signal
+d'essence.
+
+**Limite : le gain est un peu circulaire.** La cible de la sensibilité (`y0`, le trophique du
+pipeline) **contient les arbres** : l'indice moyenne les valeurs indicatrices de toute la flore, essences
+comprises. L'essence en place prédit donc en partie sa propre contribution à l'indice. L'effet reste
+faible : retirer les essences de l'indice change peu l'indice (corrélation 0,96 avec `y0`,
+`docs/referentiels.md` § 35.6). Le contrôle par essence, lui, compare à la moyenne d'essence du trophique
+**sans** les essences.
+
+Le contrôle par essence relève trois alertes (pin sylvestre prédit trop riche, aulne et érable trop
+pauvres) et un défaut d'amplitude (pente 0,31). Voir `docs/referentiels.md` § 36.

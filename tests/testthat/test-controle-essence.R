@@ -52,29 +52,46 @@ test_that("dominant_species : surface terriere ponderee par W, vivants seuls, pa
   expect_error(dominant_species(a, min_share = 1.5), "]0, 1]", fixed = TRUE)
 })
 
-test_that("trophic_without_trees : arbres retires, moyenne ph/azote, minimum de taxons", {
-  fl <- data.frame(id_placette = c("p", "p", "p", "p", "q"), CD_REF = c(1, 2, 3, 4, 1))
-  ind <- data.frame(cd_ref = 1:4, nom = c("Fagus sylvatica", "Oxalis acetosella", "Rubus idaeus",
-                                          "Poa nemoralis"),
-                    ph = c(9, 3, 4, 5), azote = c(9, 4, 6, 5))
-  codes <- read_espar_codes()
-  t1 <- trophic_without_trees(fl, ind, codes, c("q", "p"), min_taxa = 2)
-  expect_equal(t1[2], mean(c(mean(c(3, 4, 5)), mean(c(4, 6, 5)))))   # 4,5, sans le hetre
-  expect_true(is.na(t1[1]))                                          # q : aucun taxon restant
-  expect_equal(attr(t1, "n_taxons_arbres"), 1)
-  expect_error(trophic_without_trees(data.frame(a = 1), ind, codes, "p"), "id_placette")
+test_that("read_espar_cdref lit la table essence -> CD_REF (extrait du depot)", {
+  d <- read_espar_cdref(system.file("extdata", package = "sylvostation"))
+  expect_equal(names(d), c("espar", "lib_espar", "cd_ref", "lib_cdref"))
+  expect_equal(nrow(d), 193L)
+  expect_equal(d$cd_ref[d$espar == "61"], 79319)
+  expect_equal(d$lib_cdref[d$espar == "9"], "Fagus sylvatica")
+  expect_identical(sort(unique(d$cd_ref)),
+                   read_tree_cd_ref(system.file("extdata", package = "sylvostation")))
+  expect_error(read_espar_cdref(tempfile()), "introuvable")
 })
 
-test_that("species_optima : moyenne ph/azote par nom latin, NA si absent", {
-  ind <- data.frame(nom = c("Fagus sylvatica", "Abies alba", "Quercus petraea subsp. petraea"),
-                    ph = c(5.7, 5.3, NA), azote = c(NA, 5.5, NA))
-  o <- species_optima(c("09", "61", "64", "03", NA), ind, read_espar_codes())
+test_that("trophic_without_trees : essences retirees par CD_REF, moyenne ph/azote, minimum de taxons", {
+  fl <- data.frame(id_placette = c("p", "p", "p", "p", "q"), CD_REF = c(1, 2, 3, 4, 1))
+  ind <- data.frame(cd_ref = 1:4, ph = c(9, 3, 4, 5), azote = c(9, 4, 6, 5))
+  t1 <- trophic_without_trees(fl, ind, tree_cd_ref = c(1, 99), ids = c("q", "p"), min_taxa = 2)
+  expect_equal(t1[2], mean(c(mean(c(3, 4, 5)), mean(c(4, 6, 5)))))   # 4,5, sans l'essence 1
+  expect_true(is.na(t1[1]))                                          # q : aucun taxon restant
+  expect_equal(attr(t1, "n_taxons_arbres"), 1)       # le CD_REF 99 n'est pas dans les indicateurs
+  expect_equal(attr(trophic_without_trees(fl, ind, tree_cd_ref = c(1, 2), ids = "p"), "n_taxons_arbres"), 2)
+  expect_equal(trophic_without_trees(fl, ind, numeric(0), "p")[1], mean(c(mean(c(9, 3, 4, 5)),
+                                                                          mean(c(9, 4, 6, 5)))))
+  expect_error(trophic_without_trees(data.frame(a = 1), ind, 1, "p"), "id_placette")
+  expect_error(trophic_without_trees(fl, ind, "x", "p"), "CD_REF")
+})
+
+test_that("species_optima : moyenne ph/azote par CD_REF, NA si absent, nom latin ESPAR1 en plus", {
+  ec <- read_espar_cdref(system.file("extdata", package = "sylvostation"))
+  ind <- data.frame(cd_ref = c(97947, 79319, 79319, 111111), ph = c(5.7, 5.3, 5.5, NA),
+                    azote = c(NA, 5.5, NA, NA))
+  o <- species_optima(c("09", "61", "64", "03", NA), ind, ec, read_espar_codes())
   expect_equal(o$espar, c("09", "61", "64", "03"))
-  expect_equal(o$optimum_tichy[1], 5.7)           # ph seul
-  expect_equal(o$optimum_tichy[2], 5.4)
-  expect_true(is.na(o$optimum_tichy[3]))          # douglas absent de la table
-  expect_true(is.na(o$optimum_tichy[4]))          # chene sessile : ni ph ni azote
-  expect_equal(o$n_lignes[4], 1)
+  expect_equal(o$optimum_tichy[1], 5.7)                      # ph seul
+  expect_equal(o$optimum_tichy[2], mean(c(5.4, 5.5)))        # deux lignes du meme CD_REF
+  expect_equal(o$n_lignes[2], 2)
+  expect_true(is.na(o$optimum_tichy[3]))                     # douglas absent de la table
+  expect_true(is.na(o$optimum_tichy[4]))                     # chene sessile : pas de ligne
+  expect_equal(o$nom[1], "H\u00eatre")
+  expect_equal(o$latin_espar1[1], "Fagus sylvatica")
+  expect_false("latin_espar1" %in% names(species_optima("09", ind, ec)))
+  expect_error(species_optima("09", ind, data.frame(a = 1)), "read_espar_cdref")
 })
 
 # cv fabrique : 4 plis, 3 essences, prediction = observe + decalage par essence
@@ -88,7 +105,7 @@ fabrique_controle <- function(decalage_pin = 0, bruit = 0.1) {
   pli <- rep(1:4, length.out = n)
   pred <- moy + rnorm(n, sd = bruit) + ifelse(esp == "52", decalage_pin, 0)
   cv <- list(predictions = data.frame(observe = tr$trophic, predit = pred, sd = 0, pli = pli),
-             plis = pli, block_size = 5000)
+             plis = pli, block_size = 5000.4)
   dom <- data.frame(id_placette = tr$id_placette, espar = esp, share = 0.9)
   opt <- data.frame(espar = c("09", "61", "52"), nom = c("Hetre", "Sapin", "Pin"),
                     optimum_tichy = c(5.7, 5.4, 2.9))
@@ -104,7 +121,8 @@ test_that("essence_control : alerte d'ecart au-dessus du seuil, pas en dessous",
   expect_false(any(e$alerte_ecart[e$espar != "52"]))
   expect_equal(r$global$n_alertes_ecart, 1L)
   expect_equal(r$global$n_pures, 240L)
-  expect_equal(r$global$bloc_m, 5000)
+  expect_identical(r$global$bloc_m, 5000)               # arrondi au metre
+  expect_identical(unique(e$bloc_m), 5000)
   expect_match(r$global$statut_seuils, "provisoire")
   f2 <- fabrique_controle(decalage_pin = 0.4)       # sous le seuil de 0,5
   r2 <- essence_control(f2$tr, list(f2$cv), f2$dom, f2$opt, f2$tr$trophic)
@@ -152,6 +170,21 @@ test_that("essence_control n'accepte que des predictions hors pli alignees sur t
                                f$tr$trophic)$global$n_pures, 240L)
 })
 
+test_that("essence_control : une validation absente est ignoree avec un avertissement", {
+  f <- fabrique_controle(decalage_pin = 0.8)
+  expect_warning(r <- essence_control(f$tr, list(f$cv, NULL), f$dom, f$opt, f$tr$trophic),
+                 "1 validation.*absente.*sur 2")
+  expect_equal(nrow(r$global), 1L)                 # la taille de blocs presente est calculee seule
+  expect_equal(r$global$n_alertes_ecart, 1L)
+  # liste par gradient dont l'element trophic est NULL (cv_sensibilite apres 035)
+  expect_warning(r2 <- essence_control(f$tr, list(f$cv, list(trophic = NULL, hydric = NULL)),
+                                       f$dom, f$opt, f$tr$trophic), "absente")
+  expect_equal(nrow(r2$global), 1L)
+  expect_error(suppressWarnings(essence_control(f$tr, list(NULL), f$dom, f$opt, f$tr$trophic)),
+               "Aucune validation")
+  expect_no_warning(essence_control(f$tr, list(f$cv), f$dom, f$opt, f$tr$trophic))
+})
+
 fabrique_sf <- function(n = 240, effet = 1.2, seed = 3) {
   set.seed(seed)
   esp <- rep(c("09", "61", "52", "62"), length.out = n)
@@ -189,11 +222,28 @@ test_that("essence_sensitivity : gain de R2 avec une vraie essence, pas avec une
   expect_lt(max(s2$resume$gain_r2), 0.15)
 })
 
+test_that("essence_sensitivity : une taille de blocs impossible est omise avec avertissement", {
+  skip_if_not_installed("ranger")
+  f <- fabrique_sf(120)
+  # des blocs de 500 km : un seul bloc, impossible de faire des plis
+  expect_warning(s <- essence_sensitivity(f$d, "coarse_a", NULL, f$dom,
+                                          block_sizes = c(500000, 20000.4), min_placettes = 10,
+                                          num_trees = 30, folds = 3L),
+                 "taille de blocs 500000 m omise")
+  expect_identical(unique(s$resume$bloc_m), 20000)       # arrondi au metre, seule taille gardee
+  expect_error(suppressWarnings(essence_sensitivity(f$d, "coarse_a", NULL, f$dom,
+                                                    block_sizes = 500000, min_placettes = 10,
+                                                    num_trees = 30, folds = 3L)),
+               "Aucune taille")
+})
+
 test_that("essence_sensitivity : regle des 700 m et entrees", {
   f <- fabrique_sf(60)
   f$d$pente <- 1
-  expect_error(essence_sensitivity(f$d, c("coarse_a", "pente"), NULL, f$dom, block_sizes = 10000,
-                                   num_trees = 20, folds = 3L), "700|IFN|fine|maille")
+  # la regle des 700 m s'applique : une variable fine est refusee (pas avalee par l'omission de bloc)
+  expect_error(suppressWarnings(essence_sensitivity(f$d, c("coarse_a", "pente"), NULL, f$dom,
+                                                    block_sizes = 10000, num_trees = 20, folds = 3L)),
+               "Aucune taille|700|IFN|fine|maille")
   expect_error(essence_sensitivity(f$d, "coarse_a", NULL, f$dom, block_sizes = -1), "blocs")
   expect_error(essence_sensitivity(data.frame(a = 1), "coarse_a", NULL, f$dom, block_sizes = 1),
                "sf")
@@ -288,4 +338,33 @@ test_that("ADR 0008 : l'essence n'entre dans aucune cible de la carte, des types
   motif <- "essence_dominante|coarse_essence|cv_essence|controle_essence|essence_sensitivity|dominant_species"
   for (n in present) expect_false(grepl(motif, bloc(n)), info = n)
   expect_false("essence" %in% unlist(strsplit(bloc("vars_modele"), "[^A-Za-z_]")))
+})
+
+test_that("fetch_bdforet : lit le cache (JSON synthetique) sans reseau, pages et colonnes", {
+  d <- file.path(tempdir(), "bdforet_cache_synth")
+  dir.create(d, showWarnings = FALSE)
+  carre <- function(x0) sf::st_polygon(list(rbind(c(x0, 6800000), c(x0 + 400, 6800000),
+                         c(x0 + 400, 6800400), c(x0, 6800400), c(x0, 6800000))))
+  x <- sf::st_sf(code_tfv = c("FF1-09-09", "FF2G61-61"), tfv = c("Foret de hetre", "Foret de sapin"),
+                 essence = c("H\u00eatre", "Sapin, \u00e9pic\u00e9a"), synthetic = TRUE,
+                 geometry = sf::st_sfc(carre(1000000), carre(1000500), crs = 2154))
+  bb <- sf::st_bbox(c(xmin = 1000000, ymin = 6800000, xmax = 1001000, ymax = 6800400), crs = 2154)
+  f <- file.path(d, sprintf("bdforet_%s_%d.json", paste(format(round(as.numeric(bb)), scientific = FALSE, trim = TRUE), collapse = "_"), 0L))
+  sf::st_write(x, f, driver = "GeoJSON", quiet = TRUE)
+  old <- options(sylvostation.downloader = function(...) stop("reseau interdit dans ce test"),
+                 sylvostation.download_retries = 1L, sylvostation.sleeper = function(...) NULL)
+  on.exit(options(old), add = TRUE)
+  r <- fetch_bdforet(bb, d)                      # tout vient du cache : aucun telechargement
+  expect_s3_class(r, "sf")
+  expect_equal(sf::st_crs(r)$epsg, 2154L)
+  expect_equal(names(r)[1:3], c("code_tfv", "tfv", "essence"))
+  expect_false("synthetic" %in% names(r))
+  expect_equal(nrow(r), 2L)
+  expect_equal(r$code_tfv, c("FF1-09-09", "FF2G61-61"))
+  # un point connu : le centre du premier polygone tombe dans la classe hetre
+  pt <- sf::st_sfc(sf::st_point(c(1000200, 6800200)), crs = 2154)
+  expect_equal(r$code_tfv[sf::st_intersects(pt, r)[[1]]], "FF1-09-09")
+  # sans cache, le telechargement est tente (et ici refuse) : l'erreur vient du telechargeur
+  expect_error(fetch_bdforet(bb, file.path(d, "vide")), "reseau interdit|T\u00e9l\u00e9chargement|echec|\u00e9chec")
+  expect_error(fetch_bdforet(sf::st_bbox(c(xmin = 0, ymin = 0, xmax = 1, ymax = 1), crs = 2154), d))
 })

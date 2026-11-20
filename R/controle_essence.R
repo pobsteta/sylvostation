@@ -4,14 +4,6 @@
 # sensibilite (gain de R2 si l'on connaissait l'essence), publies a part.
 # Sources : docs/referentiels.md § 7 (IFN), § 33.5 bis, § 36 (cette mission).
 
-# Genres arbores retires du trophique « sans les arbres » (en plus des noms latins de la table
-# ESPAR1 de l'IFN) : valeur provisoire, a verifier.
-.ESSENCE_GENRES_ARBRES <- c("Quercus", "Fagus", "Abies", "Picea", "Pinus", "Larix", "Pseudotsuga",
-                            "Carpinus", "Castanea", "Alnus", "Betula", "Fraxinus", "Acer", "Tilia",
-                            "Ulmus", "Populus", "Sorbus", "Taxus", "Robinia", "Juglans", "Platanus",
-                            "Tsuga", "Cedrus", "Aesculus", "Ailanthus")
-.ESSENCE_ESPECES_ARBRES <- c("Prunus avium", "Prunus padus", "Prunus serotina", "Corylus avellana")
-
 # Mention portee par les sorties de sensibilite
 .AVERT_SENSIBILITE <- paste("sensibilite : essence en place ; ne pas lire comme la carte",
                             "(ADR 0008)")
@@ -126,38 +118,66 @@ dominant_species <- function(arbre, ids = NULL, min_share = 0.75) {
   out
 }
 
+#' Table essence ESPAR -> CD_REF de l'IFN
+#'
+#' Lit `espar-cdref13.csv` (archive DataIFN) ou son extrait `ifn_espar_cdref.csv` : code d'essence
+#' `espar`, libellé, `cd_ref` (TAXREF v13.0, comme la flore) et nom du taxon. Même lecture que
+#' [read_tree_cd_ref()], qui n'en rend que les `CD_REF`.
+#'
+#' @param dir Dossier contenant `espar-cdref13.csv` ou `ifn_espar_cdref.csv`.
+#' @return Un `data.frame` : `espar`, `lib_espar`, `cd_ref` (numérique), `lib_cdref`.
+#' @examples
+#' head(read_espar_cdref(system.file("extdata", package = "sylvostation")), 3)
+#' @export
+read_espar_cdref <- function(dir) {
+  if (!is.character(dir) || length(dir) != 1L || !dir.exists(dir)) {
+    stop("Dossier introuvable : ", paste(dir, collapse = ", "), call. = FALSE)
+  }
+  f <- .trouver_fichier_ifn(dir, "espar-cdref13")
+  if (is.na(f)) f <- file.path(dir, "ifn_espar_cdref.csv")
+  if (!file.exists(f)) stop("espar-cdref13.csv (ou ifn_espar_cdref.csv) introuvable dans ", dir, call. = FALSE)
+  l <- readLines(f, encoding = "UTF-8", warn = FALSE)
+  l[1] <- sub("^\ufeff?(// ?)?", "", l[1])
+  d <- utils::read.delim(text = l, sep = ";", quote = "", colClasses = "character")
+  if (!all(c("espar", "lib_espar", "cd_ref", "lib_cdref") %in% names(d))) {
+    stop("Colonnes attendues : espar, lib_espar, cd_ref, lib_cdref.", call. = FALSE)
+  }
+  d <- d[, c("espar", "lib_espar", "cd_ref", "lib_cdref")]
+  d$cd_ref <- suppressWarnings(as.numeric(d$cd_ref))
+  d
+}
+
 #' Trophique observé sans les arbres
 #'
 #' Recalcule l'indice trophique des placettes (moyenne de la moyenne de `ph` et de la moyenne
-#' d'`azote` des espèces de la flore, comme [compute_gradients()]) **sans les espèces arborées**
-#' : noms latins de la table ESPAR1, genres d'arbres ([dominant_species()] n'en dépend pas) et
-#' quatre espèces (cerisier, merisier, noisetier). Sert de référence au contrôle par essence :
-#' l'indice complet contient l'essence elle-même.
+#' d'`azote` des espèces de la flore, comme [compute_gradients()]) **sans les essences de
+#' l'IFN** : les `CD_REF` de [read_tree_cd_ref()] (table `espar-cdref13.csv`, TAXREF v13, même
+#' référentiel que la flore) sont retirés par jointure sur `CD_REF`. Sert de référence au contrôle
+#' par essence : l'indice complet contient l'essence elle-même. La table des essences liste
+#' les arbres et quelques arbustes de l'inventaire.
 #'
 #' @param flore `data.frame` de la flore IFN : `id_placette`, `CD_REF`.
-#' @param indicateurs Valeurs indicatrices (`cd_ref`, `nom`, `ph`, `azote`).
-#' @param codes Résultat de [read_espar_codes()].
+#' @param indicateurs Valeurs indicatrices (`cd_ref`, `ph`, `azote`).
+#' @param tree_cd_ref Vecteur de `CD_REF` des essences ([read_tree_cd_ref()]).
 #' @param ids Identifiants de placettes à rendre, dans cet ordre.
 #' @param min_taxa Nombre minimal d'espèces indicatrices restantes (3).
 #' @return Un vecteur numérique aligné sur `ids` (`NA` sous `min_taxa`), attribut
-#'   `n_taxons_arbres` (taxons de `indicateurs` retirés).
+#'   `n_taxons_arbres` (taxons de `indicateurs` retirés, comptés et jamais retirés en silence).
 #' @examples
 #' fl <- data.frame(id_placette = "p", CD_REF = 1:4)
-#' ind <- data.frame(cd_ref = 1:4, nom = c("Fagus sylvatica", "Oxalis acetosella",
-#'                   "Rubus idaeus", "Poa nemoralis"), ph = c(5.7, 3, 4, 5), azote = c(5, 4, 6, 5))
-#' trophic_without_trees(fl, ind, read_espar_codes(), "p", min_taxa = 2)
+#' ind <- data.frame(cd_ref = 1:4, ph = c(5.7, 3, 4, 5), azote = c(5, 4, 6, 5))
+#' trophic_without_trees(fl, ind, tree_cd_ref = 1, ids = "p", min_taxa = 2)
 #' @export
-trophic_without_trees <- function(flore, indicateurs, codes, ids, min_taxa = 3) {
+trophic_without_trees <- function(flore, indicateurs, tree_cd_ref, ids, min_taxa = 3) {
   if (!is.data.frame(flore) || !all(c("id_placette", "CD_REF") %in% names(flore))) {
     stop("`flore` doit avoir les colonnes id_placette et CD_REF.", call. = FALSE)
   }
   ind <- as.data.frame(indicateurs)
-  if (!all(c("cd_ref", "nom", "ph", "azote") %in% names(ind))) {
-    stop("`indicateurs` doit avoir les colonnes cd_ref, nom, ph, azote.", call. = FALSE)
+  if (!all(c("cd_ref", "ph", "azote") %in% names(ind))) {
+    stop("`indicateurs` doit avoir les colonnes cd_ref, ph, azote.", call. = FALSE)
   }
-  nom <- sub("\\s*\\(.*$", "", as.character(ind$nom))
-  arbre <- nom %in% trimws(codes$latin) | sub(" .*$", "", nom) %in% .ESSENCE_GENRES_ARBRES |
-    nom %in% .ESSENCE_ESPECES_ARBRES
+  if (!is.numeric(tree_cd_ref)) stop("`tree_cd_ref` doit \u00eatre un vecteur de CD_REF.", call. = FALSE)
+  arbre <- ind$cd_ref %in% tree_cd_ref
   j <- match(flore$CD_REF, ind$cd_ref)
   ok <- !is.na(j) & !arbre[j]
   ids <- as.character(ids)
@@ -174,40 +194,50 @@ trophic_without_trees <- function(flore, indicateurs, codes, ids, min_taxa = 3) 
 #' Optimum trophique de Tichý des essences (repère indicatif)
 #'
 #' Pour chaque essence ESPAR, moyenne de `ph` et `azote` de l'espèce dans la table des valeurs
-#' indicatrices (Tichý et al., celle qui sert au trophique), appariée par le nom latin
-#' (deux premiers mots). **Repère indicatif, jamais la base d'une alerte** : la table décrit
-#' l'espèce, non la station forestière, et contredit les placettes (hêtre 5,7 contre 4,2 observé
-#' sans les arbres). Les optimums forestiers publiés (Rameau et al., *Flore forestière
-#' française* ; EcoPlant) sont **à vérifier, non lus**.
+#' indicatrices (Tichý et al., celle qui sert au trophique), appariée par **`CD_REF`** grâce à
+#' la table essence -> `CD_REF` de l'IFN ([read_espar_cdref()]). **Repère indicatif, jamais la
+#' base d'une alerte** : la table décrit l'espèce, non la station forestière, et contredit les
+#' placettes (hêtre 5,7 contre 4,2 observé sans les arbres). Les optimums forestiers publiés
+#' (Rameau et al., *Flore forestière française* ; EcoPlant) sont **à vérifier, non lus**.
 #'
 #' @param espar Codes ESPAR.
-#' @param indicateurs Valeurs indicatrices (`nom`, `ph`, `azote`).
-#' @param codes Résultat de [read_espar_codes()].
-#' @return Un `data.frame` : `espar`, `nom`, `latin`, `optimum_tichy` (`NA` si l'espèce n'a ni
-#'   `ph` ni `azote`, ou n'est pas dans la table), `n_lignes`.
+#' @param indicateurs Valeurs indicatrices (`cd_ref`, `ph`, `azote`).
+#' @param espar_cdref Résultat de [read_espar_cdref()].
+#' @param codes Facultatif : résultat de [read_espar_codes()] (ajoute `latin_espar1`, nom latin
+#'   de l'unité ESPAR1 des métadonnées, qui complète le nom du taxon de `espar_cdref`).
+#' @return Un `data.frame` : `espar`, `nom` (libellé de l'essence), `latin` (nom du taxon),
+#'   `cd_ref`, `optimum_tichy` (`NA` si l'espèce n'a ni `ph` ni `azote`, ou n'est pas dans la
+#'   table), `n_lignes`, et `latin_espar1` si `codes` est fourni.
 #' @examples
-#' ind <- data.frame(nom = "Fagus sylvatica", ph = 5.7, azote = NA_real_)
-#' species_optima(c("09", "64"), ind, read_espar_codes())
+#' ind <- data.frame(cd_ref = 97947, ph = 5.7, azote = NA_real_)
+#' species_optima(c("09", "64"), ind, read_espar_cdref(system.file("extdata",
+#'                package = "sylvostation")))
 #' @export
-species_optima <- function(espar, indicateurs, codes) {
+species_optima <- function(espar, indicateurs, espar_cdref, codes = NULL) {
   ind <- as.data.frame(indicateurs)
-  if (!all(c("nom", "ph", "azote") %in% names(ind))) {
-    stop("`indicateurs` doit avoir les colonnes nom, ph, azote.", call. = FALSE)
+  if (!all(c("cd_ref", "ph", "azote") %in% names(ind))) {
+    stop("`indicateurs` doit avoir les colonnes cd_ref, ph, azote.", call. = FALSE)
   }
-  bin <- function(s) sub("^(\\S+ \\S+).*$", "\\1", sub("\\s*\\(.*$", "", as.character(s)))
+  if (!all(c("espar", "lib_espar", "cd_ref", "lib_cdref") %in% names(espar_cdref))) {
+    stop("`espar_cdref` doit venir de read_espar_cdref().", call. = FALSE)
+  }
   esp <- unique(as.character(espar[!is.na(espar)]))
-  lat <- codes$latin[match(esp, codes$code)]
-  nm <- codes$nom[match(esp, codes$code)]
+  # ARBRE note les essences sur deux caracteres (09) ; espar-cdref13.csv sans zero de tete (9)
+  nz <- function(x) sub("^0+(?=.)", "", as.character(x), perl = TRUE)
+  i <- match(nz(esp), nz(espar_cdref$espar))
+  cd <- espar_cdref$cd_ref[i]
   v <- rowMeans(cbind(ind$ph, ind$azote), na.rm = TRUE)
   v[is.nan(v)] <- NA_real_
-  res <- lapply(seq_along(esp), function(i) {
-    k <- if (is.na(lat[i])) integer(0) else which(bin(ind$nom) == bin(lat[i]))
-    c(opt = if (length(k) && any(!is.na(v[k]))) mean(v[k], na.rm = TRUE) else NA_real_,
-      n = length(k))
+  res <- lapply(seq_along(esp), function(k) {
+    r <- if (is.na(cd[k])) integer(0) else which(ind$cd_ref == cd[k])
+    c(opt = if (length(r) && any(!is.na(v[r]))) mean(v[r], na.rm = TRUE) else NA_real_,
+      n = length(r))
   })
-  data.frame(espar = esp, nom = nm, latin = lat,
-             optimum_tichy = vapply(res, `[`, 0, "opt"), n_lignes = vapply(res, `[`, 0, "n"),
-             stringsAsFactors = FALSE)
+  out <- data.frame(espar = esp, nom = espar_cdref$lib_espar[i], latin = espar_cdref$lib_cdref[i],
+                    cd_ref = cd, optimum_tichy = vapply(res, `[`, 0, "opt"),
+                    n_lignes = vapply(res, `[`, 0, "n"), stringsAsFactors = FALSE)
+  if (!is.null(codes)) out$latin_espar1 <- codes$latin[match(esp, codes$code)]
+  out
 }
 
 .sp <- function(a, b) {
@@ -247,8 +277,8 @@ species_optima <- function(espar, indicateurs, codes) {
 #'
 #' @param train `data.frame` ou `sf` d'apprentissage : `id_placette`, `trophic` (même ordre que
 #'   les prédictions).
-#' @param cv Liste nommée de résultats de [spatial_cv()] (un par taille de blocs) ou de listes
-#'   par gradient (élément `trophic`).
+#' @param cv Liste de résultats de [spatial_cv()] (un par taille de blocs) ou de listes par
+#'   gradient (élément `trophic`). Un élément `NULL` est ignoré avec un avertissement.
 #' @param dominant Résultat de [dominant_species()] (placettes de `train`).
 #' @param optima Résultat de [species_optima()].
 #' @param trophic_sans_arbres Résultat de [trophic_without_trees()], aligné sur `train`.
@@ -277,6 +307,17 @@ essence_control <- function(train, cv, dominant, optima, trophic_sans_arbres,
     stop("`trophic_sans_arbres` doit avoir la longueur de `train`.", call. = FALSE)
   }
   if (!is.list(cv) || !length(cv)) stop("`cv` doit \u00eatre une liste de validations.", call. = FALSE)
+  # une validation absente (NULL, ou gradient sans resultat) n'arrete pas le controle : les
+  # autres tailles de blocs sont calculees, et l'absence est signalee (jamais muette)
+  vide <- vapply(cv, function(x) is.null(x) || (is.list(x) && "trophic" %in% names(x) &&
+                                                   is.null(x$trophic) && !"predictions" %in% names(x)),
+                 logical(1))
+  if (any(vide)) {
+    warning(sum(vide), " validation(s) crois\u00e9e(s) absente(s) sur ", length(cv),
+            " : le contr\u00f4le est calcul\u00e9 sans elle(s) (taille de blocs omise).", call. = FALSE)
+    cv <- cv[!vide]
+  }
+  if (!length(cv)) stop("Aucune validation crois\u00e9e disponible pour le contr\u00f4le.", call. = FALSE)
   dom <- dominant[match(as.character(d$id_placette), as.character(dominant$id_placette)), ]
   pure <- !is.na(dom$share) & dom$share >= part_pure
   esp <- dom$espar
@@ -308,7 +349,7 @@ essence_control <- function(train, cv, dominant, optima, trophic_sans_arbres,
     gardees <- names(tb)[tb >= min_placettes]
     e <- do.call(rbind, lapply(gardees, function(x) {
       i <- which(pure & esp == x)
-      data.frame(bloc_m = r$block_size, espar = x, nom = nm[i[1]], n = length(i),
+      data.frame(bloc_m = round(r$block_size), espar = x, nom = nm[i[1]], n = length(i),
                  observe_complet = mean(d$trophic[i]),
                  observe_sans_arbres = mean(trophic_sans_arbres[i], na.rm = TRUE),
                  predit_hors_pli = mean(pred[i]), optimum_tichy = opt[i[1]],
@@ -330,7 +371,7 @@ essence_control <- function(train, cv, dominant, optima, trophic_sans_arbres,
       summary(stats::lm(y[i_g][ok] ~ esp[i_g][ok]))$r.squared
     }
     glob[[b]] <- data.frame(
-      bloc_m = r$block_size, n_pures = sum(pure), n_essences = nrow(e),
+      bloc_m = round(r$block_size), n_pures = sum(pure), n_essences = nrow(e),
       accord_predit = acc_p, accord_observe = acc_o, ratio = ratio,
       alerte_ordre = if (is.na(ratio) || sum(pure) < min_placettes) NA else ratio < alerte_ratio,
       pente_amplitude = pente,
@@ -429,20 +470,36 @@ essence_sensitivity <- function(train, predictors, encode = NULL, dominant, bloc
   resume <- list()
   par_pli <- list()
   for (bs in block_sizes) {
-    base <- cv(bs)
-    resume[[length(resume) + 1L]] <- data.frame(bloc_m = bs, variante = "base",
+    # une taille de blocs impossible (trop peu de blocs pour les plis) est omise avec un
+    # avertissement qui donne la raison ; les autres tailles sont calculees
+    r <- tryCatch({
+      base <- cv(bs)
+      v <- lapply(names(var), function(nm) cv(bs, var[[nm]]))
+      list(base = base, v = stats::setNames(v, names(var)))
+    }, error = function(e) {
+      warning("essence_sensitivity : taille de blocs ", format(round(bs), scientific = FALSE),
+              " m omise : ",
+              conditionMessage(e), call. = FALSE)
+      NULL
+    })
+    if (is.null(r)) next
+    base <- r$base
+    resume[[length(resume) + 1L]] <- data.frame(bloc_m = round(bs), variante = "base",
       r2 = base$global[["r2"]], rmse = base$global[["rmse"]], gain_r2 = 0, gain_rmse = 0,
       stringsAsFactors = FALSE)
-    for (v in names(var)) {
-      m <- cv(bs, var[[v]])
-      resume[[length(resume) + 1L]] <- data.frame(bloc_m = bs, variante = v,
+    for (nm in names(var)) {
+      m <- r$v[[nm]]
+      resume[[length(resume) + 1L]] <- data.frame(bloc_m = round(bs), variante = nm,
         r2 = m$global[["r2"]], rmse = m$global[["rmse"]],
         gain_r2 = m$global[["r2"]] - base$global[["r2"]],
         gain_rmse = m$global[["rmse"]] - base$global[["rmse"]], stringsAsFactors = FALSE)
-      par_pli[[length(par_pli) + 1L]] <- data.frame(bloc_m = bs, variante = v,
+      par_pli[[length(par_pli) + 1L]] <- data.frame(bloc_m = round(bs), variante = nm,
         pli = m$par_pli$pli, n = m$par_pli$n, r2 = m$par_pli$r2,
         gain_r2 = m$par_pli$r2 - base$par_pli$r2, stringsAsFactors = FALSE)
     }
+  }
+  if (!length(resume)) {
+    stop("Aucune taille de blocs n'a pu \u00eatre calcul\u00e9e (voir les avertissements).", call. = FALSE)
   }
   resume <- do.call(rbind, resume)
   resume$avertissement <- .AVERT_SENSIBILITE
@@ -503,17 +560,18 @@ essence_tables <- function(controle, sensibilite) {
 #' }
 #' @export
 fetch_bdforet <- function(bbox, cache_dir = file.path("data", "cache", "bdforet")) {
+  assert_crs_2154(sf::st_as_sfc(sf::st_bbox(bbox)))
   b <- as.numeric(sf::st_bbox(bbox)[c("xmin", "ymin", "xmax", "ymax")])
-  assert_crs_2154(bbox)
   dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
   base <- paste0("https://data.geopf.fr/wfs/ows?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature",
                  "&TYPENAMES=LANDCOVER.FORESTINVENTORY.V2:formation_vegetale&SRSNAME=EPSG:2154",
-                 "&BBOX=", paste(b, collapse = ","), ",EPSG:2154",
+                 "&BBOX=", paste(format(b, scientific = FALSE, trim = TRUE), collapse = ","), ",EPSG:2154",
                  "&OUTPUTFORMAT=application/json&COUNT=5000")
   pages <- list()
   debut <- 0L
   repeat {
-    f <- file.path(cache_dir, sprintf("bdforet_%s_%d.json", paste(round(b), collapse = "_"), debut))
+    f <- file.path(cache_dir, sprintf("bdforet_%s_%d.json", paste(format(round(b), scientific = FALSE, trim = TRUE),
+                                                           collapse = "_"), debut))
     if (!file.exists(f) || file.size(f) == 0) {
       tmp <- paste0(f, ".part")
       .download_retry(paste0(base, "&STARTINDEX=", debut), tmp)

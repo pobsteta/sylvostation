@@ -4,14 +4,14 @@
 \alias{trophic_without_trees}
 \title{Trophique observé sans les arbres}
 \usage{
-trophic_without_trees(flore, indicateurs, codes, ids, min_taxa = 3)
+trophic_without_trees(flore, indicateurs, tree_cd_ref, ids, min_taxa = 3)
 }
 \arguments{
 \item{flore}{\code{data.frame} de la flore IFN : \code{id_placette}, \code{CD_REF}.}
 
-\item{indicateurs}{Valeurs indicatrices (\code{cd_ref}, \code{nom}, \code{ph}, \code{azote}).}
+\item{indicateurs}{Valeurs indicatrices (\code{cd_ref}, \code{ph}, \code{azote}).}
 
-\item{codes}{Résultat de \code{\link[=read_espar_codes]{read_espar_codes()}}.}
+\item{tree_cd_ref}{Vecteur de \code{CD_REF} des essences (\code{\link[=read_tree_cd_ref]{read_tree_cd_ref()}}).}
 
 \item{ids}{Identifiants de placettes à rendre, dans cet ordre.}
 
@@ -19,18 +19,18 @@ trophic_without_trees(flore, indicateurs, codes, ids, min_taxa = 3)
 }
 \value{
 Un vecteur numérique aligné sur \code{ids} (\code{NA} sous \code{min_taxa}), attribut
-\code{n_taxons_arbres} (taxons de \code{indicateurs} retirés).
+\code{n_taxons_arbres} (taxons de \code{indicateurs} retirés, comptés et jamais retirés en silence).
 }
 \description{
 Recalcule l'indice trophique des placettes (moyenne de la moyenne de \code{ph} et de la moyenne
-d'\code{azote} des espèces de la flore, comme \code{\link[=compute_gradients]{compute_gradients()}}) \strong{sans les espèces arborées}
-: noms latins de la table ESPAR1, genres d'arbres (\code{\link[=dominant_species]{dominant_species()}} n'en dépend pas) et
-quatre espèces (cerisier, merisier, noisetier). Sert de référence au contrôle par essence :
-l'indice complet contient l'essence elle-même.
+d'\code{azote} des espèces de la flore, comme \code{\link[=compute_gradients]{compute_gradients()}}) \strong{sans les essences de
+l'IFN} : les \code{CD_REF} de \code{\link[=read_tree_cd_ref]{read_tree_cd_ref()}} (table \code{espar-cdref13.csv}, TAXREF v13, même
+référentiel que la flore) sont retirés par jointure sur \code{CD_REF}. Sert de référence au contrôle
+par essence : l'indice complet contient l'essence elle-même. La table des essences liste
+les arbres et quelques arbustes de l'inventaire.
 }
 \examples{
 fl <- data.frame(id_placette = "p", CD_REF = 1:4)
-ind <- data.frame(cd_ref = 1:4, nom = c("Fagus sylvatica", "Oxalis acetosella",
-                  "Rubus idaeus", "Poa nemoralis"), ph = c(5.7, 3, 4, 5), azote = c(5, 4, 6, 5))
-trophic_without_trees(fl, ind, read_espar_codes(), "p", min_taxa = 2)
+ind <- data.frame(cd_ref = 1:4, ph = c(5.7, 3, 4, 5), azote = c(5, 4, 6, 5))
+trophic_without_trees(fl, ind, tree_cd_ref = 1, ids = "p", min_taxa = 2)
 }

@@ -21,8 +21,8 @@ essence_control(
 \item{train}{\code{data.frame} ou \code{sf} d'apprentissage : \code{id_placette}, \code{trophic} (même ordre que
 les prédictions).}
 
-\item{cv}{Liste nommée de résultats de \code{\link[=spatial_cv]{spatial_cv()}} (un par taille de blocs) ou de listes
-par gradient (élément \code{trophic}).}
+\item{cv}{Liste de résultats de \code{\link[=spatial_cv]{spatial_cv()}} (un par taille de blocs) ou de listes par
+gradient (élément \code{trophic}). Un élément \code{NULL} est ignoré avec un avertissement.}
 
 \item{dominant}{Résultat de \code{\link[=dominant_species]{dominant_species()}} (placettes de \code{train}).}
 

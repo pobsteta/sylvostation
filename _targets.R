@@ -521,20 +521,28 @@ if (!isTRUE(cfg$demo)) {
     # cibles ne servent qu'a des sorties publiees a part (controle_essence*.csv,
     # sensibilite_essence.csv). Seuils : valeur provisoire, sans source, a verifier (config.yml).
     tar_target(espar_codes, sylvostation::read_espar_codes()),
+    # table essence -> CD_REF de l'IFN (espar-cdref13.csv, extraite avec l'archive) : retrait des
+    # essences de l'indice par jointure sur CD_REF, optimums de Tichy par CD_REF
+    tar_target(ifn_dir, if (hors_ligne) src$ifn_dir else sylvostation::fetch_ifn(src$ifn_url, cache)),
+    tar_target(espar_cdref, sylvostation::read_espar_cdref(ifn_dir)),
+    tar_target(arbres_cd_ref, sylvostation::read_tree_cd_ref(ifn_dir)),
     tar_target(essence_dominante, sylvostation::dominant_species(
       ifn$arbre, train$trophic$id_placette, min_share = cfg$essence_part_pure)),
+    # un echec donne un avertissement avec sa raison et NULL (sortie omise), jamais un silence
     tar_target(controle_essence, tryCatch({
-      cv <- Filter(Negate(is.null), list(cvs$trophic, cv_sensibilite$trophic))
       sylvostation::essence_control(
-        train$trophic, cv, essence_dominante,
+        train$trophic, list(cvs$trophic, cv_sensibilite$trophic), essence_dominante,
         sylvostation::species_optima(essence_dominante$espar[essence_dominante$pure %in% TRUE],
-                                     indicateurs, espar_codes),
-        sylvostation::trophic_without_trees(ifn$flore, indicateurs, espar_codes,
+                                     indicateurs, espar_cdref, espar_codes),
+        sylvostation::trophic_without_trees(ifn$flore, indicateurs, arbres_cd_ref,
                                             train$trophic$id_placette),
         part_pure = cfg$essence_part_pure, min_placettes = cfg$essence_min_placettes,
         alerte_ecart = cfg$essence_alerte_ecart, alerte_ratio = cfg$essence_alerte_ratio,
         alerte_pente = cfg$essence_alerte_pente)
-    }, error = function(e) NULL)),
+    }, error = function(e) {
+      warning("controle_essence : ", conditionMessage(e), " ; controle omis.", call. = FALSE)
+      NULL
+    })),
     tar_target(cv_essence, tryCatch(sylvostation::essence_sensitivity(
       train$trophic, vars_modele$trophic,
       # memes encodages que cvs (lithologie, formation) : copie volontaire, cvs reste inchange
@@ -546,7 +554,10 @@ if (!isTRUE(cfg$demo)) {
       block_sizes = unique(c(cvs$trophic$block_size, cfg$cv_block_sensibilite_m)),
       part_pure = cfg$essence_part_pure, min_placettes = cfg$essence_min_placettes,
       k = cfg$litho_encoding_k, ifn_precision_m = cfg$ifn_precision_m, num_trees = 500, seed = 1),
-      error = function(e) NULL)),
+      error = function(e) {
+        warning("cv_essence : ", conditionMessage(e), " ; sensibilit\u00e9 omise.", call. = FALSE)
+        NULL
+      })),
     # option (desactivee par defaut, licence contradictoire) : moyennes par classe seulement
     tar_target(controle_bdforet, if (!isTRUE(cfg$bdforet_controle)) NULL else {
       m <- sylvostation::bdforet_class_means(
