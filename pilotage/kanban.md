@@ -14,7 +14,6 @@
 
 ## Validé
 
-- [039-bioclimat-ru-fins](missions/039-bioclimat-ru-fins.md) · depuis le cycle 5 · dev (opus, plan d'abord) · mesures faites, plan en rédaction
 - 037d local contre régional ([fiche 037](missions/037-ancrages-gbif-bdforet.md)) · cycle 5 · dev · code écrit, tests et commit à faire
 
 
@@ -34,6 +33,7 @@
 
 ## Terminé
 
+- [039-bioclimat-ru-fins](missions/039-bioclimat-ru-fins.md) · cycle 5 · dev · T corrigée par gradient SAFRAN (0,22 → 0,11 °C) ; bioclimat R² +0,08 à +0,10, hydrique +0,01 à +0,05 ; RU apprise 0,11-0,14 ; trophique sans climat ; suite 039b (mineurs, test hors ligne de la branche corrigée)
 - [040-table-lithologique](missions/040-table-lithologique.md) · cycle 5 · dev · non_classe dans les disques 155 → 10, placettes à classe dominante non_classe 296 → 0 ; R² trophique ≈ +0,01 (bruit) ; 42 formations gelées candidates pour Pascal
 - [037-ancrages-gbif-bdforet](missions/037-ancrages-gbif-bdforet.md) · cycle 5 · dev · ancrages GBIF 5 → 2 (licences) ; contrôle par essence : pente 0,31, 3 alertes ; gain net de l'essence ≈ 0,05 (ADR 0008 maintenue)
 - [035-calibration-greco](missions/035-calibration-greco.md) · cycle 5 · dev · 187 → 2 893 placettes ; R² trophique 0,19 [0,09 ; 0,28] (blocs estimés 22 km), 0,27 [0,20 ; 0,31] (8 358 m)
