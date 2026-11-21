@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="sylvostation mission 041 (afficheur)" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata><name>Tournée 2026-11 : vérifications lithologie et RU</name><time>2026-11-21T00:00:00Z</time></metadata>
+  <wpt lat="49.494593" lon="6.182398">
+    <name>A1</name>
+    <desc>l3b dep 57 ; code : classe marne_argile ; L93 930582 / 6937451</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="49.380108" lon="6.147398">
+    <name>A2</name>
+    <desc>l3b dep 57 ; code : classe marne_argile ; L93 928555 / 6924622</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="48.376145" lon="5.879348">
+    <name>B1</name>
+    <desc>l3b dep 88 ; code : classe marne_argile ; L93 913169 / 6812314</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="48.239450" lon="5.714219">
+    <name>B2</name>
+    <desc>l3b dep 88 ; code : classe marne_argile ; L93 901471 / 6796697</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="48.781097" lon="6.282611">
+    <name>C1</name>
+    <desc>l3b dep 54 ; code : classe marne_argile ; L93 941137 / 6858458</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="48.637667" lon="6.190167">
+    <name>C2</name>
+    <desc>l3b dep 54 ; code : classe marne_argile ; L93 934994 / 6842246</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="48.850472" lon="6.153789">
+    <name>C3</name>
+    <desc>l3b dep 54 ; code : classe marne_argile ; L93 931371 / 6865780</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="47.857991" lon="6.610058">
+    <name>D1</name>
+    <desc>h2PK3 dep 70 ; code : classe volcanite ; L93 969864 / 6757014</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="47.745979" lon="6.739001">
+    <name>D2</name>
+    <desc>h2PK3 dep 70 ; code : classe volcanite ; L93 980085 / 6745031</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="47.775052" lon="6.595340">
+    <name>D3</name>
+    <desc>h2PK3 dep 70 ; code : classe volcanite ; L93 969184 / 6747758</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="48.147083" lon="7.296026">
+    <name>E1</name>
+    <desc>e dep 68 ; code : classe calcaire ; L93 1019349 / 6791658</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="47.500264" lon="7.162349">
+    <name>E2</name>
+    <desc>e dep 68 ; code : classe calcaire ; L93 1013208 / 6719357</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="47.718292" lon="6.901916">
+    <name>F1</name>
+    <desc>rD dep 90 ; code : classe gres ; L93 992431 / 6742549</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="47.723932" lon="6.863680">
+    <name>F2</name>
+    <desc>rD dep 90 ; code : classe gres ; L93 989537 / 6743034</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="47.720395" lon="6.881785">
+    <name>F3</name>
+    <desc>rD dep 90 ; code : classe gres ; L93 990912 / 6742708</desc>
+    <type>lithologie</type>
+  </wpt>
+  <wpt lat="48.191175" lon="7.160016">
+    <name>G1</name>
+    <desc>RU carte apprise, versant ; L93 1008990 / 6796010</desc>
+    <type>ru</type>
+  </wpt>
+  <wpt lat="48.181308" lon="7.174058">
+    <name>G2</name>
+    <desc>RU carte apprise, versant ; L93 1010090 / 6794970</desc>
+    <type>ru</type>
+  </wpt>
+  <wpt lat="48.178444" lon="7.153084">
+    <name>G3</name>
+    <desc>RU carte apprise, versant ; L93 1008550 / 6794570</desc>
+    <type>ru</type>
+  </wpt>
+  <wpt lat="48.142250" lon="7.253368">
+    <name>H1</name>
+    <desc>RU carte apprise, fond de vallée ; L93 1016210 / 6790950</desc>
+    <type>ru</type>
+  </wpt>
+  <wpt lat="48.152582" lon="7.236694">
+    <name>H2</name>
+    <desc>RU carte apprise, fond de vallée ; L93 1014910 / 6792030</desc>
+    <type>ru</type>
+  </wpt>
+  <wpt lat="48.149424" lon="7.259333">
+    <name>H3</name>
+    <desc>RU carte apprise, fond de vallée ; L93 1016610 / 6791770</desc>
+    <type>ru</type>
+  </wpt>
+</gpx>
