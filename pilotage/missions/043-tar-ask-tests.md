@@ -6,7 +6,7 @@
 un store `_targets` qu'ils ont créés, pour que la suite reste verte en local après une mise à
 jour de `targets`, sans dépendre de la variable posée dans la CI.
 
-**Redite par l'agent :** _à compléter par l'agent._
+**Redite par l'agent :** les tests qui relisent un store `_targets` qu'ils ont eux-mêmes créé posent `withr::local_envvar(TAR_ASK = "false")` à portée du test, pour rester verts avec un `targets` récent (qui refuse de lire du code `tar_format()` hors session interactive) sans dépendre de la variable de la CI.
 
 ## Sources
 

@@ -2,6 +2,9 @@
 # (jeux synthétiques de inst/extdata, sans réseau). Ne prouve rien sur données réelles.
 
 test_that("le pipeline démo s'exécute de bout en bout et écrit des sorties synthétiques", {
+  # targets récent refuse de lire un store contenant du code tar_format() hors session
+  # interactive (invite de confirmation) : le store lu ici est celui que ce test a créé.
+  withr::local_envvar(TAR_ASK = "false")
   skip_on_cran()
   skip_if_not_installed("targets")
   for (p in c("ranger", "CAST", "rpart", "indicspecies", "mgcv")) skip_if_not_installed(p)

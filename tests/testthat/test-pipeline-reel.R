@@ -883,6 +883,9 @@ test_that("write_types_gpkg_real : table jointe aux polygones, aucune couche san
 
 # --- run complet hors ligne : réseau, reprise, point connu --------------------------------
 test_that("mode réel hors ligne : 0 appel réseau, reprise après interruption, point dans la bonne cellule", {
+  # targets récent refuse de lire un store contenant du code tar_format() hors session
+  # interactive (invite de confirmation) : le store lu ici est celui que ce test a créé.
+  withr::local_envvar(TAR_ASK = "false")
   skip_on_cran()
   skip_if_not_installed("targets")
   skip_if_not_installed("withr")
@@ -999,6 +1002,9 @@ test_that("_targets.R : seule la valeur 1 de SYLVOSTATION_LIDAR_FORCE force le r
 })
 
 test_that("_targets.R : une clé sans rapport ne périme pas lidar_files, lidar_buffer_m la périme (032)", {
+  # targets récent refuse de lire un store contenant du code tar_format() hors session
+  # interactive (invite de confirmation) : le store lu ici est celui que ce test a créé.
+  withr::local_envvar(TAR_ASK = "false")
   skip_on_cran()
   skip_if_not_installed("targets")
   skip_if_not_installed("withr")

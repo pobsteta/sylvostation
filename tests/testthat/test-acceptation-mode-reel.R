@@ -36,6 +36,9 @@ reel_run <- function() {
   if (!is.null(.reel$skip)) skip(.reel$skip)
   if (!is.null(.reel$res)) return(.reel$res)
   sauter <- function(msg) { .reel$skip <- msg; skip(msg) }
+  # targets récent refuse de lire un store contenant du code tar_format() hors session
+  # interactive (invite de confirmation) : le store lu ici est celui que ce test a créé.
+  withr::local_envvar(TAR_ASK = "false")
   skip_on_cran()
   skip_if_not_installed("targets")
   pre <- Sys.getenv("SYLVOSTATION_REEL_DIR", "")
@@ -167,6 +170,9 @@ est_fine <- function(v) {
 }
 
 test_that("mode réel : aucune variable fine renseignée sur points IFN, de précision NA ou > 25 m", {
+  # targets récent refuse de lire un store contenant du code tar_format() hors session
+  # interactive (invite de confirmation) : le store lu ici est celui que ce test a créé.
+  withr::local_envvar(TAR_ASK = "false")
   s <- sorties_reel()
   old <- setwd(s$work)
   on.exit(setwd(old), add = TRUE)

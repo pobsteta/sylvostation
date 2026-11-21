@@ -4,6 +4,9 @@
 # telechargement, aucun jeu synthetique (le mode reel les refuse : assert_not_synthetic()).
 
 test_that("mode reel hors ligne : T corrigee et RU apprise calculees, ecrites, T decroit avec l'altitude", {
+  # targets récent refuse de lire un store contenant du code tar_format() hors session
+  # interactive (invite de confirmation) : le store lu ici est celui que ce test a créé.
+  withr::local_envvar(TAR_ASK = "false")
   skip_on_cran()
   skip_if_not_installed("targets")
   for (p in c("ranger", "CAST", "rpart", "indicspecies", "mgcv", "euptf2", "soiltexture"))
