@@ -172,7 +172,9 @@ validation_table <- function(cvs, sensibilite = NULL, local = NULL, min_blocs_pa
 #'   classe), `par_axe` (`axe`, `accord_exact`, `accord_une_classe`, `kappa`), `n`,
 #'   `n_ecartes`.
 #' @examples
-#' validate_maps(c("T1-H1", "T2-H1", "T2-H2", "T1-H2"), c("T1-H1", "T2-H2", "T2-H2", "T1-H1"))$accord_exact
+#' pred <- c("T1-H1", "T2-H1", "T2-H2", "T1-H2")
+#' field <- c("T1-H1", "T2-H2", "T2-H2", "T1-H1")
+#' validate_maps(pred, field)$accord_exact
 #' @export
 validate_maps <- function(pred_types, field_types) {
   if (length(pred_types) != length(field_types)) {

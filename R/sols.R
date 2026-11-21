@@ -417,7 +417,7 @@ soilgrids_cu <- function(files) {
 #' @export
 ru_soilgrids <- function(cu, depth_cm) {
   if (!is.numeric(depth_cm) || anyNA(depth_cm) || any(depth_cm < 0 | depth_cm > 200)) {
-    stop("`depth_cm` doit être entre 0 et 200 cm.", call. = FALSE)
+    stop("`depth_cm` doit \u00eatre entre 0 et 200 cm.", call. = FALSE)
   }
   ep <- function(D) pmax(0, pmin(.SG_BAS, D) - .SG_HAUT)
   if (inherits(cu, "SpatRaster")) {
@@ -476,7 +476,7 @@ coarse_cu_layers <- function(cu, radius = 700) {
 #' layers_at_points(p, r)$coarse_x_700m
 #' @export
 layers_at_points <- function(points, layers) {
-  if (!inherits(layers, "SpatRaster")) stop("`layers` doit être un SpatRaster.", call. = FALSE)
+  if (!inherits(layers, "SpatRaster")) stop("`layers` doit \u00eatre un SpatRaster.", call. = FALSE)
   assert_no_fine_extract_on_ifn(points, names(layers))
   for (n in names(layers)) {
     v <- raster_at_points(points, layers[[n]])
@@ -512,7 +512,7 @@ layers_at_points <- function(points, layers) {
 #' @export
 ru_learned_data <- function(train, cu700) {
   if (!inherits(train, "sf") || !"ru_mm" %in% names(train)) {
-    stop("`train` doit être un sf avec ru_mm.", call. = FALSE)
+    stop("`train` doit \u00eatre un sf avec ru_mm.", call. = FALSE)
   }
   geol <- intersect(c("coarse_litho_enc", "coarse_formation_enc"), names(train))
   d <- layers_at_points(train, cu700)
@@ -552,6 +552,6 @@ ru_soilgrids_diagnostic <- function(points, cu700, depths = c(50, 100, 200)) {
                ru_sg_moy = mean(sg[k]), biais = mean(e), rmse = sqrt(mean(e^2)),
                correlation = if (sum(k) > 2) stats::cor(sg[k], d$ru_mm[k]) else NA_real_,
                sd_ifn = stats::sd(d$ru_mm[k]), sd_sg = stats::sd(sg[k]),
-               statut = "diagnostic (mission 039) : RU SoilGrids non utilisée par la carte")
+               statut = "diagnostic (mission 039) : RU SoilGrids non utilis\u00e9e par la carte")
   }))
 }

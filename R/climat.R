@@ -205,13 +205,13 @@ safran_weights <- function(x, y, safran) {
 .t_mailles <- function(safran, months = 1:12) {
   d <- .safran_norm(safran)
   if (!"T" %in% names(d) || all(is.na(d$T))) {
-    stop("`safran` n'a pas de température (colonne T ou T_Q).", call. = FALSE)
+    stop("`safran` n'a pas de temp\u00e9rature (colonne T ou T_Q).", call. = FALSE)
   }
   d <- d[!is.na(d$T), , drop = FALSE]
   d$an <- as.integer(substr(as.character(d$DATE), 1, 4))
   d$mois <- as.integer(substr(as.character(d$DATE), 5, 6))
   d <- d[d$mois %in% months, , drop = FALSE]
-  if (!nrow(d)) stop("Aucune journée SAFRAN pour les mois demandés.", call. = FALSE)
+  if (!nrow(d)) stop("Aucune journ\u00e9e SAFRAN pour les mois demand\u00e9s.", call. = FALSE)
   d$maille <- paste(d$LAMBX, d$LAMBY, sep = "_")
   # moyenne annuelle par maille, puis moyenne des annees (tapply : rapide sur 30 ans)
   ma <- tapply(d$T, list(d$maille, d$an), mean)
@@ -252,7 +252,7 @@ safran_cell_altitude <- function(safran, dem) {
   if (!is.data.frame(safran) || !all(c("LAMBX", "LAMBY") %in% names(safran))) {
     stop("`safran` doit avoir les colonnes LAMBX et LAMBY.", call. = FALSE)
   }
-  if (!inherits(dem, "SpatRaster")) stop("`dem` doit être un SpatRaster.", call. = FALSE)
+  if (!inherits(dem, "SpatRaster")) stop("`dem` doit \u00eatre un SpatRaster.", call. = FALSE)
   assert_crs_2154(dem)
   m <- .mailles_safran(.safran_norm(safran))
   sq <- lapply(seq_len(nrow(m)), function(i) {
@@ -348,12 +348,12 @@ safran_lapse_rate <- function(safran, alt_mailles, months = 1:12, min_mailles = 
 #' @export
 t_corrected <- function(dem, safran, alt_mailles, lapse, months = 1:12, name = "t_corr",
                         chunk = 500000L) {
-  if (!inherits(dem, "SpatRaster")) stop("`dem` doit être un SpatRaster.", call. = FALSE)
+  if (!inherits(dem, "SpatRaster")) stop("`dem` doit \u00eatre un SpatRaster.", call. = FALSE)
   assert_crs_2154(dem)
   .check_alt_mailles(alt_mailles)
   G <- if (is.list(lapse)) lapse$gradient else lapse
   if (!is.numeric(G) || length(G) != 1L || !is.finite(G)) {
-    stop("`lapse` doit être un gradient (°C/m) ou le résultat de safran_lapse_rate().",
+    stop("`lapse` doit \u00eatre un gradient (\u00b0C/m) ou le r\u00e9sultat de safran_lapse_rate().",
          call. = FALSE)
   }
   mailles <- .mailles_safran(.safran_norm(safran))

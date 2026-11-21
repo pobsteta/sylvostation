@@ -27,5 +27,7 @@ chaîne : « 412 » (code à trois chiffres de la référence, un chiffre par ax
 en même nombre partout. Les paires avec \code{NA} sont écartées et comptées.
 }
 \examples{
-validate_maps(c("T1-H1", "T2-H1", "T2-H2", "T1-H2"), c("T1-H1", "T2-H2", "T2-H2", "T1-H1"))$accord_exact
+pred <- c("T1-H1", "T2-H1", "T2-H2", "T1-H2")
+field <- c("T1-H1", "T2-H2", "T2-H2", "T1-H1")
+validate_maps(pred, field)$accord_exact
 }

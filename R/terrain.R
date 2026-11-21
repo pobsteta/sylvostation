@@ -707,7 +707,7 @@ fetch_mnt_large <- function(bbox, cache_dir, res = 250, margin_m = 2000, offline
                             downloader = NULL) {
   b <- .as_bbox(bbox)
   if (!is.numeric(res) || length(res) != 1L || !is.finite(res) || res < 50) {
-    stop("`res` doit être un nombre >= 50 (m).", call. = FALSE)
+    stop("`res` doit \u00eatre un nombre >= 50 (m).", call. = FALSE)
   }
   x0 <- floor((b[["xmin"]] - margin_m) / res) * res
   x1 <- ceiling((b[["xmax"]] + margin_m) / res) * res
@@ -844,6 +844,6 @@ lateral_balance <- function(dtm, coef, offsets = c(-30, 0, 60)) {
   v <- v[!is.na(v)]
   attr(out, "parts") <- stats::setNames(as.numeric(table(factor(v, 1:3))) / max(1, length(v)),
                                         c("depart", "equilibre", "apports"))
-  attr(out, "statut") <- "carte de contrôle, coefficients à vérifier (mission 039)"
+  attr(out, "statut") <- "carte de contr\u00f4le, coefficients \u00e0 v\u00e9rifier (mission 039)"
   out
 }

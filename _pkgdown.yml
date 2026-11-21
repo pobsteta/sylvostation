@@ -52,6 +52,7 @@ reference:
       - real_grid
       - list_tiles
       - local_tiles
+      - fetch_mnt_large
       - select_tiles
       - tile_blocks
       - run_lasr
@@ -67,6 +68,7 @@ reference:
       - height_above_network
       - forest_mask
       - solar_factor
+      - lateral_balance
   - title: "3. Géologie et sols"
     contents:
       - read_geology
@@ -77,11 +79,27 @@ reference:
       - check_geol_joins
       - geology_coverage
       - rasterize_geol
+      - formation_encoded_layer
+      - lithology_encoded_layer
+      - lithology_at_points
+      - read_lithology_notations
       - read_texture_dictionary
       - texture_to_psd
       - ru_from_texture
       - ru_coefficients
       - stack_soil_layers
+      - fetch_soilgrids_ph
+      - fetch_soilgrids_texture
+      - soilgrids_cu
+      - ru_soilgrids
+      - ru_soilgrids_diagnostic
+      - ru_learned_data
+      - ru_fill_by_cell
+      - raster_at_points
+      - layers_at_points
+      - coarse_disk_mean
+      - coarse_cu_layers
+      - soilgrids_disk_mean
   - title: "4. Placettes IFN, relevés et flore"
     contents:
       - fetch_ifn
@@ -90,6 +108,7 @@ reference:
       - filter_releves
       - ifn_flora_matrix
       - ifn_trees
+      - read_tree_cd_ref
       - ifn_observables
       - read_taxref
       - unmatched_taxa
@@ -112,12 +131,21 @@ reference:
       - ifn_real_gradients
       - compare_gradients
       - comparison_res
+      - safran_cell_altitude
+      - safran_lapse_rate
+      - safran_weights
+      - t_corrected
+      - t_correction_validation
+      - coarse_t_corr_layer
+      - model_climate_vars
+      - write_layers
   - title: "6. Points d'ancrage (GBIF, GNSS)"
     contents:
       - get_gbif
       - IFN_GBIF_DATASET_KEYS
       - clean_occ
       - gbif_anchors
+      - PLANTNET_GBIF_DATASET_KEYS
       - grid_bioindication
       - load_gnss
       - gnss_field_gradients
@@ -128,6 +156,13 @@ reference:
       - fit_gradient
       - spatial_cv
       - predict_raster
+      - target_encoding
+      - apply_target_encoding
+      - encode_by_blocks
+      - oof_target_encoding
+      - local_trophic_vars
+      - compare_local_regional
+      - select_trophic_map
   - title: "8. Typologie, caractérisation et clé"
     contents:
       - default_thresholds
@@ -152,6 +187,8 @@ reference:
       - empty_layers
       - write_outputs
       - write_types_gpkg_real
+      - validation_table
+      - calibration_counts
   - title: "10. Plan d'échantillonnage et fiches de terrain"
     desc: "Plan de relevés terrain (cellules homogènes, accessibilité, temps de terrain) et lecture des fiches."
     contents:
@@ -169,6 +206,32 @@ reference:
       - read_station_sheet
       - BRAUN_BLANQUET
       - HUMUS_FORMS
+  - title: "11. Contrôle par essence (BD Forêt, ESPAR)"
+    desc: "Contrôle du trophique prédit contre les essences en place, et modèle de sensibilité."
+    contents:
+      - fetch_bdforet
+      - bdforet_class_means
+      - read_espar_codes
+      - read_espar_cdref
+      - espar_group_tfv
+      - dominant_species
+      - species_optima
+      - trophic_without_trees
+      - essence_control
+      - essence_sensitivity
+      - essence_tables
+  - title: "12. Comparaison à CarHab"
+    desc: "Comparaison des gradients prédits aux paramètres ordinaux de CarHab (WFS Géoplateforme)."
+    contents:
+      - carhab_levels
+      - carhab_wfs_url
+      - carhab_fetch
+      - carhab_recode
+      - carhab_rasterize
+      - carhab_quantile_classes
+      - carhab_kappa
+      - carhab_spearman
+      - carhab_compare
   - title: "Mode démonstration (données synthétiques)"
     desc: "Jeux d'essai fabriqués (préfixe synth_, synthetic = TRUE) : ne valent rien sur données réelles."
     contents:

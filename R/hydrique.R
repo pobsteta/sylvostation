@@ -1403,13 +1403,13 @@ write_hydric_grid <- function(r, out_dir, ser_code, forest = NULL, synthetic = F
 #' @export
 write_layers <- function(layers, out_dir, ser_code, synthetic = FALSE, cog = TRUE) {
   if (!is.list(layers) || is.null(names(layers)) || any(!nzchar(names(layers)))) {
-    stop("`layers` doit être une liste nommée de SpatRaster.", call. = FALSE)
+    stop("`layers` doit \u00eatre une liste nomm\u00e9e de SpatRaster.", call. = FALSE)
   }
   if (!is.character(out_dir) || length(out_dir) != 1L || !nzchar(out_dir)) {
-    stop("`out_dir` doit être un chemin.", call. = FALSE)
+    stop("`out_dir` doit \u00eatre un chemin.", call. = FALSE)
   }
   if (!is.character(ser_code) || length(ser_code) != 1L || !nzchar(ser_code)) {
-    stop("`ser_code` doit être un code SER.", call. = FALSE)
+    stop("`ser_code` doit \u00eatre un code SER.", call. = FALSE)
   }
   layers <- Filter(Negate(is.null), layers)
   dir <- file.path(out_dir, ser_code)
@@ -1445,7 +1445,7 @@ write_layers <- function(layers, out_dir, ser_code, synthetic = FALSE, cog = TRU
 #' terra::values(ru_fill_by_cell(r, data.frame(maille = m$maille, ru_mm = 90), s))[, 1]
 #' @export
 ru_fill_by_cell <- function(ru, ru_mailles, safran) {
-  if (!inherits(ru, "SpatRaster")) stop("`ru` doit être un SpatRaster.", call. = FALSE)
+  if (!inherits(ru, "SpatRaster")) stop("`ru` doit \u00eatre un SpatRaster.", call. = FALSE)
   assert_crs_2154(ru)
   if (!is.data.frame(ru_mailles) || !all(c("maille", "ru_mm") %in% names(ru_mailles))) {
     stop("`ru_mailles` doit avoir les colonnes maille et ru_mm.", call. = FALSE)
