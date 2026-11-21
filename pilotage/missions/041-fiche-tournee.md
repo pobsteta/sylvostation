@@ -6,7 +6,7 @@
 les points que Pascal doit vérifier sur le terrain ou sur carte géologique, pour que chaque
 affirmation du code non vérifiable au bureau soit confrontée au réel et la réponse notée.
 
-**Redite par l'agent :** _à compléter par l'agent._
+**Redite par l'agent :** Produire une fiche de tournée imprimable, avec GPX et CSV de mêmes points, pour que Pascal confronte sur le terrain les classes lithologiques du code (l3b, h2PK3, e, rD) et la carte de RU apprise ; chaque point de roche est contrôlé dans un polygone de sa NOTATION.
 
 ## Sources
 
