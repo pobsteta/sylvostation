@@ -52,7 +52,7 @@ jobs:
           needs: website
 
       - name: Construire le site
-        run: Rscript -e 'pkgdown::check_pkgdown(); pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)'
+        run: Rscript -e 'pkgdown::check_pkgdown(); pkgdown::build_site_github_pages(dest_dir = "site", new_process = FALSE, install = FALSE)'
 
       # Garde : aucune PAGE interne dans le site (fichier, plan du site, index de recherche,
       # llms.txt). Une simple mention de CLAUDE.md ou de pilotage/ dans un texte d'aide est permise.
