@@ -16,12 +16,55 @@
 
 
 
+
+
+
+
+
+
+
 ## Planifié
 
 
-- [018-execution-ser-pilote](missions/018-execution-ser-pilote.md) · après 016, 017 · dev
+
+
+
 
 ## Terminé
+
+- 037d local contre régional ([fiche 037](missions/037-ancrages-gbif-bdforet.md)) · cycle 5 · dev · local remplace seulement si borne basse de l'IC du gain > 0,02, mêmes variables larges ; run réel : 2 ancrages, comparaison impossible, carte régionale gardée
+- [039-bioclimat-ru-fins](missions/039-bioclimat-ru-fins.md) · cycle 5 · dev · T corrigée par gradient SAFRAN (0,22 → 0,11 °C) ; bioclimat R² +0,08 à +0,10, hydrique +0,01 à +0,05 ; RU apprise 0,11-0,14 ; trophique sans climat ; suite 039b (mineurs, test hors ligne de la branche corrigée)
+- [040-table-lithologique](missions/040-table-lithologique.md) · cycle 5 · dev · non_classe dans les disques 155 → 10, placettes à classe dominante non_classe 296 → 0 ; R² trophique ≈ +0,01 (bruit) ; 42 formations gelées candidates pour Pascal
+- [037-ancrages-gbif-bdforet](missions/037-ancrages-gbif-bdforet.md) · cycle 5 · dev · ancrages GBIF 5 → 2 (licences) ; contrôle par essence : pente 0,31, 3 alertes ; gain net de l'essence ≈ 0,05 (ADR 0008 maintenue)
+- [035-calibration-greco](missions/035-calibration-greco.md) · cycle 5 · dev · 187 → 2 893 placettes ; R² trophique 0,19 [0,09 ; 0,28] (blocs estimés 22 km), 0,27 [0,20 ; 0,31] (8 358 m)
+- [034-predicteurs-piedallu](missions/034-predicteurs-piedallu.md) · cycle 5 · dev · plan rendu, code absorbé par 035
+- [033-empreinte-safran](missions/033-empreinte-safran.md) · cycle 5 · dev · maille : type modal 0,90 → 0,53 ; trophique sans pouvoir prédictif jusqu'à 035
+
+- [038-geochimie-brgm](missions/038-geochimie-brgm.md) · cycle 5 · acquereur · aucune géochimie ouverte téléchargeable en D11
+
+- [036-placettes-ouvertes-precises](missions/036-placettes-ouvertes-precises.md) · cycle 5 · acquereur · aucun relevé ouvert à ≤ 25 m en D11
+
+- [032-cache-lidar](missions/032-cache-lidar.md) · cycle 5 · dev · cache par dalle, lidar_files hors de cfg
+
+- [023-page-pkgdown-vosges](missions/023-page-pkgdown-vosges.md) · cycle 5 · dev · site pkgdown, article D11 (à refaire après 033 et 034)
+
+- [031-comparaison-carhab](missions/031-comparaison-carhab.md) · cycle 5 · dev · aucune concordance avec CarHab 68
+
+- [029-plan-echantillonnage-gnss](missions/029-plan-echantillonnage-gnss.md) · cycle 5 · dev · plan GNSS prêt, tirage réel après relecture de Pascal
+
+- [027-diagnostic-mrvbf-hand](missions/027-diagnostic-mrvbf-hand.md) · cycle 5 · dev · MRVBF à 20 m, HAND cuvettes franchies
+
+- [028-cout-hydrique](missions/028-cout-hydrique.md) · cycle 5 · dev · BILJOU vectorisé ×38 à ×59
+
+- [030-sophy](missions/030-sophy.md) · cycle 5 · acquereur
+
+- [025-grille-20m](missions/025-grille-20m.md) · cycle 5 · dev
+
+- [026-robustesse-run-reel](missions/026-robustesse-run-reel.md) · cycle 5 · dev
+
+- [022-rapport-pdf](missions/022-rapport-pdf.md) · cycle 5 · dev
+
+- [024-cartes-comparaison](missions/024-cartes-comparaison.md) · cycle 5 · acquereur
 
 - [021-descente-echelle-hydrique](missions/021-descente-echelle-hydrique.md) · cycle 5 · dev
 

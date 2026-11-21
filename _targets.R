@@ -63,10 +63,12 @@ tar_option_set(format = tar_format(
 ))
 
 extdata <- function(...) system.file("extdata", ..., package = "sylvostation")
+# Maille de comparaison a la reference (50 m) : plus petit multiple commun (20 m -> 100 m ; ADR 0007).
+res_comparaison <- sylvostation::comparison_res(cfg$resolution_m)
 rapport_modele <- function() system.file("rapport", "rapport.qmd", package = "sylvostation")
 
 # Emprise de demonstration : carre de 2 500 m au sud-ouest de l'emprise test
-# (x = est, y = nord, Lambert-93) ; 100 x 100 cellules de 25 m.
+# (x = est, y = nord, Lambert-93) ; environ 125 x 125 cellules de `resolution_m`.
 demo_emprise <- c(xmin = cfg$emprise_test$xmin, ymin = cfg$emprise_test$ymin,
                   xmax = cfg$emprise_test$xmin + 2500, ymax = cfg$emprise_test$ymin + 2500)
 emprise_test <- c(cfg$emprise_test$xmin, cfg$emprise_test$ymin,
@@ -219,7 +221,7 @@ pipeline <- list(
 
   # --- comparaison a la reference (synthetique) --------------------------------------
   tar_target(reference, sylvostation::load_reference(extdata("synth_reference.tif"))),
-  tar_target(comparison, sylvostation::compare_gradients(gradient_map, reference, res = 50)),
+  tar_target(comparison, sylvostation::compare_gradients(gradient_map, reference, res = res_comparaison)),
   tar_target(comparison_types, {
     refv <- terra::as.data.frame(comparison$ref, cells = TRUE, na.rm = TRUE)
     ov <- terra::as.data.frame(comparison$ours, cells = TRUE, na.rm = TRUE)
@@ -241,7 +243,8 @@ pipeline <- list(
   }),
 
   # --- sorties -----------------------------------------------------------------------
-  tar_target(evidence, sylvostation::evidence_table(n_ifn = nrow(ifn$placettes))),
+  tar_target(evidence, sylvostation::evidence_table(n_ifn = nrow(ifn$placettes),
+                                                                 resolution_m = cfg$resolution_m)),
   tar_target(outputs, {
     w <- sylvostation::write_outputs(
       out_dir = cfg$out_dir, ser_code = cfg$ser_code,
@@ -271,6 +274,7 @@ pipeline <- list(
 # =====================================================================================
 if (!isTRUE(cfg$demo)) {
   src <- sylvostation::real_sources(cfg)
+  options(sylvostation.download_retries = cfg$download_retries)  # reprise reseau (026)
   hors_ligne <- isTRUE(src$offline)
   cache <- cfg$cache_dir
   lidar_dir <- file.path(cfg$data_dir, "lidar")
@@ -278,23 +282,43 @@ if (!isTRUE(cfg$demo)) {
   mois_sv <- seq(cfg$saison_vegetation[1], cfg$saison_vegetation[2])
   greco <- substr(cfg$ser_code, 1, 1)
   grad_reg <- c("trophic", "hydric")  # modeles regionaux ; bioclim est calcule
+  # Mission 032 : targets suit les objets globaux lus par une cible. Lire `cfg` ou `src`
+  # en entier rendrait ser, emprise, tiles et lidar_files perimes a chaque cle ajoutee
+  # a config.yml (10 a 16 h de LiDAR). Ces cibles ne lisent donc que les scalaires
+  # ci-dessous : seule la modification d'une de ces valeurs les periment.
+  p_ser_code <- cfg$ser_code
+  p_ser_buffer_m <- cfg$buffer_m
+  p_max_tiles <- cfg$max_tiles
+  p_block_size <- cfg$lidar_block_size
+  p_lidar_buffer_m <- cfg$lidar_buffer_m   # change le calcul des dalles
+  p_lidar_ncores <- cfg$lidar_ncores       # ne change pas le resultat (voir run_tile_block)
+  p_lidar_res_m <- 1                         # maille LiDAR (m) = defaut de run_tile_block
+  p_lidar_engine <- "auto"                   # moteur = defaut de run_tile_block
+  cfg_emprise <- cfg[intersect(c("emprise", "emprise_test", "ser_code"), names(cfg))]
+  src_ser <- src$ser
+  src_laz <- src$laz
   gbif_ok <- function() all(nzchar(Sys.getenv(c("GBIF_USER", "GBIF_PWD", "GBIF_EMAIL"))))
 
   pipeline <- list(
     # --- emprise, dalles LiDAR (branchement dynamique par blocs), terrain --------------
-    tar_target(ser, sylvostation::get_ser(cfg$ser_code, buffer_m = cfg$buffer_m,
-                                          source = src$ser$source, path = src$ser$path,
+    tar_target(ser, sylvostation::get_ser(p_ser_code, buffer_m = p_ser_buffer_m,
+                                          source = src_ser$source, path = src_ser$path,
                                           data_dir = cache)),
-    tar_target(emprise, sylvostation::real_extent(ser, cfg)),
+    tar_target(emprise, sylvostation::real_extent(ser, cfg_emprise)),
     tar_target(tiles, {
-      t <- if (hors_ligne) sylvostation::local_tiles(src$laz) else sylvostation::list_tiles(emprise)
-      sylvostation::select_tiles(t, cfg$max_tiles)
+      t <- if (hors_ligne) sylvostation::local_tiles(src_laz) else sylvostation::list_tiles(emprise)
+      sylvostation::select_tiles(t, p_max_tiles)
     }),
-    tar_target(tile_blocks, sylvostation::tile_blocks(tiles, cfg$lidar_block_size),
+    tar_target(tile_blocks, sylvostation::tile_blocks(tiles, p_block_size),
                iteration = "list"),
-    # une branche par bloc de 3 x 3 dalles ; une dalle deja calculee n'est pas refaite
+    # une branche par bloc de 3 x 3 dalles. Cache par dalle (mission 032) : run_tile_block()
+    # reutilise une dalle dont mnt_/mhc_ existent, se lisent, sont en EPSG:2154 a la maille
+    # voulue et ont ete calcules avec les memes parametres ; sinon il la recalcule.
+    # Recalcul force : SYLVOSTATION_LIDAR_FORCE=1 puis tar_invalidate(lidar_files) (docs/pipeline.md).
     tar_target(lidar_files, sylvostation::run_tile_block(
-      tile_blocks, lidar_dir, buffer = cfg$lidar_buffer_m, ncores = cfg$lidar_ncores),
+      tile_blocks, lidar_dir, res = p_lidar_res_m, buffer = p_lidar_buffer_m,
+      ncores = p_lidar_ncores, engine = p_lidar_engine,
+      force = identical(Sys.getenv("SYLVOSTATION_LIDAR_FORCE"), "1")),
       pattern = map(tile_blocks), format = "file"),
     tar_target(dtm, sylvostation::mosaic_tiles(lidar_files, "mnt", fact = 5,
                                                tile_ids = tiles$tile_id)),
@@ -303,7 +327,8 @@ if (!isTRUE(cfg$demo)) {
       b <- sf::st_bbox(terra::ext(grid) + 1000, crs = sf::st_crs(2154))
       sylvostation::get_hydro_network(b, source = src$hydro$source, path = src$hydro$path)
     }),
-    tar_target(terrain, sylvostation::real_terrain(dtm, grid, streams = hydro, mrvbf = TRUE)),
+    tar_target(terrain, sylvostation::real_terrain(dtm, grid, streams = hydro, mrvbf = TRUE,
+                                                     mrvbf_res = cfg$mrvbf_res_m)),
     tar_target(forest, if (isTRUE(cfg$forest_mask)) {
       sylvostation::forest_mask(lidar_files, grid, height = cfg$forest_height_m)
     } else NULL),
@@ -338,12 +363,42 @@ if (!isTRUE(cfg$demo)) {
                                        sf::st_as_sfc(sf::st_bbox(emprise)))))
         sylvostation::fetch_safran(annees, b, file.path(cache, "safran"))
       })),
-    tar_target(climat, sylvostation::safran_climate(safran, months = mois_sv)),
+    # climat kilometrique : interpolation bilineaire entre centres de mailles (mission 033)
+    tar_target(climat, sylvostation::safran_climate(safran, months = mois_sv,
+                                                    interpolation = cfg$safran_interpolation)),
+    # --- temperature corrigee du relief (mission 039) -------------------------------------
+    # MNT BD ALTI de 250 m (IGN, Licence Ouverte) sur les placettes et l'emprise ; altitude
+    # moyenne des mailles SAFRAN ; gradient lu entre les mailles (T ~ z + x + y) ; T corrigee
+    # moyennee dans 700 m (couche large, apprentissage) et a la cellule (t_corr, fine, carte).
+    # Hors ligne sans mnt_large_path, ou climat_temperature: bilineaire : NULL (avertissement).
+    tar_target(mnt_large_file, {
+      if (!identical(cfg$climat_temperature, "corrigee")) return(NULL)
+      if (!is.null(src$mnt_large)) return(src$mnt_large)
+      if (hors_ligne) {
+        warning("climat_temperature: corrigee, mais aucun MNT de 250 m hors ligne ",
+                "(mnt_large_path absent) : temp\u00e9rature bilin\u00e9aire gard\u00e9e.", call. = FALSE)
+        return(NULL)
+      }
+      sylvostation::fetch_mnt_large(
+        sf::st_bbox(sf::st_union(c(sf::st_as_sfc(sf::st_bbox(ifn$placettes)),
+                                   sf::st_as_sfc(sf::st_bbox(emprise))))),
+        file.path(cache, "bdalti"), res = cfg$mnt_large_res_m, margin_m = 12000)
+    }),
+    tar_target(alt_mailles, if (is.null(mnt_large_file)) NULL else
+      sylvostation::safran_cell_altitude(safran, terra::rast(mnt_large_file))),
+    tar_target(t_lapse, if (is.null(alt_mailles)) NULL else
+      sylvostation::safran_lapse_rate(safran, alt_mailles)),
+    tar_target(t_validation, if (is.null(alt_mailles)) NULL else
+      sylvostation::t_correction_validation(safran, alt_mailles)),
+    tar_target(t_coarse, if (is.null(t_lapse)) NULL else
+      sylvostation::coarse_t_corr_layer(terra::rast(mnt_large_file), safran, alt_mailles,
+                                        t_lapse, radius = cfg$ifn_precision_m)),
     # gradients des placettes : maille large seulement (regle des 700 m)
     tar_target(ifn_gradients, sylvostation::ifn_real_gradients(
-      ifn, indicateurs, climat, safran, ru_source = cfg$ru_source, annees = annees)),
+      ifn, indicateurs, climat, safran, ru_source = cfg$ru_source, annees = annees,
+      interpolation = cfg$safran_interpolation, t_layer = t_coarse)),
 
-    # --- carte hydrique de 25 m (mission 021) : k r.sun, RU par maille, BILJOU --------
+    # --- carte hydrique (mission 021) : k r.sun, RU par maille, BILJOU --------
     # k = rayonnement r.sun (ciel clair) de la pente / plat ; variable fine, grille seule
     tar_target(solar_k, {
       k <- sylvostation::solar_factor(terrain[["altitude"]], linke = cfg$solar_linke,
@@ -351,13 +406,22 @@ if (!isTRUE(cfg$demo)) {
                                       nprocs = cfg$lidar_ncores)
       list(k = k, methode = attr(k, "methode"), repli = attr(k, "repli"))
     }),
-    # RU uniforme par maille SAFRAN (provisoire) : mediane euptf2 des placettes IFN
+    # RU uniforme par maille SAFRAN (provisoire) : mediane euptf2 des placettes IFN ;
+    # mediane de l'emprise sous ru_min_placettes placettes (mission 033)
     tar_target(ru_mailles, sylvostation::ru_by_safran_cell(
-      ifn_gradients, safran, emprise = sf::st_bbox(terra::ext(grid), crs = sf::st_crs(2154)))),
+      ifn_gradients, safran, emprise = sf::st_bbox(terra::ext(grid), crs = sf::st_crs(2154)),
+      min_placettes = cfg$ru_min_placettes)),
+    # RU de la carte (mission 039) : RU apprise (geologie et SoilGrids dans 700 m) si
+    # disponible, sinon RU uniforme par maille ; T corrigee du relief dans BILJOU si disponible
     tar_target(hydric_grid, {
+      ru <- if (is.null(ru_map)) ru_mailles else sylvostation::ru_fill_by_cell(
+        terra::resample(ru_map, solar_k$k[[1]], method = "bilinear"), ru_mailles, safran)
+      corr <- !is.null(t_lapse) && identical(cfg$safran_interpolation, "bilineaire")
       h <- sylvostation::hydric_stress_grid(
-        solar_k$k, ru_mailles, safran, altitude = terrain[["altitude"]], annees = annees,
-        pas_k = cfg$hydric_pas_k, n_controle = cfg$hydric_n_controle, k_methode = solar_k$methode)
+        solar_k$k, ru, safran, altitude = terrain[["altitude"]], annees = annees,
+        pas_k = cfg$hydric_pas_k, n_controle = cfg$hydric_n_controle, k_methode = solar_k$methode,
+        interpolation = cfg$safran_interpolation, node_res = cfg$hydric_node_res_m,
+        t_lapse = if (corr) t_lapse, alt_mailles = if (corr) alt_mailles)
       list(r = h, methode = attr(h, "methode"), ecart = attr(h, "ecart"),
            mailles = attr(h, "mailles"), repli = attr(h, "repli"))
     }),
@@ -365,14 +429,97 @@ if (!isTRUE(cfg$demo)) {
     # --- predicteurs, ancrages GBIF (en ligne), modeles ---------------------------------
     tar_target(soils, if (is.null(src$soils)) NULL else
       sylvostation::stack_soil_layers(src$soils, grid)),
-    tar_target(predictors, {
+    # predicteurs a maille large : climat (SAFRAN) ; coarse_vars ne depend pas de la
+    # lithologie encodee (qui depend de l'apprentissage) : pas de cycle (mission 035)
+    tar_target(predictors_climat, {
       p <- sylvostation::coarse_predictors(climat, grid)
+      if (!is.null(t_coarse)) {
+        p <- c(p, terra::resample(terra::crop(t_coarse, terra::ext(grid) + 2000, snap = "out"),
+                                  grid, method = "bilinear"))
+      }
+      p
+    }),
+    # variables climatiques des modeles (mission 039) : climat_temperature et trophique_climat
+    # de config.yml ; sans T corrigee disponible, la T bilineaire (avertissement si demandee)
+    tar_target(clim_vars, {
+      tro <- cfg$trophique_climat
+      if (identical(tro, "corrige") && is.null(t_coarse)) {
+        warning("trophique_climat: corrige sans temp\u00e9rature corrig\u00e9e disponible : ",
+                "climat actuel gard\u00e9.", call. = FALSE)
+        tro <- "actuel"
+      }
+      v <- sylvostation::model_climate_vars(
+        if (is.null(t_coarse)) "bilineaire" else cfg$climat_temperature, tro)
+      for (k in c("trophic", "hydric", "toutes")) v[[k]] <- intersect(v[[k]], names(predictors_climat))
+      v
+    }),
+    tar_target(coarse_vars, clim_vars$toutes),
+    # t_corr a la cellule (MNT fin) : variable fine, carte seulement (bioclimat)
+    tar_target(t_corr_grid, if (is.null(t_lapse)) NULL else
+      sylvostation::t_corrected(terrain[["altitude"]], safran, alt_mailles, t_lapse)),
+    # --- RU apprise (mission 039) : SoilGrids (texture, cailloux) + euptf2, dans 700 m ---
+    # hors ligne : soilgrids_texture_path (GeoTIFF a 24 couches, mission 039b), sinon absent
+    tar_target(soilgrids_texture_files, if (!identical(cfg$ru_carte, "apprise")) NULL else
+      if (!is.null(src$soilgrids_texture)) src$soilgrids_texture else if (hors_ligne) NULL else
+      sylvostation::fetch_soilgrids_texture(
+        sf::st_bbox(sf::st_union(c(sf::st_as_sfc(sf::st_bbox(ifn$placettes)),
+                                   sf::st_as_sfc(sf::st_bbox(emprise))))),
+        file.path(cache, "soilgrids"))),
+    tar_target(cu700, if (is.null(soilgrids_texture_files)) NULL else
+      sylvostation::coarse_cu_layers(sylvostation::soilgrids_cu(soilgrids_texture_files),
+                                     radius = cfg$ifn_precision_m)),
+    tar_target(ru_learn, if (is.null(cu700)) NULL else
+      sylvostation::ru_learned_data(trophic_enc$data, cu700)),
+    tar_target(ru_model, if (is.null(ru_learn)) NULL else
+      sylvostation::fit_gradient(ru_learn$data, "ru_mm", ru_learn$vars, points_source = "ifn",
+                                 ifn_precision_m = cfg$ifn_precision_m, num_trees = 500, seed = 1)),
+    tar_target(ru_cv, if (is.null(ru_learn)) NULL else stats::setNames(lapply(
+      list(cfg$cv_block_m, cfg$cv_block_sensibilite_m), function(b) tryCatch(
+        sylvostation::spatial_cv(ru_learn$data, "ru_mm", ru_learn$vars, k = 5, points_source = "ifn",
+                                 block_size = b, ifn_precision_m = cfg$ifn_precision_m,
+                                 num_trees = 500, seed = 1),
+        error = function(e) {
+          warning("ru_cv : ", conditionMessage(e), call. = FALSE)
+          NULL
+        })), c("principal", "sensibilite"))),
+    tar_target(ru_map, if (is.null(ru_model)) NULL else {
+      lay <- c(litho_layer, formation_layer,
+               terra::resample(terra::crop(cu700, terra::ext(grid) + 2000, snap = "out"), grid,
+                               method = "bilinear"))
+      r <- sylvostation::predict_raster(ru_model, lay, aoa = FALSE)[["pred"]]
+      names(r) <- "ru_apprise"
+      r
+    }),
+    tar_target(ru_sg_diagnostic, if (is.null(cu700)) NULL else
+      sylvostation::ru_soilgrids_diagnostic(
+        ifn_gradients[is.finite(ifn_gradients$ru_mm), c("id_placette", "source", "loc_precision_m", "ru_mm")],
+        cu700)),
+    # bilan lateral (Piedallu et al. 2006, tableau 20) : carte de controle, desactive par defaut
+    tar_target(lateral, if (!isTRUE(cfg$bilan_lateral)) NULL else {
+      b <- sylvostation::lateral_balance(dtm, coef = cfg$bilan_lateral_coef,
+                                         offsets = cfg$bilan_lateral_ru_mm)
+      list(r = b[[c("bilan_lateral", "ru_bilan_lateral")]], parts = attr(b, "parts"))
+    }),
+    # pH SoilGrids 0-5 cm (250 m, CC BY 4.0) moyenne dans 700 m : maille large. Hors ligne
+    # ou soilgrids_ph: false : absent (jamais remplace). Exactitude sur la France non evaluee.
+    tar_target(soilgrids_file, if (hors_ligne || !isTRUE(cfg$soilgrids_ph)) NULL else
+      sylvostation::fetch_soilgrids_ph(
+        sf::st_bbox(sf::st_union(c(sf::st_as_sfc(sf::st_bbox(ifn$placettes)),
+                                   sf::st_as_sfc(sf::st_bbox(emprise))))),
+        file.path(cache, "soilgrids"))),
+    tar_target(ph_layer, if (is.null(soilgrids_file)) NULL else
+      sylvostation::soilgrids_disk_mean(terra::rast(soilgrids_file), cfg$ifn_precision_m)),
+    tar_target(predictors, {
+      out <- c(predictors_climat, litho_layer, formation_layer)
+      if (!is.null(ph_layer)) {
+        out <- c(out, terra::resample(terra::crop(ph_layer, terra::ext(grid) + 2000, snap = "out"),
+                                      grid, method = "bilinear"))
+      }
       fines <- setdiff(names(terrain), sylvostation::empty_layers(terrain))
-      out <- c(p, terrain[[fines]])
+      out <- c(out, terrain[[fines]])
       if (!is.null(soils)) out <- c(out, soils)
       out
     }),
-    tar_target(coarse_vars, intersect(names(predictors), c("coarse_p_etp_sv", "coarse_t_moy"))),
     tar_target(anchors, if (hors_ligne) NULL else {
       occ <- sylvostation::get_gbif(emprise, method = if (cfg$gbif_method == "download" && gbif_ok())
         "download" else "search", path = file.path(cache, "gbif"))
@@ -381,42 +528,203 @@ if (!isTRUE(cfg$demo)) {
       sylvostation::gbif_anchors(sylvostation::grid_bioindication(cl, indicateurs_noms), cl,
                                  predictors)
     }),
-    tar_target(train, stats::setNames(lapply(grad_reg, function(g) {
+    # lithologie dominante dans 700 m aux placettes (mission 035) : BD Charm-50 de tous les
+    # departements de la GRECO lus ; disque a moins de litho_min_cover couvert = pas de
+    # lithologie (placette retiree et comptee, jamais completee)
+    tar_target(geol_placettes, sylvostation::read_geology(
+      if (hors_ligne) src$geol$paths else
+        vapply(src$geol$urls, sylvostation::fetch_cached, "", dir = file.path(cache, "bdcharm")),
+      emprise = sf::st_bbox(sf::st_buffer(sf::st_as_sfc(sf::st_bbox(ifn_gradients)),
+                                          cfg$ifn_precision_m + 1000)))),
+    tar_target(geol_classes_placettes, suppressWarnings(
+      sylvostation::recode_lithology(sylvostation::list_formations(geol_placettes)))),
+    tar_target(litho_placettes, sylvostation::lithology_at_points(
+      ifn_gradients[, c("id_placette", "source", "loc_precision_m")], geol_placettes,
+      geol_classes_placettes,
+      radius = cfg$ifn_precision_m, min_cover = cfg$litho_min_cover)),
+    tar_target(train_climat, stats::setNames(lapply(grad_reg, function(g) {
       d <- ifn_gradients[!is.na(ifn_gradients[[g]]), ]
       d[stats::complete.cases(sf::st_drop_geometry(d)[, coarse_vars, drop = FALSE]), ]
     }), grad_reg)),
+    # trophique : lithologie (classe) et formation dominantes dans 700 m, encodees par le
+    # trophique moyen retreci, hors pli pour l'apprentissage ; les encodages complets servent
+    # a la carte (couches litho_layer et formation_layer)
+    tar_target(trophic_enc, {
+      d <- train_climat$trophic
+      i <- match(d$id_placette, litho_placettes$id_placette)
+      d$coarse_litho_700m <- litho_placettes$coarse_litho_700m[i]
+      d$coarse_formation_700m <- litho_placettes$coarse_formation_700m[i]
+      if (!is.null(ph_layer)) {
+        ph <- sylvostation::raster_at_points(d[, c("id_placette", "source", "loc_precision_m")], ph_layer)
+        d$coarse_ph_soilgrids_700m <- ph$coarse_ph_soilgrids_700m[match(d$id_placette, ph$id_placette)]
+        d <- d[!is.na(d$coarse_ph_soilgrids_700m), ]
+      }
+      # classe (12 niveaux, des centaines de placettes par niveau) : encodage avec toute la partie
+      # d'apprentissage (R2 par blocs 0,15 contre 0,09 hors pli) ; formation (centaines de
+      # niveaux, certains rares) : hors pli, qui limite le surapprentissage (mission 035)
+      e1 <- sylvostation::encode_by_blocks(d, "trophic", "coarse_litho_700m", "coarse_litho_enc",
+                                           k = cfg$litho_encoding_k, oof = FALSE,
+                                           block_size = cfg$cv_block_m)
+      e2 <- sylvostation::encode_by_blocks(e1$data, "trophic", "coarse_formation_700m",
+                                           "coarse_formation_enc", k = cfg$litho_encoding_k,
+                                           block_size = cfg$cv_block_m)
+      list(data = e2$data, encoding = e1$encoding, encoding_formation = e2$encoding,
+           retirees = e1$retirees)
+    }),
+    tar_target(litho_layer, sylvostation::lithology_encoded_layer(geol_dom, trophic_enc$encoding)),
+    tar_target(formation_layer, sylvostation::formation_encoded_layer(
+      geol_sf, grid, trophic_enc$encoding_formation, radius = cfg$ifn_precision_m)),
+    tar_target(train, list(trophic = trophic_enc$data, hydric = train_climat$hydric)),
+    tar_target(vars_modele, list(
+      trophic = c(clim_vars$trophic, "coarse_litho_enc", "coarse_formation_enc",
+                  if (!is.null(ph_layer)) "coarse_ph_soilgrids_700m"),
+      hydric = clim_vars$hydric)),
+    tar_target(calibration_effectifs, sylvostation::calibration_counts(
+      ifn, ifn_gradients, train_climat, litho_placettes, trophic_enc$data)),
     tar_target(models, stats::setNames(lapply(grad_reg, function(g) {
-      sylvostation::fit_gradient(train[[g]], g, coarse_vars, points_source = "ifn",
+      sylvostation::fit_gradient(train[[g]], g, vars_modele[[g]], points_source = "ifn",
                                  ifn_precision_m = cfg$ifn_precision_m, num_trees = 500, seed = 1)
     }), grad_reg)),
+    # CV : l'encodage est refait dans chaque pli (reponse du pli de test jamais utilisee)
     tar_target(cvs, stats::setNames(lapply(grad_reg, function(g) {
-      sylvostation::spatial_cv(train[[g]], g, coarse_vars, k = 5, points_source = "ifn",
-                               ifn_precision_m = cfg$ifn_precision_m, num_trees = 500, seed = 1)
+      sylvostation::spatial_cv(train[[g]], g, vars_modele[[g]], k = 5, points_source = "ifn",
+                               block_size = cfg$cv_block_m,
+                               ifn_precision_m = cfg$ifn_precision_m, num_trees = 500, seed = 1,
+                               encode = if (g == "trophic") list(
+                                 list(var = "coarse_litho_700m", name = "coarse_litho_enc",
+                                      k = cfg$litho_encoding_k, oof = FALSE),
+                                 list(var = "coarse_formation_700m", name = "coarse_formation_enc",
+                                      k = cfg$litho_encoding_k, oof = TRUE)))
     }), grad_reg)),
-    # composante locale (en ligne seulement) : trophique sur les ancrages GBIF
-    tar_target(local_trophic, {
-      if (is.null(anchors)) return(NULL)
-      v <- setdiff(names(predictors), character(0))
-      d <- anchors[stats::complete.cases(sf::st_drop_geometry(anchors)[, c("trophic", v)]), ]
-      if (nrow(d) < 20) return(NULL)
-      list(model = sylvostation::fit_gradient(d, "trophic", v, num_trees = 500, seed = 1),
-           cv = sylvostation::spatial_cv(d, "trophic", v, k = 5, num_trees = 500, seed = 1))
-    }),
-    tar_target(maps, {
-      m <- stats::setNames(lapply(grad_reg, function(g) {
-        sylvostation::predict_raster(models[[g]], predictors, cv = cvs[[g]])
-      }), grad_reg)
-      if (!is.null(local_trophic)) {
-        m$trophic <- sylvostation::predict_raster(local_trophic$model, predictors,
-                                                  cv = local_trophic$cv)
-      }
+    # sensibilite : meme validation croisee de CHAQUE gradient modelise avec des blocs de
+    # cv_block_sensibilite_m (8 358 m par defaut), publiee a cote du chiffre principal (blocs de
+    # cv_block_m). Un echec (jeu trop petit pour 5 plis de cette taille, par exemple hors ligne)
+    # donne un avertissement avec sa raison et un element NULL : la ligne est omise, pas muette.
+    tar_target(cv_sensibilite, stats::setNames(lapply(grad_reg, function(g) {
+      tryCatch(sylvostation::spatial_cv(
+        train[[g]], g, vars_modele[[g]], k = 5, points_source = "ifn",
+        block_size = cfg$cv_block_sensibilite_m, ifn_precision_m = cfg$ifn_precision_m,
+        num_trees = 500, seed = 1,
+        encode = if (g == "trophic") list(
+          list(var = "coarse_litho_700m", name = "coarse_litho_enc", k = cfg$litho_encoding_k,
+               oof = FALSE),
+          list(var = "coarse_formation_700m", name = "coarse_formation_enc",
+               k = cfg$litho_encoding_k, oof = TRUE))),
+        error = function(e) {
+          warning("cv_sensibilite (", g, ") : ", conditionMessage(e),
+                  " ; ligne de sensibilit\u00e9 omise.", call. = FALSE)
+          NULL
+        })
+    }), grad_reg)),
+    # --- controle par essence et sensibilite (mission 037, ADR 0008) --------------------------
+    # L'essence n'entre JAMAIS dans train, vars_modele, models, cvs, maps ni dans les types : ces
+    # cibles ne servent qu'a des sorties publiees a part (controle_essence*.csv,
+    # sensibilite_essence.csv). Seuils : valeur provisoire, sans source, a verifier (config.yml).
+    tar_target(espar_codes, sylvostation::read_espar_codes()),
+    # table essence -> CD_REF de l'IFN (espar-cdref13.csv, extraite avec l'archive) : retrait des
+    # essences de l'indice par jointure sur CD_REF, optimums de Tichy par CD_REF
+    tar_target(ifn_dir, if (hors_ligne) src$ifn_dir else sylvostation::fetch_ifn(src$ifn_url, cache)),
+    tar_target(espar_cdref, sylvostation::read_espar_cdref(ifn_dir)),
+    tar_target(arbres_cd_ref, sylvostation::read_tree_cd_ref(ifn_dir)),
+    tar_target(essence_dominante, sylvostation::dominant_species(
+      ifn$arbre, train$trophic$id_placette, min_share = cfg$essence_part_pure)),
+    # un echec donne un avertissement avec sa raison et NULL (sortie omise), jamais un silence
+    tar_target(controle_essence, tryCatch({
+      sylvostation::essence_control(
+        train$trophic, list(cvs$trophic, cv_sensibilite$trophic), essence_dominante,
+        sylvostation::species_optima(essence_dominante$espar[essence_dominante$pure %in% TRUE],
+                                     indicateurs, espar_cdref, espar_codes),
+        sylvostation::trophic_without_trees(ifn$flore, indicateurs, arbres_cd_ref,
+                                            train$trophic$id_placette),
+        part_pure = cfg$essence_part_pure, min_placettes = cfg$essence_min_placettes,
+        alerte_ecart = cfg$essence_alerte_ecart, alerte_ratio = cfg$essence_alerte_ratio,
+        alerte_pente = cfg$essence_alerte_pente)
+    }, error = function(e) {
+      warning("controle_essence : ", conditionMessage(e), " ; controle omis.", call. = FALSE)
+      NULL
+    })),
+    tar_target(cv_essence, tryCatch(sylvostation::essence_sensitivity(
+      train$trophic, vars_modele$trophic,
+      # memes encodages que cvs (lithologie, formation) : copie volontaire, cvs reste inchange
+      encode = list(
+        list(var = "coarse_litho_700m", name = "coarse_litho_enc", k = cfg$litho_encoding_k, oof = FALSE),
+        list(var = "coarse_formation_700m", name = "coarse_formation_enc", k = cfg$litho_encoding_k,
+             oof = TRUE)),
+      dominant = essence_dominante,
+      block_sizes = unique(c(cvs$trophic$block_size, cfg$cv_block_sensibilite_m)),
+      part_pure = cfg$essence_part_pure, min_placettes = cfg$essence_min_placettes,
+      k = cfg$litho_encoding_k, ifn_precision_m = cfg$ifn_precision_m, num_trees = 500, seed = 1),
+      error = function(e) {
+        warning("cv_essence : ", conditionMessage(e), " ; sensibilit\u00e9 omise.", call. = FALSE)
+        NULL
+      })),
+    # option (desactivee par defaut, licence contradictoire) : moyennes par classe seulement
+    tar_target(controle_bdforet, if (!isTRUE(cfg$bdforet_controle)) NULL else {
+      m <- sylvostation::bdforet_class_means(
+        sylvostation::fetch_bdforet(emprise, file.path(cache, "bdforet")), gradient_map$trophic,
+        buffer_m = cfg$bdforet_tampon_m, min_polygones = cfg$bdforet_min_polygones)
+      g <- sylvostation::espar_group_tfv(essence_dominante$espar)
+      p <- essence_dominante$pure %in% TRUE
+      m$moyenne_placettes_ifn <- as.numeric(tapply(train$trophic$trophic[p], g[p], mean)[m$classe])
       m
     }),
+    # composante locale (en ligne seulement) : trophique sur les ancrages GBIF
+    # Variables du local : les MEMES variables larges que le regional (vars_modele$trophic : il suit
+    # trophique_climat de lui-meme, coarse_t_corr_700m n'y entre que si le regional l'a) plus des
+    # variables FINES nommees (terrain fin non vide, sols) ; jamais names(predictors).
+    # une couche coarse_ (maille >= 90 m, stack_soil_layers) est LARGE : elle n'entre dans le local que
+    # si le regional l'a (vars_modele$trophic) ; vars_fines ne garde que le terrain fin non coarse_
+    tar_target(vars_fines, {
+      v <- c(setdiff(names(terrain), sylvostation::empty_layers(terrain)),
+             if (!is.null(soils)) names(soils))
+      v[!startsWith(v, "coarse_")]
+    }),
+    # Toujours une liste quand des ancrages ont ete cherches : `model`/`cv`/`data`, ou `n_complets`
+    # (effectif insuffisant) ou `erreur` (echec de l'ajustement, message d'origine).
+    tar_target(local_trophic, {
+      if (is.null(anchors)) return(NULL)
+      v <- sylvostation::local_trophic_vars(vars_modele$trophic, vars_fines)
+      d <- anchors[stats::complete.cases(sf::st_drop_geometry(anchors)[, c("trophic", v)]), ]
+      if (nrow(d) < cfg$local_min_ancrages) return(list(n_complets = nrow(d)))
+      # un echec (trop peu de blocs pour 5 plis, par exemple) : avertissement avec sa raison, pas de
+      # modele local, carte regionale gardee (jamais un arret ni un silence)
+      tryCatch(list(model = sylvostation::fit_gradient(d, "trophic", v, num_trees = 500, seed = 1),
+                    cv = sylvostation::spatial_cv(d, "trophic", v, k = 5, num_trees = 500, seed = 1),
+                    data = d, n_complets = nrow(d), variables = v),
+               error = function(e) {
+                 warning("local_trophic : ", conditionMessage(e), " ; mod\u00e8le local omis.", call. = FALSE)
+                 list(n_complets = nrow(d), erreur = conditionMessage(e))
+               })
+    }),
+    # cartes du modele REGIONAL (IFN) : jamais remplacees ici ; le local n'entre que par maps
+    tar_target(maps_regional, stats::setNames(lapply(grad_reg, function(g) {
+      sylvostation::predict_raster(models[[g]], predictors, cv = cvs[[g]])
+    }), grad_reg)),
+    tar_target(local_map, if (is.null(local_trophic$model)) NULL else
+      sylvostation::predict_raster(local_trophic$model, predictors, cv = local_trophic$cv)),
+    # le local ne remplace le regional que s'il fait mieux en validation croisee sur les memes
+    # ancrages et les memes plis (borne basse de l'IC du gain > local_gain_min). Hors ligne (pas
+    # d'ancrage cherche) : pas de comparaison, carte regionale.
+    tar_target(comparaison_locale, if (is.null(anchors)) NULL else
+      sylvostation::compare_local_regional(
+        local_trophic, maps_regional$trophic[["pred"]], n_anchors = nrow(anchors),
+        gain_min = cfg$local_gain_min, min_anchors = cfg$local_min_ancrages,
+        min_blocks = cfg$local_min_blocs, level = cfg$local_ic_niveau,
+        n_boot = cfg$local_bootstrap,
+        aoa_part = if (is.null(local_map) || !"aoa" %in% names(local_map)) NA_real_ else
+          as.numeric(terra::global(local_map[["aoa"]], "mean", na.rm = TRUE)[1, 1]))),
+    tar_target(maps, sylvostation::select_trophic_map(maps_regional, local_map,
+                                                      comparaison_locale)$maps),
     tar_target(gradient_map, {
-      b <- sylvostation::apply_bioclim(predictors, attr(ifn_gradients, "bioclim_axis"))
-      # hydrique : -Istress de 25 m calcule (mission 021) ; le modele regional hydrique
+      ax <- attr(ifn_gradients, "bioclim_axis")
+      # mission 039 : axe appris sur la T moyennee dans 700 m, applique a la T de la cellule
+      b <- if (!is.null(t_corr_grid) && "coarse_t_corr_700m" %in% ax$vars) {
+        sylvostation::apply_bioclim(c(predictors, t_corr_grid), ax,
+                                    layers = c(coarse_t_corr_700m = "t_corr"))
+      } else sylvostation::apply_bioclim(predictors, ax)
+      # hydrique : -Istress calcule (mission 021) ; le modele regional hydrique
       # (placettes IFN) ne sert qu'a la validation croisee
-      r <- c(maps$trophic[["pred"]], hydric_grid$r[["grad_hydrique_25m"]], b)
+      r <- c(maps$trophic[["pred"]], hydric_grid$r[["grad_hydrique_carte"]], b)
       names(r) <- c("trophic", "hydric", "bioclim")
       if (!is.null(forest)) r <- terra::mask(r, forest[["foret"]])
       r
@@ -494,15 +802,9 @@ if (!isTRUE(cfg$demo)) {
       seuil = key$min_accuracy, atteint = key$meets_target, profondeur = key$depth)),
 
     # --- validation ---------------------------------------------------------------------
-    tar_target(val_stats, {
-      v <- sylvostation::validate_stats(cvs)
-      if (!is.null(local_trophic)) {
-        l <- sylvostation::validate_stats(list(trophic = local_trophic$cv))
-        l$gradient <- "trophic (local, ancrages GBIF)"
-        v <- rbind(v, l)
-      }
-      v
-    }),
+    tar_target(val_stats, sylvostation::validation_table(
+      cvs, sensibilite = cv_sensibilite, local = local_trophic$cv,
+      min_blocs_par_pli = cfg$cv_min_blocs_par_pli)),
     tar_target(gnss_validation, if (is.null(src$gnss)) NULL else {
       g <- sylvostation::gnss_field_gradients(sylvostation::load_gnss(src$gnss), indicateurs_noms,
                                               predictors, attr(ifn_gradients, "bioclim_axis"))
@@ -519,7 +821,7 @@ if (!isTRUE(cfg$demo)) {
 
     # --- sorties ------------------------------------------------------------------------
     tar_target(evidence, sylvostation::evidence_table_real(list(
-      offline = hors_ligne, ser_code = cfg$ser_code, n_tiles = nrow(tiles),
+      offline = hors_ligne, ser_code = cfg$ser_code, resolution_m = cfg$resolution_m, n_tiles = nrow(tiles),
       n_ifn = nrow(ifn$placettes), greco = greco,
       mrvbf = !"mrvbf" %in% sylvostation::empty_layers(terrain), hydro_n = nrow(hydro),
       empty_layers = sylvostation::empty_layers(terrain),
@@ -543,15 +845,52 @@ if (!isTRUE(cfg$demo)) {
                    validation_stats = val_stats,
                    fusions_types = attr(merged, "merges"),
                    taxons_non_apparies = attr(indicateurs, "non_apparies"),
-                   geologie_dominante = terra::freq(geol_dom))
+                   geologie_dominante = terra::freq(geol_dom),
+                   effectifs_calibration = calibration_effectifs,
+                   encodage_lithologie = trophic_enc$encoding,
+                   encodage_formations = trophic_enc$encoding_formation,
+                   formations_non_classees = attr(litho_placettes, "formations_non_classees"))
+      # controle par essence et sensibilite (mission 037) : a part, jamais la carte
+      # chaque table est publiee si son resultat existe (un NULL est deja signale par un avertissement)
+      tabs <- c(tabs, sylvostation::essence_tables(controle_essence, cv_essence))
+      if (!is.null(controle_bdforet)) tabs$controle_bdforet_classes <- controle_bdforet
+      # comparaison local / regional (ancrages GBIF) : quelle carte trophique est publiee, et pourquoi
+      if (!is.null(comparaison_locale)) {
+        tabs$comparaison_trophique_locale <- comparaison_locale$resume
+        if (NROW(comparaison_locale$par_pli)) {
+          tabs$comparaison_trophique_locale_par_pli <- comparaison_locale$par_pli
+        }
+      }
       if (!is.null(gnss_validation)) tabs$validation_gnss <- gnss_validation
       if (!is.null(comparison_table)) {
         tabs$comparaison_gradients <- comparison_table
       }
-      # carte hydrique de 25 m (mission 021) : ecart table / calcul direct, RU par maille
+      # carte hydrique (mission 021) : ecart table / calcul direct, RU par maille
       if (NROW(hydric_grid$ecart)) tabs$hydrique_ecart_table <- hydric_grid$ecart
       tabs$hydrique_mailles <- if (is.null(hydric_grid$mailles)) ru_mailles else
         merge(ru_mailles, hydric_grid$mailles, by = "maille", all.x = TRUE)
+      # mission 039 : variables des modeles regionaux (climat du trophique : trophique_climat),
+      # temperature corrigee, RU apprise, RU SoilGrids (diagnostic), bilan lateral
+      tabs$variables_modeles <- data.frame(
+        gradient = names(vars_modele),
+        variables = vapply(vars_modele, paste, "", collapse = ", "),
+        climat = c(trophic = cfg$trophique_climat, hydric = cfg$climat_temperature)[names(vars_modele)])
+      if (!is.null(t_lapse)) tabs$temperature_gradient <- data.frame(
+        gradient_100m = t_lapse$gradient_100m, erreur_type_100m = t_lapse$erreur_type_100m,
+        r2 = t_lapse$r2, sigma = t_lapse$sigma, n_mailles = t_lapse$n, formule = t_lapse$formule,
+        repere = "-0,55 degC/100 m (Rolland 2003, a verifier)")
+      if (!is.null(t_validation)) tabs$temperature_validation <- t_validation
+      if (!is.null(ru_cv)) tabs$ru_apprise_validation <- do.call(rbind, lapply(names(ru_cv), function(n) {
+        cv <- ru_cv[[n]]
+        if (is.null(cv)) return(NULL)
+        data.frame(validation = n, bloc_m = cv$block_size, r2 = cv$global[["r2"]],
+                   rmse = cv$global[["rmse"]], n = length(cv$plis),
+                   variables = paste(ru_learn$vars, collapse = ", "))
+      }))
+      if (!is.null(ru_sg_diagnostic)) tabs$ru_soilgrids_diagnostic <- ru_sg_diagnostic
+      if (!is.null(lateral)) tabs$bilan_lateral_parts <- data.frame(
+        classe = names(lateral$parts), part = as.numeric(lateral$parts),
+        statut = "carte de contr\u00f4le, coefficients \u00e0 v\u00e9rifier")
       w <- sylvostation::write_outputs(
         out_dir = cfg$out_dir, ser_code = cfg$ser_code,
         types = type_map$raster, type_legend = type_legend,
@@ -562,30 +901,34 @@ if (!isTRUE(cfg$demo)) {
       # couches de la carte hydrique (Istress de la pente et du plat, k_sv, RU de la maille)
       wh <- sylvostation::write_hydric_grid(hydric_grid$r, cfg$out_dir, cfg$ser_code,
                                             forest = forest, synthetic = FALSE)
-      c(w$fichier, wh$fichier)
+      wl <- sylvostation::write_layers(list(
+        temperature_corrigee = t_corr_grid, ru_apprise = ru_map,
+        bilan_lateral = if (!is.null(lateral)) lateral$r),
+        cfg$out_dir, cfg$ser_code, synthetic = FALSE)
+      c(w$fichier, wh$fichier, wl$fichier)
     }, format = "file"),
     # comparaison a la reference : seulement si reference_path est fourni
     tar_target(comparison_table, if (is.null(src$reference)) NULL else {
       cmp <- sylvostation::compare_gradients(gradient_map,
-                                             sylvostation::load_reference(src$reference), res = 50)
+                                             sylvostation::load_reference(src$reference), res = res_comparaison)
       cmp$correlation
     })
   )
 }
 
-# Rapport Quarto : seulement si le CLI Quarto est disponible.
+# Rapport Quarto : seulement si le CLI Quarto est disponible. HTML toujours ; PDF (mission
+# 022) en plus si un moteur LaTeX est disponible, sinon HTML seul avec un avertissement.
 if (requireNamespace("quarto", quietly = TRUE) && !is.null(quarto::quarto_path())) {
   pipeline <- c(pipeline, list(
     tar_target(rapport, {
       outputs  # dependance : les fichiers doivent exister
-      dossier <- file.path(cfg$out_dir, cfg$ser_code)
-      qmd <- file.path(dossier, "rapport.qmd")
-      file.copy(rapport_modele(), qmd, overwrite = TRUE)
-      quarto::quarto_render(qmd, execute_params = list(
-        dossier = normalizePath(dossier), prefixe = if (isTRUE(cfg$demo)) "synth_" else "",
-        ser_code = cfg$ser_code, hors_ligne = isTRUE(cfg$offline)),
-        quiet = TRUE)
-      file.path(dossier, "rapport.html")
+      rendu <- new.env()
+      sys.source(system.file("rapport", "rendre_rapport.R", package = "sylvostation"), rendu)
+      rendu$rendre_rapport(
+        dossier = file.path(cfg$out_dir, cfg$ser_code),
+        prefixe = if (isTRUE(cfg$demo)) "synth_" else "",
+        ser_code = cfg$ser_code, hors_ligne = isTRUE(cfg$offline),
+        modele = rapport_modele())
     }, format = "file")
   ))
 }

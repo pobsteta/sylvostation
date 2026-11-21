@@ -27,7 +27,7 @@ test_that("le pipeline démo s'exécute de bout en bout et écrit des sorties sy
     d <- file.path(cfg$out_dir, cfg$ser_code)
     fichiers <- list.files(d)
     # tout fichier de sortie des données est préfixé synth_ (le rapport et son modèle sont des documents)
-    donnees <- setdiff(fichiers, c("rapport.html", "rapport.qmd"))
+    donnees <- setdiff(fichiers, c("rapport.html", "rapport.pdf", "rapport.qmd"))
     expect_true(all(startsWith(donnees, "synth_")))
     for (f in c("synth_types.tif", "synth_gradients.tif", "synth_incertitude.tif",
                 "synth_types.gpkg", "synth_types.csv", "synth_etat_de_preuve.csv",
@@ -35,15 +35,20 @@ test_that("le pipeline démo s'exécute de bout en bout et écrit des sorties sy
       expect_true(f %in% fichiers, info = f)
     }
 
-    # Grille en Lambert-93, origine multiple de 50 m, et un point connu dans la bonne cellule.
+    # Grille en Lambert-93, origine multiple de 20 m (resolution_m), et un point connu dans la bonne cellule.
     ty <- terra::rast(file.path(d, "synth_types.tif"))
     expect_error(assert_crs_2154(ty), NA)
-    expect_equal(terra::xmin(ty) %% 50, 0)
-    expect_equal(terra::ymin(ty) %% 50, 0)
+    expect_equal(terra::xmin(ty) %% cfg$resolution_m, 0)
+    expect_equal(terra::ymin(ty) %% cfg$resolution_m, 0)
     expect_equal(terra::res(ty), c(cfg$resolution_m, cfg$resolution_m))
     cel <- terra::cellFromXY(ty, cbind(cfg$emprise_test$xmin + 1010, cfg$emprise_test$ymin + 40))
-    # 1010 m à l'est : colonne 41 ; 40 m au nord du bord sud (2 500 m de haut) : ligne 100 - 1
-    expect_equal(unname(terra::rowColFromCell(ty, cel)), cbind(99, 41))
+    # cellules de 20 m, emprise de 2 500 m de côté (125 x 125) : 1010 m à l'est du bord ouest ->
+    # colonne floor(1010 / 20) + 1 = 51 ; 40 m au nord du bord sud -> ligne 125 - 2 + 1 = 124.
+    e <- terra::ext(ty)
+    col <- floor((cfg$emprise_test$xmin + 1010 - e$xmin) / cfg$resolution_m) + 1
+    lig <- floor((e$ymax - (cfg$emprise_test$ymin + 40)) / cfg$resolution_m) + 1
+    expect_equal(unname(terra::rowColFromCell(ty, cel)), unname(cbind(lig, col)))
+    expect_equal(unname(c(col, lig)), c(51, 124))
 
     # L'état de preuve est écrit, et rien n'est « réel » complet.
     ep <- utils::read.delim(file.path(d, "synth_etat_de_preuve.csv"), sep = ";",
@@ -71,6 +76,9 @@ test_that("le pipeline démo s'exécute de bout en bout et écrit des sorties sy
       expect_match(html, "non atteints", fixed = TRUE)
       expect_match(html, "Limites", fixed = TRUE)
       expect_match(html, "tat de preuve", fixed = TRUE)
+      # mission 022 : le PDF accompagne le HTML quand un moteur LaTeX est disponible
+      lat <- nzchar(Sys.which("xelatex"))
+      if (lat) expect_true("rapport.pdf" %in% fichiers)
     }
 
     # Relancer ne refait rien (cache de targets)

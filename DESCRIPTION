@@ -10,6 +10,8 @@ Description: Fonctions et pipeline pour produire, à partir du seul code d'une
     (EPSG:2154) et interdit toute extraction de variable fine aux coordonnées
     des placettes de l'Inventaire forestier national, localisées à 700 m près.
 License: GPL (>= 3)
+URL: https://pobsteta.github.io/sylvostation/, https://github.com/pobsteta/sylvostation
+BugReports: https://github.com/pobsteta/sylvostation/issues
 Encoding: UTF-8
 Language: fr
 Roxygen: list(markdown = TRUE)
@@ -22,12 +24,14 @@ Imports:
     terra,
     tools,
     utils,
+    withr,
     yaml
 Suggests:
     ade4,
     biljouR,
     blockCV,
     CAST,
+    clhs,
     cluster,
     euptf2,
     happign,
@@ -37,6 +41,7 @@ Suggests:
     lidR,
     mgcv,
     permute,
+    pkgdown,
     quarto,
     ranger,
     rgbif,
@@ -45,10 +50,10 @@ Suggests:
     soiltexture,
     targets,
     testthat (>= 3.0.0),
+    tinytex,
     vegan,
     whitebox,
-    readxl,
-    withr
+    readxl
 Remotes:
     github::pobsteta/biljouR,
     github::tkdweber/euptf2

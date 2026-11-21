@@ -4,7 +4,12 @@
 \alias{safran_climate}
 \title{Climat kilométrique à partir de SAFRAN}
 \usage{
-safran_climate(safran, months = 4:9, res = 1000)
+safran_climate(
+  safran,
+  months = 4:9,
+  res = 1000,
+  interpolation = c("bilineaire", "proche")
+)
 }
 \arguments{
 \item{safran}{\code{data.frame} de \code{\link[=read_safran]{read_safran()}}.}
@@ -12,9 +17,12 @@ safran_climate(safran, months = 4:9, res = 1000)
 \item{months}{Mois de la saison de végétation (4:9).}
 
 \item{res}{Résolution du raster en Lambert-93 (1000 m, minimum pour l'IFN).}
+
+\item{interpolation}{\code{"bilineaire"} (défaut) ou \code{"proche"}.}
 }
 \value{
-Un \code{SpatRaster} (EPSG:2154) : \code{p_sv}, \code{etp_sv}, \code{t_moy}.
+Un \code{SpatRaster} (EPSG:2154) : \code{p_sv}, \code{etp_sv}, \code{t_moy} ; attributs \code{months}
+et \code{interpolation}.
 }
 \description{
 Pour chaque maille SAFRAN (8 km), moyenne sur les années des cumuls de la saison de
@@ -22,8 +30,20 @@ végétation (\code{months}, avril à septembre par défaut, \strong{provisoire}
 précipitations (\code{PRELIQ + PRENEI}, couche \code{p_sv}) et de l'ETP (\code{etp_sv}), et
 température moyenne annuelle (\code{t_moy}, \code{NA} si la colonne \code{T} manque). Le raster
 est construit en Lambert II étendu (EPSG:27572, grille SAFRAN) puis projeté en
-Lambert-93 à \code{res} m (plus proche voisin) : la maille reste celle de SAFRAN, donc
-utilisable avec les placettes IFN.
+Lambert-93 à \code{res} m.
+}
+\details{
+\itemize{
+\item \code{interpolation = "bilineaire"} (défaut, mission 033) : chaque cellule de \code{res} m
+reçoit l'interpolation bilinéaire des valeurs des mailles entre leurs centres
+(\code{\link[=safran_weights]{safran_weights()}}) : le champ est continu, sans saut aux limites des mailles.
+Lissé à l'échelle de 8 km, il reste un climat kilométrique (variable large),
+croisable avec les placettes IFN. Aucune correction d'altitude.
+\item \code{interpolation = "proche"} : plus proche voisin (comportement d'avant 033), la
+valeur de la maille est uniforme sur ses 8 km. \strong{Attention} : la maille d'une placette
+est lue dans un raster de 1 km reprojeté ; sur la GRECO D, 3,8 \% des placettes (109 sur
+2 894) reçoivent la maille voisine, avec jusqu'à 2,5 °C d'écart (mission 035).
+}
 }
 \examples{
 s <- read_safran(system.file("extdata", "safran_sim2_12mailles_extrait.csv",

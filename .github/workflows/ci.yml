@@ -58,6 +58,10 @@ jobs:
       - uses: quarto-dev/quarto-actions/setup@v2
 
       - name: Tests depuis la racine (mode réel hors ligne)
+        # TAR_ASK=false : les stores _targets sont créés par les tests eux-mêmes (dossiers
+        # temporaires) ; targets récent refuse sinon de les lire hors session interactive.
+        env:
+          TAR_ASK: "false"
         run: LC_ALL=C.UTF-8 Rscript -e 'devtools::test(stop_on_failure = TRUE)'
 
   couverture:

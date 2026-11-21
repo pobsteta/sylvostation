@@ -14,7 +14,7 @@ emprise_test:
 
 # Valeurs provisoires (brief : 10-25 m et 5-10 km), à geler avant la phase 1.
 buffer_m: 5000
-resolution_m: 25
+resolution_m: 20
 
 crs: 2154
 
@@ -37,6 +37,10 @@ max_tiles: null
 # test = emprise_test recoupée avec la SER tamponnée (225 dalles) ; ser = SER entière.
 emprise: test
 # Valeurs provisoires (journal, mission 003), à geler avant la phase 1.
+# Maille (m) du MNT sur lequel le MRVBF est calculé (multiple de la maille du MNT, 5 m) ;
+# défaut = resolution_m. Provisoire, à vérifier (mission 027, référentiels § 28.1) : à 20 m le
+# MRVBF voit moins de fonds étroits qu'à 5 m (part >= 1,5 de 7,9 % à 0,8 % sur 4 dalles).
+mrvbf_res_m: 20
 lidar_block_size: 3
 lidar_buffer_m: 20
 lidar_ncores: 3
@@ -59,12 +63,97 @@ solar_albedo: 0.2
 solar_step_h: 0.5
 hydric_pas_k: 0.02
 hydric_n_controle: 30
+# Descente d'échelle du climat SAFRAN (mission 033), valeurs provisoires, à vérifier :
+# séries journalières interpolées bilinéairement entre les centres des mailles de 8 km
+# (« proche » = maille la plus proche, avant 033), sur un réseau de hydric_node_res_m m
+# pour BILJOU ; aucune correction d'altitude. RU de maille : médiane de l'emprise si la
+# maille compte moins de ru_min_placettes placettes IFN.
+safran_interpolation: bilineaire
+# NB (mission 035) : en mode « proche », la maille est reconstruite par un raster de 1 km reprojeté :
+# 3,8 % des placettes de la GRECO D (109 sur 2 894) reçoivent la maille voisine (jusqu'à 2,5 °C d'écart).
+hydric_node_res_m: 1000
+ru_min_placettes: 5
+# Calibration sur la GRECO (mission 035), valeurs provisoires, à vérifier : un disque de 700 m
+# couvert à moins de litho_min_cover par la BD Charm-50 n'a pas de lithologie (placette
+# retirée de l'apprentissage, comptée) ; litho_encoding_k = poids de la moyenne générale
+# (en placettes) dans l'encodage de la lithologie par le trophique moyen.
+litho_min_cover: 0.5
+litho_encoding_k: 10
+# pH SoilGrids 2.0 (ISRIC, CC BY 4.0, 250 m, 0-5 cm) moyenné dans 700 m : prédicteur à maille large.
+# Exactitude sur la France non évaluée (à vérifier). false : sans pH (jamais remplacé).
+soilgrids_ph: true
+# Taille (m) des blocs de la validation croisée du pipeline. null = portée de l'autocorrélation
+# estimée sur la réponse (environ 22 km pour le trophique de la GRECO D : le R² publié, le plus
+# prudent). cv_block_sensibilite_m = taille de la sensibilité publiée à côté (8 358 m : portée
+# estimée en 018 sur l'emprise test). Les deux R² sont donnés dans le rapport (mission 035).
+cv_block_m: null
+cv_block_sensibilite_m: 8358
+# Nombre minimal de blocs occupés par pli : sous cv_min_blocs_par_pli x 5 blocs, le R² est signalé
+# « peu interprétable » dans validation_stats.csv et le rapport. Valeur provisoire, à vérifier
+# (mission 035 : hydrique à 8 blocs pour 5 plis, R² porté par un seul pli).
+cv_min_blocs_par_pli: 4
+# Contrôle par essence et modèle de sensibilité (mission 037, ADR 0008). L'essence n'entre jamais
+# dans la carte. TOUS CES SEUILS : valeur provisoire, sans source, à vérifier (choisis par le dev).
+# essence_part_pure : part minimale de surface terrière (pondérée par W) pour une placette « pure » ;
+# essence_min_placettes : placettes pures minimales pour juger une essence ;
+# essence_alerte_ecart : alerte si |moyenne prédite hors pli - moyenne observée| dépasse ce seuil
+# (points de trophique, environ la moitié du RMSE de la validation croisée) ;
+# essence_alerte_ratio : alerte si l'accord d'ordre prédit/essence tombe sous ce ratio de l'accord
+# observé/essence ; essence_alerte_pente : seuil de la pente prévu contre observé par essence.
+essence_part_pure: 0.75
+essence_min_placettes: 15
+essence_alerte_ecart: 0.5
+essence_alerte_ratio: 0.5
+essence_alerte_pente: 0.2
+# Option BD Forêt v2 : moyennes du trophique de la carte par classe de peuplement pur (intérieur des
+# polygones). Désactivée par défaut : licence contradictoire (docs/referentiels.md, § 33.5 bis et
+# § 36) ; rien n'est publié hors moyennes par classe. bdforet_tampon_m : valeur provisoire, sans source.
+bdforet_controle: false
+bdforet_tampon_m: 50
+bdforet_min_polygones: 5
+# Carte trophique locale (ancrages GBIF, en ligne) : elle ne remplace la carte régionale que si, sur les
+# mêmes ancrages et les mêmes plis, la borne basse de l'IC (bootstrap de blocs) du gain de R² du local
+# sur le régional dépasse local_gain_min. TOUTES CES VALEURS : provisoire, sans source, à vérifier.
+# local_gain_min : marge minimale 0,02 (choix prudent de l'orchestrateur au lieu de 0, sans source) ;
+# local_min_ancrages, local_min_blocs : en dessous, la comparaison est impossible (carte régionale
+# gardée, avertissement) ; local_ic_niveau : niveau de l'IC bilatéral ; local_bootstrap : tirages.
+local_gain_min: 0.02
+local_min_ancrages: 20
+local_min_blocs: 10
+local_ic_niveau: 0.95
+local_bootstrap: 1000
+# Téléchargements (SER, dalles LiDAR, WFS, TOPAGE, SAFRAN, IFN) : nombre total de tentatives
+# avant arrêt (attentes 5, 20, 60 s). Provisoire (mission 026).
+download_retries: 3
+# Bioclimat et RU plus fins (mission 039, arbitrages de l'orchestrateur du 2026-11-20 ;
+# docs/referentiels.md § 37). climat_temperature : corrigee = T SAFRAN corrigée du relief par le
+# gradient lu entre les mailles (T ~ altitude moyenne + x + y), MNT BD ALTI de 250 m
+# (IGN, Licence Ouverte) ; bilineaire = état d'avant 039. trophique_climat : climat dans le
+# modèle trophique ; sans = retiré (décision de Pascal du 2026-11-20, défaut) ; options : actuel =
+# P - ETP et T bilinéaire (état d'avant 039), corrige = P - ETP et T corrigée. ru_carte : apprise = RU des placettes IFN apprise
+# sur la géologie et SoilGrids (texture, cailloux, euptf2) dans 700 m ; maille = RU uniforme
+# par maille SAFRAN (avant 039). bilan_lateral : carte de contrôle du tableau 20 de Piedallu et
+# al. 2006 (coefficients à vérifier, jamais ajoutée à la RU) ; false par défaut, car appliquée
+# telle quelle elle donne 53 % d'apports contre 28 % observés.
+climat_temperature: corrigee
+trophique_climat: sans
+ru_carte: apprise
+mnt_large_res_m: 250
+bilan_lateral: false
+bilan_lateral_ru_mm: [-30, 0, 60]
+# Coefficients du bilan latéral : logit multinomial du tableau 20 de Piedallu et al. (2006),
+# HAL hal-00835906, p. 53 imprimée (référence : apports ; N = 1 200 relevés EcoPlant vosgiens,
+# pseudo-R² 0,112). À VÉRIFIER : unités de la courbure, calcul de l'indice de Moore (lu comme le
+# TWI) et MNT de 50 m non donnés par le texte. Équivalents en RU (bilan_lateral_ru_mm) : p. 54.
+bilan_lateral_coef:
+  depart: {constante: -0.926, curv150: 2.659, idr_1500: 3.410, moore: -0.395}
+  equilibre: {constante: 0.459, curv150: 1.327, idr_1500: 1.379, moore: -0.176}
 # Départements BD Charm-50 de l'emprise (référentiels § 5) : liste explicite.
-bdcharm_departements: ["067", "068", "088"]
+bdcharm_departements: ["054", "057", "067", "068", "070", "088", "090"]
 ifn_archive_url: "https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip"
 # GBIF : search sans compte ; download si GBIF_USER, GBIF_PWD, GBIF_EMAIL sont posées.
 gbif_method: search
-# Masque forestier : MHC > forest_height_m sur au moins la moitié de la cellule de 25 m.
+# Masque forestier : MHC > forest_height_m sur au moins la moitié de la cellule (resolution_m).
 forest_mask: true
 forest_height_m: 5
 cache_dir: data/cache
@@ -72,3 +161,8 @@ cache_dir: data/cache
 gnss_path: null
 reference_path: null
 soil_paths: null
+# MNT de 250 m local (mode hors ligne) ; absent en ligne : BD ALTI lue par le WMS de l'IGN.
+mnt_large_path: null
+# Textures et cailloux SoilGrids locaux (mode hors ligne, mission 039b) : un GeoTIFF à 24 couches
+# nommées <propriété>_<horizon>_mean ; absent en ligne : SoilGrids lu sur files.isric.org.
+soilgrids_texture_path: null

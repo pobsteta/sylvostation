@@ -11,18 +11,20 @@
 #'
 #' @param geol Objet `sf` polygonal en Lambert-93 (EPSG:2154) portant les champs
 #'   `NOTATION`, `DESCR` et `CODE` (nom des champs réglable ci-dessous).
-#' @param notation,description,code Noms des champs.
+#' @param notation,description,code,dep Noms des champs (`dep` : facultatif).
 #' @return Un `data.frame` trié par surface décroissante : `notation`, `code` (les
 #'   `CODE` distincts, séparés par `/`), `description` (celle du plus grand polygone
 #'   de la notation), `n_poly`, `area_km2` (surface des polygones **dans
-#'   l'emprise de la couche**, calculée sur la géométrie fournie).
+#'   l'emprise de la couche**, calculée sur la géométrie fournie) et, si la couche porte
+#'   le champ `dep`, `dep` : département du plus grand polygone (celui dont vient la
+#'   description), sans zéro de tête (`"67"`).
 #' @examples
 #' g <- sf::st_read(system.file("extdata/bdcharm50_emprise_test.gpkg",
 #'                              package = "sylvostation"), quiet = TRUE)
 #' head(list_formations(g), 3)
 #' @export
 list_formations <- function(geol, notation = "NOTATION", description = "DESCR",
-                            code = "CODE") {
+                            code = "CODE", dep = "dep") {
   if (!inherits(geol, "sf")) stop("`geol` doit \u00eatre un objet sf.", call. = FALSE)
   assert_crs_2154(geol)
   manq <- setdiff(c(notation, description, code), names(geol))
@@ -34,7 +36,7 @@ list_formations <- function(geol, notation = "NOTATION", description = "DESCR",
   d$.nota <- as.character(d[[notation]])
   out <- lapply(split(d, d$.nota), function(s) {
     s <- s[order(-s$.area), , drop = FALSE]
-    data.frame(
+    r <- data.frame(
       notation = s$.nota[1],
       code = paste(unique(as.character(s[[code]])), collapse = "/"),
       description = as.character(s[[description]][1]),
@@ -42,12 +44,17 @@ list_formations <- function(geol, notation = "NOTATION", description = "DESCR",
       area_km2 = sum(s$.area),
       stringsAsFactors = FALSE
     )
+    if (dep %in% names(s)) r$dep <- .norm_dep(s[[dep]][1])
+    r
   })
   out <- do.call(rbind, unname(out))
   out <- out[order(-out$area_km2), , drop = FALSE]
   rownames(out) <- NULL
   out
 }
+
+# Département sans zéro de tête ("067" -> "67") : les extraits portent « 067 », le pipeline « 67 ».
+.norm_dep <- function(x) sub("^0+", "", trimws(as.character(x)))
 
 # Normalise un texte pour la recherche de mots-clés : minuscules, sans accents.
 .norm_texte <- function(x) {
@@ -84,38 +91,129 @@ read_lithology_rules <- function(path = system.file("extdata", "lithologie_regle
   invisible(rules)
 }
 
+#' Lire la table notation -> classe de la mission 040
+#'
+#' Table de classes lithologiques acceptée par Pascal le 2026-11-20 (option b) pour les
+#' formations de la GRECO D que les règles seules ne classent pas ou classent mal. Elle est
+#' propre aux départements de la colonne `dep` : ailleurs, seules les règles s'appliquent. Elle ne
+#' contient que des **codes de notation et des classes** (BD Charm-50, BRGM, Licence
+#' Ouverte ; aucune description). La colonne `origine` distingue : `table` (classe imposée,
+#' prioritaire sur les règles : homonymies, descriptions sans mot-clé, décisions de Pascal),
+#' `gele` (formation dont les règles changeraient la classe sans que la proposition l'ait
+#' annoncé : on lui applique le jeu de règles d'avant la mission 040,
+#' `inst/extdata/lithologie_regles_avant040.csv`, **sur sa propre description** ; la classe de
+#' la colonne `classe` n'est qu'indicative, `classe_regle` donne ce que dirait la règle
+#' actuelle ; candidate soumise à Pascal, supprimer la ligne pour accepter le changement),
+#' `regle` (classe que les règles retrouvent ; ligne de contrôle) et `laisse` (formation
+#' laissée `non_classe`, listée et jamais supprimée).
+#'
+#' @param path Chemin du CSV. Par défaut `inst/extdata/lithologie_notations.csv`.
+#' @return Un `data.frame` : `notation`, `dep` (départements, séparés par `/` et sans zéro de
+#'   tête, où la classe a été établie ; vide = partout), `classe`, `origine`, `regle`,
+#'   `confiance`, `source`, `decision_pascal`, `classe_regle` (classe que donnerait la règle,
+#'   lignes `gele`) et `surface_km2` (numérique, `NA` hors lignes `gele`).
+#' @examples
+#' table(read_lithology_notations()$origine)
+#' @export
+read_lithology_notations <- function(path = system.file("extdata", "lithologie_notations.csv",
+                                                        package = "sylvostation")) {
+  if (!nzchar(path) || !file.exists(path)) stop("Fichier de notations introuvable.", call. = FALSE)
+  t <- utils::read.csv(path, stringsAsFactors = FALSE, encoding = "UTF-8", na.strings = "")
+  if (!all(c("notation", "classe", "origine") %in% names(t))) {
+    stop("La table de notations doit avoir les colonnes notation, classe, origine.", call. = FALSE)
+  }
+  if (!all(t$origine %in% c("table", "gele", "regle", "laisse"))) {
+    stop("`origine` doit valoir table, gele, regle ou laisse.", call. = FALSE)
+  }
+  if (anyDuplicated(t$notation)) stop("Notation en double dans la table.", call. = FALSE)
+  for (j in setdiff(names(t), "surface_km2")) {
+    if (is.character(t[[j]])) t[[j]][is.na(t[[j]])] <- ""
+  }
+  if ("surface_km2" %in% names(t)) t$surface_km2 <- suppressWarnings(as.numeric(t$surface_km2))
+  if (!"dep" %in% names(t)) t$dep <- ""
+  t
+}
+
 #' Recoder les formations en classes lithologiques
 #'
 #' Applique des règles de mots-clés (expressions régulières sur la description,
 #' en minuscules et sans accents) dans l'ordre de `priorite` : la **première** règle
 #' qui correspond donne la classe. Une formation sans règle reçoit `non_classe` :
 #' elle n'est **jamais** affectée par défaut, et un avertissement la liste.
-#' Les règles fournies sont **provisoires** (`validated = FALSE` jusqu'à relecture).
+#' Les formations dont la notation figure dans `overrides` (lignes `origine = "table"` ou `"gele"`,
+#' voir [read_lithology_notations()]) reçoivent d'abord la classe de la table, avec le
+#' statut `table`. Les règles fournies sont **provisoires** (`validated = FALSE` jusqu'à
+#' relecture).
 #'
 #' @param formations `data.frame` de [list_formations()] (colonne `description`).
 #' @param rules `data.frame` de règles, voir [read_lithology_rules()].
-#' @return `formations` avec les colonnes `classe`, `statut` (`regle` ou `non_classe`)
-#'   et `validated` (`FALSE`).
+#' @param overrides `data.frame` notation -> classe prioritaire sur les règles
+#'   ([read_lithology_notations()] par défaut) ; `NULL` pour n'appliquer que les règles.
+#'   Si `formations` porte une colonne `dep` ([list_formations()]), une ligne ne vaut que
+#'   dans les départements de sa colonne `dep` ; sans `dep`, elle vaut partout.
+#' @param rules_gele Règles d'avant la mission 040, appliquées aux lignes `gele`.
+#' @return `formations` avec les colonnes `classe`, `statut` (`regle`, `table`, `gele` ou
+#'   `non_classe`) et `validated` (`FALSE`).
 #' @examples
 #' f <- data.frame(notation = c("a", "b"), description = c("Granite de X", "Remblais"))
 #' suppressWarnings(recode_lithology(f, read_lithology_rules()))
 #' @export
-recode_lithology <- function(formations, rules = read_lithology_rules()) {
+recode_lithology <- function(formations, rules = read_lithology_rules(),
+                             overrides = read_lithology_notations(),
+                             rules_gele = read_lithology_rules(
+                               system.file("extdata", "lithologie_regles_avant040.csv",
+                                           package = "sylvostation"))) {
   if (!is.data.frame(formations) || !"description" %in% names(formations)) {
     stop("`formations` doit avoir une colonne `description`.", call. = FALSE)
   }
   .check_rules(rules)
-  rules <- rules[order(rules$priorite), , drop = FALSE]
   txt <- .norm_texte(formations$description)
+  .appliquer <- function(rg, i = seq_along(txt)) {
+    rg <- rg[order(rg$priorite), , drop = FALSE]
+    cl <- rep(NA_character_, length(i))
+    for (k in seq_len(nrow(rg))) {
+      hit <- is.na(cl) & grepl(rg$motif[k], txt[i], perl = TRUE)
+      cl[hit] <- rg$classe[k]
+    }
+    cl
+  }
   classe <- rep(NA_character_, length(txt))
+  statut <- rep("regle", length(txt))
+  fixe <- rep(FALSE, length(txt))
+  if (!is.null(overrides) && "notation" %in% names(formations)) {
+    ov <- overrides[overrides$origine %in% c("table", "gele"), , drop = FALSE]
+    ov_dep <- if ("dep" %in% names(ov)) ov$dep else rep("", nrow(ov))
+    fdep <- if ("dep" %in% names(formations)) .norm_dep(formations$dep) else
+      rep(NA_character_, length(txt))
+    j <- match(as.character(formations$notation), ov$notation)
+    # la ligne ne vaut que dans ses departements ; departement inconnu : elle vaut
+    dans <- vapply(seq_along(j), function(i) {
+      if (is.na(j[i])) return(FALSE)
+      is.na(fdep[i]) || !nzchar(ov_dep[j[i]]) || fdep[i] %in% strsplit(ov_dep[j[i]], "/", fixed = TRUE)[[1]]
+    }, logical(1))
+    fixe <- dans
+    # table : classe imposee ; gele : regles d'avant la mission 040 sur CETTE description
+    est_table <- dans & ov$origine[pmax(j, 1L)] == "table"
+    est_gele <- dans & ov$origine[pmax(j, 1L)] == "gele"
+    classe[est_table] <- ov$classe[j[est_table]]
+    statut[est_table] <- "table"
+    if (any(est_gele)) {
+      if (is.null(rules_gele)) stop("`rules_gele` requis pour les lignes `gele`.", call. = FALSE)
+      .check_rules(rules_gele)
+      classe[est_gele] <- .appliquer(rules_gele, which(est_gele))
+      statut[est_gele] <- "gele"
+    }
+    classe[fixe & !is.na(classe) & classe == "non_classe"] <- NA_character_
+  }
+  rules <- rules[order(rules$priorite), , drop = FALSE]
   for (i in seq_len(nrow(rules))) {
-    hit <- is.na(classe) & grepl(rules$motif[i], txt, perl = TRUE)
+    hit <- is.na(classe) & !fixe & grepl(rules$motif[i], txt, perl = TRUE)
     classe[hit] <- rules$classe[i]
   }
   nc <- is.na(classe)
   classe[nc] <- "non_classe"
   formations$classe <- classe
-  formations$statut <- ifelse(nc, "non_classe", "regle")
+  formations$statut <- ifelse(nc, "non_classe", statut)
   formations$validated <- FALSE
   if (any(nc)) {
     id <- if ("notation" %in% names(formations)) formations$notation else formations$description
@@ -295,4 +393,199 @@ check_geol_joins <- function(geol, fields = c("dep", "CARTE"), tol = 10,
             " m) : voir le tableau renvoy\u00e9.", call. = FALSE)
   }
   out
+}
+
+#' Lithologie dominante dans un disque autour de points (placettes IFN)
+#'
+#' Pour chaque point, la classe lithologique **de plus grande surface** dans le disque de
+#' rayon `radius` (mission 035). C'est le prédicteur géologique à maille large permis pour
+#' les placettes de l'IFN (localisées à 700 m près) : même résultat que
+#' [dominant_lithology()] au centre d'une cellule, mais calculé aux seuls points, sans
+#' raster de toute la GRECO. La variable s'appelle `coarse_litho_700m`.
+#'
+#' La règle des 700 m est appelée en premier ([assert_no_fine_extract_on_ifn()]), et un
+#' rayon inférieur à la précision de localisation des points (`loc_precision_m`) est
+#' refusé : ce serait une variable fine déguisée. Pour une placette IFN, la précision est
+#' au moins 700 m même si `loc_precision_m` est absent ou `NA` ; hors IFN, une précision
+#' absente ou `NA` est refusée. Jointure par `NOTATION`, jamais par
+#' `CODE` ; une notation absente de `table` reçoit `non_classe` (jamais une classe par
+#' défaut) et est listée dans l'attribut `formations_non_classees`. Un point dont le
+#' disque est couvert à moins de `min_cover` par la couche (hors des départements lus)
+#' n'a **pas** de lithologie (`NA`) : il est compté, jamais complété.
+#'
+#' @param points `sf` de points en Lambert-93 (EPSG:2154, x = est, y = nord), avec une
+#'   colonne `id_placette` et, pour les placettes IFN, `loc_precision_m`.
+#' @param geol `sf` polygonal en Lambert-93 avec `NOTATION` ([read_geology()]).
+#' @param table Tableau de recodage avec `notation` et `classe` ([recode_lithology()]).
+#' @param radius Rayon du disque (m, 700 par défaut).
+#' @param min_cover Part minimale du disque couverte par `geol` (0,5 par défaut).
+#' @return Un `data.frame` (une ligne par point) : `id_placette`, `coarse_litho_700m`
+#'   (classe, texte, `NA` sans géologie), `coarse_formation_700m` (`NOTATION` dominante,
+#'   pour l'encodage par formation de [target_encoding()]), `litho_couverture` (part du disque couverte),
+#'   `litho_part_dominante` (part de la classe dominante dans la partie couverte). Attributs :
+#'   `formations_non_classees` (`notation`, `surface_km2`, `n_points`) et `radius`.
+#' @examples
+#' g <- sf::st_read(system.file("extdata/bdcharm50_emprise_test.gpkg",
+#'                              package = "sylvostation"), quiet = TRUE)
+#' tab <- suppressWarnings(recode_lithology(list_formations(g)))
+#' p <- mark_ifn(sf::st_sf(id_placette = "a",
+#'                         geometry = sf::st_sfc(sf::st_point(c(1014500, 6799300)), crs = 2154)))
+#' lithology_at_points(p, g, tab)
+#' @export
+lithology_at_points <- function(points, geol, table, radius = 700, min_cover = 0.5) {
+  if (!inherits(points, "sf") || !inherits(geol, "sf")) {
+    stop("`points` et `geol` doivent \u00eatre des objets sf.", call. = FALSE)
+  }
+  if (!"id_placette" %in% names(points)) stop("`points` doit avoir `id_placette`.", call. = FALSE)
+  assert_crs_2154(points)
+  assert_crs_2154(geol)
+  assert_no_fine_extract_on_ifn(points, c("coarse_litho_700m", "coarse_formation_700m"))
+  if (!is.numeric(radius) || length(radius) != 1L || !is.finite(radius) || radius <= 0) {
+    stop("`radius` doit \u00eatre un nombre positif (m).", call. = FALSE)
+  }
+  lp <- if ("loc_precision_m" %in% names(points)) points$loc_precision_m else numeric(0)
+  if (.is_ifn(points)) {
+    # placettes IFN : au moins 700 m, meme si loc_precision_m est absent ou NA
+    prec <- max(c(lp, 700), na.rm = TRUE)
+  } else {
+    if (!length(lp) || anyNA(lp)) {
+      stop("`loc_precision_m` absent ou NA : pr\u00e9cision de localisation non garantie, refus.",
+           call. = FALSE)
+    }
+    prec <- max(lp)
+  }
+  if (radius < prec) {
+    stop("Rayon (", radius, " m) inf\u00e9rieur \u00e0 la pr\u00e9cision de localisation des points (",
+         prec, " m) : variable fine d\u00e9guis\u00e9e, refus\u00e9e.", call. = FALSE)
+  }
+  if (!is.numeric(min_cover) || length(min_cover) != 1L || is.na(min_cover) ||
+      min_cover < 0 || min_cover > 1) {
+    stop("`min_cover` doit \u00eatre dans [0, 1].", call. = FALSE)
+  }
+  if (!all(c("notation", "classe") %in% names(table))) {
+    stop("`table` doit avoir les colonnes notation et classe.", call. = FALSE)
+  }
+  if (!"NOTATION" %in% names(geol)) stop("`geol` n'a pas de champ NOTATION.", call. = FALSE)
+  ids <- as.character(points$id_placette)
+  disque <- sf::st_buffer(sf::st_geometry(points), radius)
+  disques <- sf::st_sf(.pt = seq_along(ids), geometry = disque)
+  g <- geol[, "NOTATION"]
+  g$classe <- table$classe[match(as.character(g$NOTATION), table$notation)]
+  g$classe[is.na(g$classe)] <- "non_classe"
+  inter <- suppressWarnings(sf::st_intersection(g, disques))
+  d <- sf::st_drop_geometry(inter)
+  d$a <- as.numeric(sf::st_area(inter))
+  aire_disque <- pi * radius^2
+  couv <- tapply(d$a, factor(d$.pt, seq_along(ids)), sum)
+  couv[is.na(couv)] <- 0
+  # surface par (point, classe)
+  m <- tapply(d$a, list(factor(d$.pt, seq_along(ids)), factor(d$classe)), sum)
+  m[is.na(m)] <- 0
+  dom <- if (ncol(m)) colnames(m)[max.col(m, ties.method = "first")] else rep(NA_character_, length(ids))
+  part <- if (ncol(m)) m[cbind(seq_along(ids), max.col(m, ties.method = "first"))] / pmax(rowSums(m), 1e-9) else
+    rep(NA_real_, length(ids))
+  couverture <- pmin(as.numeric(couv) / aire_disque, 1)
+  sans <- couverture < min_cover | couverture <= 0
+  dom[sans] <- NA_character_
+  part[sans] <- NA_real_
+  # formation (NOTATION) dominante : meme disque, meme regle de couverture
+  mf <- tapply(d$a, list(factor(d$.pt, seq_along(ids)), factor(d$NOTATION)), sum)
+  mf[is.na(mf)] <- 0
+  fdom <- if (ncol(mf)) colnames(mf)[max.col(mf, ties.method = "first")] else rep(NA_character_, length(ids))
+  fdom[sans] <- NA_character_
+  out <- data.frame(id_placette = ids, coarse_litho_700m = dom, coarse_formation_700m = fdom,
+                    litho_couverture = couverture, litho_part_dominante = part,
+                    stringsAsFactors = FALSE)
+  nc <- d[d$classe == "non_classe", , drop = FALSE]
+  if (nrow(nc)) {
+    s <- tapply(nc$a, nc$NOTATION, sum) / 1e6
+    n <- tapply(nc$.pt, nc$NOTATION, function(i) length(unique(i)))
+    fnc <- data.frame(notation = names(s), surface_km2 = as.numeric(s),
+                      n_points = as.integer(n[names(s)]), stringsAsFactors = FALSE)
+    fnc <- fnc[order(-fnc$surface_km2), , drop = FALSE]
+    rownames(fnc) <- NULL
+  } else {
+    fnc <- data.frame(notation = character(), surface_km2 = numeric(), n_points = integer())
+  }
+  attr(out, "formations_non_classees") <- fnc
+  attr(out, "radius") <- radius
+  out
+}
+
+#' Couche numérique de la lithologie encodée, pour la carte
+#'
+#' Remplace chaque classe du raster [dominant_lithology()] par sa valeur de
+#' [target_encoding()] (trophique moyen rétréci de la classe, calculé sur les placettes de
+#' la GRECO) : la carte est prédite avec la même variable que celle de l'apprentissage. Une
+#' classe absente de l'encodage reçoit la moyenne générale ([apply_target_encoding()]).
+#'
+#' @param litho_dom `SpatRaster` catégoriel de [dominant_lithology()].
+#' @param encoding Résultat de [target_encoding()] (niveaux = classes lithologiques).
+#' @param name Nom de la couche (`"coarse_litho_enc"`).
+#' @return Un `SpatRaster` numérique à une couche.
+#' @examples
+#' r <- terra::rast(nrows = 2, ncols = 2, xmin = 1e6, xmax = 1000200,
+#'                  ymin = 6.8e6, ymax = 6800200, crs = "EPSG:2154")
+#' terra::values(r) <- c(1, 2, 1, 2)
+#' levels(r) <- data.frame(id = 1:2, classe = c("granite", "gres"))
+#' e <- target_encoding(c("granite", "gres"), c(5, 3), k = 0)
+#' terra::values(lithology_encoded_layer(r, e))[, 1]
+#' @export
+lithology_encoded_layer <- function(litho_dom, encoding, name = "coarse_litho_enc") {
+  if (!inherits(litho_dom, "SpatRaster")) stop("`litho_dom` doit \u00eatre un SpatRaster.", call. = FALSE)
+  assert_crs_2154(litho_dom)
+  cats <- terra::cats(litho_dom)[[1]]
+  if (is.null(cats)) stop("`litho_dom` doit \u00eatre cat\u00e9goriel.", call. = FALSE)
+  val <- apply_target_encoding(as.character(cats[[2]]), encoding)
+  num <- terra::rast(litho_dom, nlyrs = 1)
+  terra::values(num) <- as.numeric(terra::values(litho_dom, mat = FALSE))
+  out <- terra::classify(num, cbind(as.numeric(cats[[1]]), val), others = NA)
+  names(out) <- name
+  out
+}
+
+#' Couche numérique de la formation dominante encodée, calculée à maille de 100 m
+#'
+#' Formation (`NOTATION`) **dominante dans un disque de 700 m**, remplacée par sa valeur de
+#' [target_encoding()] (trophique moyen rétréci de la formation sur les placettes de la
+#' GRECO), pour la carte (mission 035). Le mode du disque est calculé à `res` m (100 m par
+#' défaut) : avec des centaines de formations, un calcul à la maille de la grille (20 m)
+#' coûterait des dizaines de minutes pour un prédicteur lisse à l'échelle de 700 m ; la
+#' couche est ensuite ramenée sur `grid` (plus proche voisin). Une formation absente de
+#' l'encodage (jamais dominante sur une placette) reçoit la moyenne générale.
+#'
+#' @param geol `sf` polygonal en Lambert-93 avec `NOTATION` ([read_geology()]).
+#' @param grid `SpatRaster` modèle (Lambert-93).
+#' @param encoding Résultat de [target_encoding()] (niveaux = `NOTATION`).
+#' @param radius Rayon du disque (m, 700).
+#' @param res Maille du calcul du mode (m), multiple de la maille de `grid`.
+#' @param name Nom de la couche (`"coarse_formation_enc"`).
+#' @return Un `SpatRaster` numérique à une couche sur `grid`.
+#' @examples
+#' g <- sf::st_read(system.file("extdata/bdcharm50_emprise_test.gpkg", package = "sylvostation"),
+#'                  quiet = TRUE)
+#' grid <- terra::rast(xmin = 1007000, xmax = 1010000, ymin = 6790000, ymax = 6793000,
+#'                     resolution = 100, crs = "EPSG:2154")
+#' e <- target_encoding(g$NOTATION[1:20], seq_len(20), k = 5)
+#' formation_encoded_layer(g, grid, e, res = 100)
+#' @export
+formation_encoded_layer <- function(geol, grid, encoding, radius = 700, res = 100,
+                                    name = "coarse_formation_enc") {
+  if (!inherits(geol, "sf") || !"NOTATION" %in% names(geol)) {
+    stop("`geol` doit \u00eatre un sf avec le champ NOTATION.", call. = FALSE)
+  }
+  if (!inherits(grid, "SpatRaster")) stop("`grid` doit \u00eatre un SpatRaster.", call. = FALSE)
+  assert_crs_2154(geol)
+  assert_crs_2154(grid)
+  fact <- res / terra::res(grid)[1]
+  if (!is.numeric(res) || res <= 0 || abs(fact - round(fact)) > 1e-6) {
+    stop("`res` doit \u00eatre un multiple de la maille de `grid`.", call. = FALSE)
+  }
+  tpl <- if (round(fact) > 1) terra::aggregate(terra::rast(grid, nlyrs = 1), fact = round(fact)) else
+    terra::rast(grid, nlyrs = 1)
+  dom <- dominant_lithology(rasterize_geol(geol, tpl, "NOTATION"), radius = radius)
+  enc <- lithology_encoded_layer(dom, encoding, name = name)
+  if (round(fact) > 1) enc <- terra::resample(enc, terra::rast(grid, nlyrs = 1), method = "near")
+  names(enc) <- name
+  enc
 }

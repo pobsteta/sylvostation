@@ -4,7 +4,14 @@
 \alias{real_terrain}
 \title{Dérivés du terrain ramenés à la grille}
 \usage{
-real_terrain(dtm, grid, streams = NULL, mrvbf = TRUE, tpi_radii = c(100, 300))
+real_terrain(
+  dtm,
+  grid,
+  streams = NULL,
+  mrvbf = TRUE,
+  tpi_radii = c(100, 300),
+  mrvbf_res = NULL
+)
 }
 \arguments{
 \item{dtm}{\code{SpatRaster} du MNT (5 m).}
@@ -16,6 +23,9 @@ real_terrain(dtm, grid, streams = NULL, mrvbf = TRUE, tpi_radii = c(100, 300))
 \item{mrvbf}{Calculer le MRVBF (\code{TRUE} en mode réel).}
 
 \item{tpi_radii}{Rayons du TPI (m).}
+
+\item{mrvbf_res}{Maille (m) du calcul du MRVBF, passée à \code{\link[=derive_terrain]{derive_terrain()}} (\code{mrvbf_res},
+\code{mrvbf_res_m} de \code{config.yml}) ; \code{NULL} = maille du MNT.}
 }
 \value{
 Un \code{SpatRaster} sur \code{grid} : couches de \code{\link[=derive_terrain]{derive_terrain()}} et \code{altitude}
@@ -31,7 +41,7 @@ le raster, même sur une petite emprise), puis le résultat est rogné.
 \donttest{
 f <- system.file("extdata", "synth_dtm.tif", package = "sylvostation")
 d <- terra::rast(f)
-g <- build_grid(terra::ext(d)[c(1, 3, 2, 4)], 25)
+g <- build_grid(terra::ext(d)[c(1, 3, 2, 4)], 20)
 suppressWarnings(names(real_terrain(d, g, mrvbf = FALSE)))
 }
 }

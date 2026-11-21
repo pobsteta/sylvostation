@@ -16,7 +16,9 @@ servi à \code{cells}.}
 }
 \value{
 Un \code{sf} de points : \code{cell_id}, \code{source}, \code{loc_precision_m}, \code{n_occ_maille},
-\code{trophic}, une colonne par couche de \code{predictors}. Attribut \code{n_ecartees}.
+\code{trophic}, une colonne par couche de \code{predictors}. Attribut \code{n_ecartees}. Si aucune
+maille n'est bioindiquée : \code{sf} de 0 ligne aux mêmes colonnes et avertissement de
+classe \code{sylvostation_non_calcule} (l'aval, modèle trophique local, reste sauté).
 }
 \description{
 Centres des mailles de \code{\link[=grid_bioindication]{grid_bioindication()}} (\code{source = "gbif"}), niveau trophique
@@ -35,7 +37,7 @@ occ <- sf::st_as_sf(data.frame(x = c(1015510, 1015520), y = 6793510,
                                loc_precision_m = c(5, 12)),
                     coords = c("x", "y"), crs = 2154)
 r <- terra::rast(xmin = 1015500, xmax = 1015600, ymin = 6793500, ymax = 6793600,
-                 resolution = 25, crs = "EPSG:2154", vals = 1)
+                 resolution = 20, crs = "EPSG:2154", vals = 1)
 names(r) <- "pente"
 gbif_anchors(cel, occ, r)$loc_precision_m
 }

@@ -125,7 +125,7 @@ test_that("les constantes de variables sont cohérentes", {
 })
 
 test_that("couches de la carte hydrique de 25 m : fines (mission 021)", {
-  noms <- c(sprintf("k_%02d", 1:12), "k_sv", "is_topo", "nj_topo", "is_plat", "grad_hydrique_25m")
+  noms <- c(sprintf("k_%02d", 1:12), "k_sv", "is_topo", "nj_topo", "is_plat", "grad_hydrique_carte")
   expect_true(all(noms %in% FINE_VARIABLES))
   expect_true(sylvostation:::.is_fine("k_autre"))   # prefixe k_
   # l'indice des placettes (maille SAFRAN, sans k) reste a maille large : pas fin
@@ -134,4 +134,11 @@ test_that("couches de la carte hydrique de 25 m : fines (mission 021)", {
   for (v in noms) expect_error(assert_no_fine_extract_on_ifn(p, v), "IFN")
   ok <- data.frame(x = 1015500, y = 6793500, loc_precision_m = 5)
   for (v in noms) expect_true(assert_no_fine_extract_on_ifn(ok, v))
+})
+
+test_that("la couche hydrique de la grille a un nom sans resolution (mission 025)", {
+  expect_true("grad_hydrique_carte" %in% FINE_VARIABLES)
+  expect_false("grad_hydrique_25m" %in% FINE_VARIABLES)
+  # grad_hydrique (placettes IFN) n'est pas une variable fine
+  expect_false("grad_hydrique" %in% FINE_VARIABLES)
 })

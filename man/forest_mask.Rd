@@ -28,6 +28,6 @@ pixels sont renseignés ; sinon \code{NA}.
 \examples{
 chm <- terra::rast(xmin = 1015500, xmax = 1015550, ymin = 6793500, ymax = 6793550,
                    resolution = 1, crs = "EPSG:2154", vals = 10)
-g <- build_grid(c(1015500, 6793500, 1015550, 6793550), 25)
+g <- build_grid(c(1015500, 6793500, 1015550, 6793550), 20)
 forest_mask(chm, g)
 }

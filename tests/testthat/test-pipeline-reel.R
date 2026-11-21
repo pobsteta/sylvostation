@@ -16,7 +16,7 @@ cfg_reel <- function(...) {
   base <- list(ser_code = "D11",
                emprise_test = list(xmin = 1007000, ymin = 6790000, xmax = 1022000,
                                    ymax = 6805000, crs = 2154),
-               buffer_m = 5000, resolution_m = 25, crs = 2154, data_dir = "data",
+               buffer_m = 5000, resolution_m = 20, crs = 2154, data_dir = "data",
                laz_dir = "data/laz", out_dir = "data/sorties", ifn_precision_m = 700,
                demo = FALSE, offline = TRUE)
   yaml::write_yaml(utils::modifyList(base, list(...)), f)
@@ -84,7 +84,63 @@ test_that("fetch_cached : cache sans réseau, refus hors ligne, téléchargement
   fetch_cached("https://exemple.invalid/a.csv", d, offline = TRUE, downloader = faux)
   expect_equal(appels, 1L)  # en cache : aucun nouvel appel
   echec <- function(url, destfile, ...) 1L
-  expect_error(fetch_cached("https://exemple.invalid/b.csv", d, downloader = echec), "impossible")
+  expect_error(fetch_cached("https://exemple.invalid/b.csv", d, downloader = echec,
+                            sleeper = function(s) NULL), "impossible")
+})
+
+test_that("fetch_cached : reprise après deux échecs, puis réussite (mission 026)", {
+  d <- tempfile("cache")
+  dir.create(d)
+  appels <- 0L
+  attentes <- numeric()
+  partiel_vu <- logical()
+  capricieux <- function(url, destfile, ...) {
+    partiel_vu <<- c(partiel_vu, file.exists(destfile))
+    appels <<- appels + 1L
+    if (appels < 3L) {
+      writeLines("partiel", destfile)  # fichier partiel laissé par l'échec
+      stop("Stream error in the HTTP/2 framing layer")
+    }
+    writeLines("x", destfile)
+    0L
+  }
+  expect_message(
+    p <- fetch_cached("https://exemple.invalid/c.csv", d, downloader = capricieux,
+                      sleeper = function(s) attentes <<- c(attentes, s)),
+    "tentative 1/3")
+  expect_equal(appels, 3L)
+  expect_equal(attentes, c(5, 20))                 # attente croissante
+  expect_false(any(partiel_vu))                    # partiel supprimé avant chaque reprise
+  expect_identical(readLines(p), "x")
+  expect_false(file.exists(paste0(p, ".part")))
+})
+
+test_that("fetch_cached : échec définitif après N tentatives, N réglable", {
+  d <- tempfile("cache")
+  dir.create(d)
+  appels <- 0L
+  toujours <- function(url, destfile, ...) {
+    appels <<- appels + 1L
+    stop("Stream error in the HTTP/2 framing layer")
+  }
+  rien <- function(s) NULL
+  suppressMessages(expect_error(
+    fetch_cached("https://exemple.invalid/e.csv", d, downloader = toujours, sleeper = rien),
+    "impossible apr.s 3 tentative.*HTTP/2"))
+  expect_equal(appels, 3L)
+  appels <- 0L
+  suppressMessages(expect_error(
+    fetch_cached("https://exemple.invalid/f.csv", d, downloader = toujours, retries = 5,
+                 sleeper = rien), "5 tentative"))
+  expect_equal(appels, 5L)
+  old <- options(sylvostation.download_retries = 2L)
+  on.exit(options(old), add = TRUE)
+  appels <- 0L
+  suppressMessages(try(fetch_cached("https://exemple.invalid/g.csv", d,
+                                    downloader = toujours, sleeper = rien), silent = TRUE))
+  expect_equal(appels, 2L)
+  expect_error(fetch_cached("https://exemple.invalid/h.csv", d, retries = 0), "retries")
+  expect_false(file.exists(file.path(d, "e.csv.part")))
 })
 
 test_that("real_sources : extraits réels hors ligne, jamais synth_, version TAXREF figée", {
@@ -220,29 +276,82 @@ test_that("tile_blocks : blocs contigus de 3 x 3 dalles (225 dalles -> 25 blocs)
   expect_error(tile_blocks(fausses_dalles(2), 0), "size")
 })
 
-test_that("run_tile_block : reprise, une dalle déjà calculée n'est pas refaite", {
-  d <- tempfile("lidar")
-  appels <- list()
-  faux_runner <- function(laz_files, out_dir, ...) {
-    appels[[length(appels) + 1L]] <<- laz_files
+# faux moteur LiDAR : écrit de vrais petits rasters (EPSG:2154, maille `res`) et compte les appels
+faux_runner_lidar <- function(journal, crs = "EPSG:2154") {
+  function(laz_files, out_dir, res = 1, ...) {
+    journal$appels[[length(journal$appels) + 1L]] <- laz_files
     ids <- sub("^.*/", "", sub("\\.laz$", "", laz_files))
-    for (id in ids) for (k in c("mnt", "mhc")) file.create(file.path(out_dir, paste0(k, "_", id, ".tif")))
+    for (id in ids) for (k in c("mnt", "mhc")) {
+      r <- terra::rast(xmin = 1015000, xmax = 1015000 + 10 * res, ymin = 6794000,
+                       ymax = 6794000 + 10 * res, resolution = res, crs = crs)
+      terra::values(r) <- 1
+      terra::writeRaster(r, file.path(out_dir, paste0(k, "_", id, ".tif")), overwrite = TRUE)
+    }
     invisible(NULL)
   }
+}
+
+test_that("run_tile_block : cache par dalle, une dalle déjà calculée n'est pas refaite (032)", {
+  d <- tempfile("lidar")
+  j <- new.env()
+  j$appels <- list()
+  faux_runner <- faux_runner_lidar(j)
   blk <- tile_blocks(fausses_dalles(3), 3)[[1]]
   out <- run_tile_block(blk, d, runner = faux_runner)
   expect_length(out, 18)
-  expect_length(appels[[1]], 9)
-  # interruption simulée : deux dalles perdues, seules elles sont recalculées
+  expect_length(j$appels[[1]], 9)
+  # rien à refaire : aucun appel
+  run_tile_block(blk, d, runner = faux_runner)
+  expect_length(j$appels, 1)
+  # interruption simulée : un fichier absent (mnt, mhc), seules ces dalles sont recalculées
   unlink(file.path(d, c("mnt_1007-6805.tif", "mhc_1008-6804.tif")))
   run_tile_block(blk, d, runner = faux_runner)
-  expect_length(appels, 2)
-  expect_setequal(basename(appels[[2]]), c("1007-6805.laz", "1008-6804.laz"))
+  expect_length(j$appels, 2)
+  expect_setequal(basename(j$appels[[2]]), c("1007-6805.laz", "1008-6804.laz"))
+  # fichier illisible : recalculé
+  writeLines("pas un raster", file.path(d, "mnt_1009-6803.tif"))
   run_tile_block(blk, d, runner = faux_runner)
-  expect_length(appels, 2)  # rien à refaire
+  expect_length(j$appels, 3)
+  expect_identical(basename(j$appels[[3]]), "1009-6803.laz")
+  # option de recalcul forcé : tout est refait
+  run_tile_block(blk, d, runner = faux_runner, force = TRUE)
+  expect_length(j$appels, 4)
+  expect_length(j$appels[[4]], 9)
+  expect_error(run_tile_block(blk, d, runner = faux_runner, force = NA), "force")
   rien <- function(...) NULL
   unlink(file.path(d, "mnt_1007-6805.tif"))
   expect_error(run_tile_block(blk, d, runner = rien), "absents")
+})
+
+test_that("run_tile_block : mauvais système de coordonnées, mauvaise maille ou paramètres changés -> recalcul (032)", {
+  blk <- tile_blocks(fausses_dalles(1), 3)[[1]]
+  # CRS différent (WGS84) : refait
+  d <- tempfile("lidar")
+  j <- new.env(); j$appels <- list()
+  run_tile_block(blk, d, runner = faux_runner_lidar(j, crs = "EPSG:4326"))
+  run_tile_block(blk, d, runner = faux_runner_lidar(j))
+  expect_length(j$appels, 2)
+  # maille différente : refait
+  d <- tempfile("lidar")
+  j <- new.env(); j$appels <- list()
+  run_tile_block(blk, d, res = 2, runner = faux_runner_lidar(j))
+  run_tile_block(blk, d, res = 1, runner = faux_runner_lidar(j))
+  expect_length(j$appels, 2)
+  # tampon ou moteur changé : refait ; identique : réutilisé
+  d <- tempfile("lidar")
+  j <- new.env(); j$appels <- list()
+  fr <- faux_runner_lidar(j)
+  run_tile_block(blk, d, buffer = 20, runner = fr)
+  run_tile_block(blk, d, buffer = 20, ncores = 8, runner = fr)  # ncores : sans effet
+  expect_length(j$appels, 1)
+  run_tile_block(blk, d, buffer = 50, runner = fr)
+  expect_length(j$appels, 2)
+  run_tile_block(blk, d, buffer = 50, engine = "lidr", runner = fr)
+  expect_length(j$appels, 3)
+  # dalle calculée avant 032 (sans params_*.txt) : acceptée si le raster est bon
+  unlink(list.files(d, "^params_", full.names = TRUE))
+  run_tile_block(blk, d, buffer = 50, engine = "lidr", runner = fr)
+  expect_length(j$appels, 3)
 })
 
 test_that("run_tile_block et mosaic_tiles sur la dalle LiDAR réelle", {
@@ -258,7 +367,7 @@ test_that("run_tile_block et mosaic_tiles sur la dalle LiDAR réelle", {
   expect_true(e$xmin <= 1015500 && e$xmax >= 1015580)
   expect_error(mosaic_tiles(f, "mnt", tile_ids = c("1015-6794", "1016-6794")), "manquantes")
   expect_error(mosaic_tiles(character(0), "mnt"), "Aucun")
-  fm <- forest_mask(f, real_grid(sf::st_bbox(e, crs = sf::st_crs(2154)), m, 25))
+  fm <- forest_mask(f, real_grid(sf::st_bbox(e, crs = sf::st_crs(2154)), m, 20))
   expect_identical(names(fm), c("foret", "part_couvert"))
   expect_gt(sum(!is.na(terra::values(fm[["foret"]]))), 0)
 })
@@ -285,6 +394,22 @@ test_that("real_grid : grille alignée sur l'intersection emprise et MNT", {
   loin <- sf::st_as_sfc(sf::st_bbox(c(xmin = 900000, ymin = 6700000, xmax = 901000,
                                       ymax = 6701000), crs = sf::st_crs(2154)))
   expect_error(real_grid(loin, d, 25), "recoupe")
+})
+
+test_that("real_terrain transmet mrvbf_res et mrvbf a derive_terrain (mission 027)", {
+  dtm <- make_synth_dtm(nc = 40, res = 5, xmin = 1015000, ymin = 6793000)
+  g <- build_grid(c(1015000, 6793000, 1015200, 6793200), 25)
+  vu <- new.env()
+  testthat::local_mocked_bindings(derive_terrain = function(dtm, tpi_radii, streams, mrvbf,
+                                                            mrvbf_res) {
+    vu$mrvbf <- mrvbf; vu$res <- mrvbf_res
+    out <- dtm * 0; names(out) <- "pente"; out
+  })
+  real_terrain(dtm, g, mrvbf = TRUE, mrvbf_res = 20)
+  expect_true(vu$mrvbf)
+  expect_equal(vu$res, 20)
+  real_terrain(dtm, g, mrvbf = FALSE)
+  expect_null(vu$res)                       # defaut : maille du MNT
 })
 
 test_that("real_terrain et empty_layers : dérivés agrégés à la grille, couches vides nommées", {
@@ -339,9 +464,47 @@ test_that("fetch_safran : téléchargement simulé, filtrage aux mailles de l'em
   expect_equal(length(unique(paste(read_safran(f2)$LAMBX, read_safran(f2)$LAMBY))), 9)
 })
 
+test_that("fetch_safran : un fichier filtre pour une autre emprise n'est jamais resservi (mission 035)", {
+  d <- tempfile("safran")
+  dir.create(d)
+  src <- read_safran(ex("safran_sim2_12mailles_extrait.csv"))
+  faux <- function(url, destfile, ...) {
+    con <- gzfile(destfile, "w")
+    utils::write.table(src[substr(src$DATE, 1, 4) == "2003", ], con, sep = ";", quote = FALSE,
+                       row.names = FALSE)
+    close(con)
+    0L
+  }
+  petite <- c(1014000, 6798000, 1015000, 6799000)
+  grande <- c(1007000, 6790000, 1022000, 6805000)
+  f1 <- fetch_safran(2003, petite, d, downloader = faux)
+  f2 <- fetch_safran(2003, grande, d, downloader = faux)
+  expect_false(identical(f1, f2))
+  expect_true(file.exists(f1))
+  n <- function(f) length(unique(paste(read_safran(f)$LAMBX, read_safran(f)$LAMBY)))
+  expect_equal(n(f1), 1)
+  expect_equal(n(f2), 9)
+  # meme emprise : le fichier existant est resservi tel quel (pas de second filtrage)
+  mt <- file.mtime(f2)
+  expect_identical(fetch_safran(2003, grande, d, offline = TRUE), f2)
+  expect_equal(file.mtime(f2), mt)
+  # l'ancien nom sans emprise n'est plus lu
+  writeLines("LAMBX;LAMBY;DATE;PRENEI;PRELIQ;ETP\n1;1;20030101;0;0;0", file.path(d, "emprise_2003.csv"))
+  expect_identical(fetch_safran(2003, grande, d, offline = TRUE), f2)
+  # colonnes gardees = celles de read_safran, valeurs inchangees
+  expect_true(all(c("LAMBX", "LAMBY", "DATE", "PRENEI", "PRELIQ", "ETP", "T") %in% names(read_safran(f2))))
+  r2 <- read_safran(f2)
+  k2 <- paste(r2$LAMBX, r2$LAMBY)
+  s03 <- src[substr(src$DATE, 1, 4) == "2003" & paste(src$LAMBX, src$LAMBY) %in% k2, ]
+  expect_equal(sum(r2$PRELIQ), sum(s03$PRELIQ))      # valeurs inchangees sur les mailles gardees
+  expect_equal(nrow(r2), nrow(s03))
+})
+
 test_that("safran_climate : couches p_sv, etp_sv, t_moy à maille kilométrique en Lambert-93", {
   s <- read_safran(ex("safran_sim2_12mailles_extrait.csv"))
-  cl <- safran_climate(s)
+  # plus proche voisin : valeurs de la maille (l'interpolation bilineaire, defaut depuis la
+  # mission 033, est testee dans test-climat.R)
+  cl <- safran_climate(s, interpolation = "proche")
   expect_identical(names(cl), c("p_sv", "etp_sv", "t_moy"))
   expect_equal(terra::res(cl), c(1000, 1000))
   expect_error(assert_crs_2154(cl), NA)
@@ -384,6 +547,20 @@ test_that("bioclim_axis et apply_bioclim : axe orienté « plus haut = plus chau
   a2 <- bioclim_axis(data.frame(coarse_p_etp_sv = c(100, 300, 500), coarse_t_moy = NA))
   expect_match(a2$sens, "sec")
   expect_error(bioclim_axis(data.frame(coarse_t_moy = 1:3)), "coarse_p_etp_sv")
+})
+
+test_that("bioclimat (mission 039) : axe appris sur la T moyennee dans 700 m, applique a t_corr", {
+  d <- data.frame(coarse_p_etp_sv = c(100, 300, 500, 700), coarse_t_corr_700m = c(10, 9, 7, 6))
+  a <- bioclim_axis(d, t_var = "coarse_t_corr_700m")
+  expect_identical(a$vars, c("coarse_p_etp_sv", "coarse_t_corr_700m"))
+  expect_gt(a$loadings[["coarse_t_corr_700m"]], 0)
+  r <- terra::rast(nrows = 1, ncols = 4, nlyrs = 2, crs = "EPSG:2154",
+                   xmin = 1007000, xmax = 1007100, ymin = 6790000, ymax = 6790025)
+  terra::values(r) <- as.matrix(d)
+  names(r) <- c("coarse_p_etp_sv", "t_corr")
+  b <- apply_bioclim(r, a, layers = c(coarse_t_corr_700m = "t_corr"))
+  expect_equal(as.vector(terra::values(b)), apply_bioclim(d, a), tolerance = 1e-9)
+  expect_error(apply_bioclim(r, a), "coarse_t_corr_700m")
 })
 
 # --- placettes IFN -----------------------------------------------------------------------
@@ -464,6 +641,37 @@ test_that("ifn_real_gradients : trois gradients aux placettes, maille large seul
   expect_false(is.null(attr(g, "bioclim_axis")))
 })
 
+test_that("ifn_real_gradients(t_layer) : T corrigee dans 700 m aux placettes, axe appris sur elle", {
+  skip_if_not_installed("euptf2")
+  skip_if_not_installed("soiltexture")
+  skip_if_not_installed("ranger")
+  ifn <- filter_releves(load_ifn(ex("")))
+  ind <- load_indicator_values("tichy", ex("tichy_2023_extrait.csv"), ex("taxref_v18_extrait.csv"),
+                               taxa = unique(ifn$flore$CD_REF))
+  s <- read_safran(ex("safran_sim2_12mailles_extrait.csv"))
+  b <- sf::st_bbox(ifn$placettes)
+  # couche large fabriquee en memoire : T croissante vers l'est (x = est, Lambert-93)
+  t7 <- terra::rast(xmin = floor(b[["xmin"]] / 250) * 250 - 5000, xmax = ceiling(b[["xmax"]] / 250) * 250 + 5000,
+                    ymin = floor(b[["ymin"]] / 250) * 250 - 5000, ymax = ceiling(b[["ymax"]] / 250) * 250 + 5000,
+                    resolution = 250, crs = "EPSG:2154")
+  xy <- terra::xyFromCell(t7, seq_len(terra::ncell(t7)))
+  terra::values(t7) <- 8 + (xy[, 1] - b[["xmin"]]) / 10000
+  names(t7) <- "coarse_t_corr_700m"
+  g <- suppressWarnings(ifn_real_gradients(ifn, ind, safran_climate(s), s, t_layer = t7))
+  expect_true("coarse_t_corr_700m" %in% names(g))
+  x <- sf::st_coordinates(g)[, 1]
+  expect_equal(g$coarse_t_corr_700m, 8 + (x - b[["xmin"]]) / 10000, tolerance = 1e-6)
+  ax <- attr(g, "bioclim_axis")
+  expect_identical(ax$vars, c("coarse_p_etp_sv", "coarse_t_corr_700m"))
+  expect_gt(ax$loadings[["coarse_t_corr_700m"]], 0)
+  expect_equal(g$bioclim, apply_bioclim(g, ax))
+  # une couche fine (t_corr) est refusee aux placettes IFN (regle des 700 m)
+  fine <- t7
+  names(fine) <- "t_corr"
+  expect_error(suppressWarnings(ifn_real_gradients(ifn, ind, safran_climate(s), s, t_layer = fine)),
+               "IFN|interdite")
+})
+
 test_that("ifn_observables, ifn_flora_matrix, ifn_trees : formats pour la clé et les fiches", {
   ifn <- load_ifn(ex(""))
   o <- ifn_observables(ifn$placettes)
@@ -520,6 +728,32 @@ test_that("gbif_anchors : précision = incertitude maximale des occurrences de l
   expect_error(gbif_anchors(cel, mark_ifn(occ), r), "IFN|700|pr.cision", ignore.case = TRUE)
   expect_error(gbif_anchors(data.frame(a = 1), occ, r), "grid_bioindication")
   expect_error(gbif_anchors(cel, data.frame(a = 1), r), "clean_occ")
+})
+
+test_that("gbif_anchors : aucune maille bioindiquée -> sf vide signalé, pas d'erreur (026)", {
+  carre <- sf::st_polygon(list(rbind(c(1015500, 6793500), c(1015550, 6793500),
+                                     c(1015550, 6793550), c(1015500, 6793550),
+                                     c(1015500, 6793500))))
+  cel <- sf::st_sf(cell_id = "a", ph = 5, azote = 4, geometry = sf::st_sfc(carre, crs = 2154))
+  r <- terra::rast(xmin = 1015500, xmax = 1015600, ymin = 6793500, ymax = 6793600,
+                   resolution = 25, crs = "EPSG:2154", vals = 7)
+  names(r) <- "pente"
+  loin <- sf::st_as_sf(data.frame(x = 1016500, y = 6794500, loc_precision_m = 5),
+                       coords = c("x", "y"), crs = 2154)
+  expect_warning(a <- gbif_anchors(cel, loin, r), class = "sylvostation_non_calcule")
+  expect_s3_class(a, "sf")
+  expect_equal(nrow(a), 0L)
+  expect_true(all(c("cell_id", "source", "loc_precision_m", "n_occ_maille", "trophic", "pente")
+                  %in% names(a)))
+  expect_equal(sf::st_crs(a)$epsg, 2154L)
+  expect_equal(attr(a, "n_ecartees"), 1L)
+  # l'aval accepte ce vide : aucune ligne complète, donc pas de modèle local (< 20 lignes)
+  expect_equal(sum(stats::complete.cases(sf::st_drop_geometry(a))), 0L)
+  # l'état de preuve le dit
+  e <- evidence_table_real(list(offline = FALSE, n_gbif = nrow(a), gnss = TRUE,
+                                reference = TRUE, key = TRUE, soils = TRUE))
+  expect_identical(e$etat[grepl("GBIF", e$etape)], "non atteint (aucune maille GBIF)")
+  expect_match(e$detail[grepl("^10", e$etape)], "non ex.cut.e")
 })
 
 test_that("gnss_field_gradients : gradients de terrain des relevés GNSS", {
@@ -583,7 +817,7 @@ test_that("evidence_table_real : ligne 6 bis de la carte hydrique de 25 m (missi
   expect_true(any(grepl("Composante régionale seulement", e$detail)))
   expect_true(any(grepl("validation croisée", e$detail[grepl("^10", e$etape)])))
   expect_true(all(e$etat[e$dans_ce_run == "oui"] == "réel réduit"))
-  expect_true(grepl("seuils de la carte de 25 m", l$detail, fixed = TRUE))
+  expect_true(grepl("seuils de la carte hydrique", l$detail, fixed = TRUE))
   expect_true(grepl("merge_rare", l$detail, fixed = TRUE))
   # toute autre méthode que biljou_topo : état « repli »
   for (m in c("biljou_climatique", "climatique_etp_safran", "repli_ru")) {
@@ -601,10 +835,10 @@ test_that("write_hydric_grid : COG ou GeoTIFF, prefixe synth_, masque forestier"
   r <- terra::rast(xmin = 1015500, xmax = 1015550, ymin = 6793500, ymax = 6793550,
                    resolution = 25, crs = "EPSG:2154", nlyrs = 6)
   terra::values(r) <- matrix(c(10, 20, 30, 40), 4, 6)
-  names(r) <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille", "grad_hydrique_25m")
+  names(r) <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille", "grad_hydrique_carte")
   d <- tempfile("hyd")
   w <- write_hydric_grid(r, d, "D11")
-  expect_identical(basename(w$fichier), "hydrique_25m.tif")
+  expect_identical(basename(w$fichier), "hydrique.tif")
   expect_true(w$format %in% c("COG", "GTiff"))
   h <- terra::rast(w$fichier)
   expect_identical(names(h), c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille"))
@@ -615,7 +849,7 @@ test_that("write_hydric_grid : COG ou GeoTIFF, prefixe synth_, masque forestier"
   terra::values(foret) <- c(1, NA, 1, NA)
   names(foret) <- "foret"
   ws <- write_hydric_grid(r, d, "D11", forest = foret, synthetic = TRUE)
-  expect_identical(basename(ws$fichier), "synth_hydrique_25m.tif")
+  expect_identical(basename(ws$fichier), "synth_hydrique.tif")
   expect_equal(terra::values(terra::rast(ws$fichier))[, "is_topo"], c(10, NA, 30, NA))
   expect_error(write_hydric_grid(r[[1:2]], d, "D11"), "hydric_stress_grid")
   expect_error(write_hydric_grid(terra::project(r, "EPSG:4326"), d, "D11"), "2154")
@@ -701,10 +935,10 @@ test_that("mode réel hors ligne : 0 appel réseau, reprise après interruption,
   ty <- terra::rast(file.path(out, "types.tif"))
   expect_error(assert_crs_2154(ty), NA)
   e <- terra::ext(ty)
-  expect_equal(c(e$xmin, e$ymax) %% 50, c(xmin = 0, ymax = 0))
+  expect_equal(c(e$xmin, e$ymax) %% cfg$resolution_m, c(xmin = 0, ymax = 0))
   cel <- terra::cellFromXY(ty, cbind(1015540, 6793540))
-  col <- floor((1015540 - e$xmin) / 25) + 1
-  lig <- floor((e$ymax - 6793540) / 25) + 1
+  col <- floor((1015540 - e$xmin) / cfg$resolution_m) + 1
+  lig <- floor((e$ymax - 6793540) / cfg$resolution_m) + 1
   expect_equal(unname(terra::rowColFromCell(ty, cel)[1, ]), unname(c(lig, col)))
   expect_false(is.na(terra::values(ty)[cel, 1]))
 
@@ -727,4 +961,135 @@ test_that("mode réel hors ligne : 0 appel réseau, reprise après interruption,
   ep <- utils::read.delim(file.path(out, "etat_de_preuve.csv"), sep = ";", encoding = "UTF-8")
   expect_true(any(grepl("Composante régionale seulement", ep$detail)))
   expect_true(any(grepl("non atteint (entrée absente)", ep$etat, fixed = TRUE)))
+})
+
+test_that("run_tile_block : recalcul interrompu, pas de dalle mixte ; message sans params (032)", {
+  blk <- tile_blocks(fausses_dalles(1), 3)[[1]]
+  d <- tempfile("lidar")
+  j <- new.env(); j$appels <- list()
+  fr <- faux_runner_lidar(j)
+  run_tile_block(blk, d, buffer = 20, runner = fr)
+  # recalcul à buffer 30 interrompu après l'écriture du mnt seul
+  interrompu <- function(laz_files, out_dir, res = 1, ...) {
+    r <- terra::rast(xmin = 1015000, xmax = 1015010, ymin = 6794000, ymax = 6794010,
+                     resolution = res, crs = "EPSG:2154")
+    terra::values(r) <- 2
+    terra::writeRaster(r, file.path(out_dir, "mnt_1007-6805.tif"), overwrite = TRUE)
+    stop("coupure")
+  }
+  expect_error(run_tile_block(blk, d, buffer = 30, runner = interrompu), "coupure")
+  # relance à buffer 20 : la dalle mixte ne doit pas être reprise
+  j$appels <- list()
+  run_tile_block(blk, d, buffer = 20, runner = fr)
+  expect_length(j$appels, 1)
+  # dalle sans params : reprise avec un message
+  unlink(list.files(d, "^params_", full.names = TRUE))
+  expect_message(run_tile_block(blk, d, buffer = 20, runner = fr), "sans params")
+  expect_length(j$appels, 1)
+  run_tile_block(blk, d, buffer = 20, runner = fr, force = TRUE)  # recalcul : params réécrits
+  expect_no_message(run_tile_block(blk, d, buffer = 20, runner = fr))
+})
+
+test_that("_targets.R : seule la valeur 1 de SYLVOSTATION_LIDAR_FORCE force le recalcul (032)", {
+  racine <- testthat::test_path("..", "..")
+  skip_if_not(file.exists(file.path(racine, "_targets.R")), "_targets.R absent")
+  txt <- paste(readLines(file.path(racine, "_targets.R"), encoding = "UTF-8"), collapse = "\n")
+  expect_match(txt, 'identical(Sys.getenv("SYLVOSTATION_LIDAR_FORCE"), "1")', fixed = TRUE)
+  expect_false(grepl('nzchar(Sys.getenv("SYLVOSTATION_LIDAR_FORCE"))', txt, fixed = TRUE))
+})
+
+test_that("_targets.R : une clé sans rapport ne périme pas lidar_files, lidar_buffer_m la périme (032)", {
+  skip_on_cran()
+  skip_if_not_installed("targets")
+  skip_if_not_installed("withr")
+  skip_if_not_installed("lasR")
+  racine <- testthat::test_path("..", "..")
+  skip_if_not(file.exists(file.path(racine, "_targets.R")) &&
+                file.exists(file.path(racine, "config.yml")),
+              "_targets.R et config.yml absents (paquet installé)")
+  racine <- normalizePath(racine)
+  d <- withr::local_tempdir("cache032_")
+  file.copy(file.path(racine, c("_targets.R", "config.yml")), d)
+  ecrire_config <- function(retirer = character(), ajouter = character()) {
+    txt <- readLines(file.path(racine, "config.yml"), encoding = "UTF-8")
+    txt <- txt[!grepl(paste0("^(demo|offline|max_tiles|", paste(c("zz", retirer), collapse = "|"), "):"), txt)]
+    writeLines(c(txt, "demo: false", "offline: true", "max_tiles: 1", ajouter),
+               file.path(d, "config.yml"), useBytes = TRUE)
+  }
+  ecrire_config()
+  withr::local_dir(d)
+  perimee <- function() {
+    "lidar_files" %in% targets::tar_outdated(names = "lidar_files", callr_function = NULL,
+                                              reporter = "silent")
+  }
+  targets::tar_make(names = "lidar_files", callr_function = NULL, reporter = "silent")
+  expect_false(perimee())
+  # une clé ajoutée sans rapport avec le LiDAR, et une clé d'un autre calcul modifiée
+  ecrire_config(ajouter = "cle_sans_rapport_032: 42")
+  expect_false(perimee())
+  ecrire_config(retirer = "mrvbf_res_m", ajouter = c("cle_sans_rapport_032: 42", "mrvbf_res_m: 10"))
+  expect_false(perimee())
+  # le tampon LiDAR change le calcul : périmée
+  ecrire_config(retirer = "lidar_buffer_m", ajouter = "lidar_buffer_m: 30")
+  expect_true(perimee())
+})
+
+test_that("fetch_cached : retries entier >= 1 et wait non vide (026)", {
+  d <- tempfile("cache")
+  dir.create(d)
+  u <- "https://exemple.invalid/z.csv"
+  expect_error(fetch_cached(u, d, retries = 2.5), "retries")
+  expect_error(fetch_cached(u, d, retries = NA_real_), "retries")
+  expect_error(fetch_cached(u, d, wait = numeric(0)), "wait")
+  expect_error(fetch_cached(u, d, wait = -1), "wait")
+})
+
+test_that("forest_mask a 20 m : la moitie de la cellule suit la resolution de la grille (mission 025)", {
+  # MHC a 1 m ; cellule de 20 m. Colonnes ouest (x < 1015510) boisees : la cellule de
+  # x 1015500-1015520 est boisee a exactement 50 %, celle de 1015520-1015540 a 0 %.
+  chm <- terra::rast(xmin = 1015500, xmax = 1015540, ymin = 6793500, ymax = 6793520,
+                     resolution = 1, crs = "EPSG:2154")
+  xy <- terra::xyFromCell(chm, seq_len(terra::ncell(chm)))  # x = est, y = nord
+  terra::values(chm) <- ifelse(xy[, 1] < 1015510, 10, 1)
+  g <- build_grid(c(1015500, 6793500, 1015540, 6793520), 20)
+  expect_equal(terra::res(g), c(20, 20))
+  m <- forest_mask(chm, g)
+  v <- terra::extract(m, cbind(c(1015510, 1015530), c(6793510, 6793510)))
+  expect_equal(v$part_couvert, c(0.5, 0))
+  expect_equal(v$foret, c(1, NA))   # 50 % : seuil atteint (>=), 0 % : hors foret
+  # a moins de la moitie : non boisee
+  terra::values(chm) <- ifelse(xy[, 1] < 1015509, 10, 1)
+  expect_equal(terra::extract(forest_mask(chm, g), cbind(1015510, 6793510))$foret, NA_real_)
+})
+
+test_that("evidence_table_real et evidence_table : la maille vient de resolution_m (mission 025)", {
+  e20 <- evidence_table_real(list(offline = TRUE, ser_code = "D11", n_tiles = 1, n_ifn = 10,
+                                  gnss = FALSE, reference = FALSE, resolution_m = 20,
+                                  forest_mask = TRUE, n_cells = 5))
+  expect_true(any(grepl("grille de 20 m", e20$detail, fixed = TRUE)))
+  expect_true(any(grepl("Cellule de 20 m", e20$detail, fixed = TRUE)))
+  expect_false(any(grepl("25 m", e20$detail, fixed = TRUE)))
+  e30 <- evidence_table_real(list(offline = TRUE, ser_code = "D11", n_tiles = 1, n_ifn = 10,
+                                  gnss = FALSE, reference = FALSE, resolution_m = 30))
+  expect_true(any(grepl("grille de 30 m", e30$detail, fixed = TRUE)))
+  d <- evidence_table(n_ifn = 3, resolution_m = 20)
+  expect_true(grepl("grille de 20 m", d$detail[1], fixed = TRUE))
+})
+
+test_that("calibration_counts : entonnoir des effectifs, chute a l'etape climat visible", {
+  ifn <- filter_releves(load_ifn(system.file("extdata", package = "sylvostation")))
+  g <- data.frame(coarse_t_moy = c(1, NA, NA, NA, 2))
+  litho <- data.frame(coarse_litho_700m = c("gres", NA))
+  r <- calibration_counts(ifn, g, list(trophic = 2, hydric = data.frame(a = 1)), litho,
+                          data.frame(a = 1))
+  expect_named(r, c("etape", "n", "perdues", "cause"))
+  expect_equal(r$n[1], nrow(ifn$placettes))
+  expect_equal(r$n[r$etape == "trophique calculable"], 5L)
+  expect_equal(r$n[r$etape == "avec climat SAFRAN"], 2L)
+  expect_equal(r$perdues[r$etape == "avec climat SAFRAN"], 3L)
+  expect_equal(r$n[r$etape == "avec lithologie (disque couvert)"], 1L)
+  expect_equal(r$n[r$etape == "apprentissage trophique"], 1L)
+  expect_true(is.na(r$perdues[1]))
+  r0 <- calibration_counts(ifn, g, list(trophic = 2, hydric = 1))
+  expect_false(any(grepl("lithologie|apprentissage trophique", r0$etape)))
 })

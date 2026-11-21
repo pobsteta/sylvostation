@@ -11,13 +11,27 @@
 #'   et les clés du mode réel (mission 016, valeurs par défaut si absentes) : `offline`
 #'   (`FALSE` ; `TRUE` = mode réel sans réseau sur les extraits réels de `inst/extdata`),
 #'   `max_tiles` (`NULL` = toutes les dalles), `emprise` (`"test"` ou `"ser"`),
-#'   `lidar_block_size` (3), `lidar_buffer_m` (20), `lidar_ncores` (3),
+#'   `mrvbf_res_m` (maille en m du MNT sur lequel le MRVBF est calculé, multiple de 5 ;
+#'   défaut `resolution_m` ; provisoire, à vérifier, mission 027), `lidar_block_size` (3), `lidar_buffer_m` (20), `lidar_ncores` (3),
 #'   `taxref_version` (`"18"`, figée), `indicator_source` (`"tichy"`), `ru_source`
 #'   (`"euptf2"`), `safran_annees` (1996-2025), `saison_vegetation` (mois 4 à 9),
 #'   `bdcharm_departements`, `gbif_method` (`"search"`), `forest_mask` (`TRUE`),
-#'   `forest_height_m` (5), `cache_dir`, la carte hydrique de 25 m (mission 021,
+#'   `forest_height_m` (5), `cache_dir`, la carte hydrique (mission 021,
 #'   provisoires) : `solar_linke` (3), `solar_albedo` (0,2), `solar_step_h` (0,5),
-#'   `hydric_pas_k` (0,02), `hydric_n_controle` (30), `ifn_archive_url` et `taxref_url` (sans valeur
+#'   `hydric_pas_k` (0,02), `hydric_n_controle` (30), la descente d'échelle du climat
+#'   (mission 033, provisoires) : `safran_interpolation` (`"bilineaire"` ou `"proche"`),
+#'   `hydric_node_res_m` (1000), `ru_min_placettes` (5), la calibration sur la GRECO
+#'   (mission 035, provisoires) : `litho_min_cover` (0,5), `litho_encoding_k` (10), `soilgrids_ph` (`TRUE`), `cv_block_m` (`NULL` : portée
+#'   estimée de la réponse) `cv_block_sensibilite_m` (8 358 m) et `cv_min_blocs_par_pli` (4),
+#'   les choix de la mission 039 : `climat_temperature` (`"corrigee"` ou `"bilineaire"`),
+#'   `trophique_climat` (`"sans"` par défaut, décision de Pascal du 2026-11-20 ;
+#'   options `"actuel"` et `"corrige"`), `ru_carte` (`"apprise"` ou `"maille"`), `mnt_large_res_m` (250),
+#'   `bilan_lateral` (`FALSE`), `bilan_lateral_ru_mm` (−30, 0, 60) et `bilan_lateral_coef`
+#'   (coefficients du tableau 20 de Piedallu et al. 2006, à vérifier), l'entrée optionnelle
+#'   `mnt_large_path` (MNT de 250 m local, mode hors ligne), l'entrée optionnelle
+#'   `soilgrids_texture_path` (`NULL` par défaut : GeoTIFF à 24 couches de textures et
+#'   cailloux SoilGrids, mode hors ligne, mission 039b),
+#'   `ifn_archive_url` et `taxref_url` (sans valeur
 #'   par défaut : seule source, config.yml ; exigées en ligne), et les
 #'   entrées optionnelles `gnss_path`, `reference_path`, `soil_paths`, `tichy_path`
 #'   (`NULL` si absentes : jamais remplacées).
@@ -26,7 +40,7 @@
 #' writeLines(c(
 #'   'ser_code: "D11"',
 #'   "emprise_test: {xmin: 1007000, ymin: 6790000, xmax: 1022000, ymax: 6805000, crs: 2154}",
-#'   "buffer_m: 5000", "resolution_m: 25", "crs: 2154",
+#'   "buffer_m: 5000", "resolution_m: 20", "crs: 2154",
 #'   "data_dir: data", "laz_dir: data/laz", "out_dir: data/sorties",
 #'   "ifn_precision_m: 700"), f)
 #' read_config(f)$ser_code
@@ -98,9 +112,40 @@ read_config <- function(path = "config.yml") {
   ru_source = "euptf2", safran_annees = c(1996L, 2025L), saison_vegetation = c(4L, 9L),
   bdcharm_departements = c("067", "068", "088"), gbif_method = "search",
   forest_mask = TRUE, forest_height_m = 5, cache_dir = "data/cache",
-  # carte hydrique de 25 m (mission 021), valeurs provisoires (referentiels § 25.5)
+  # carte hydrique (mission 021), valeurs provisoires (referentiels § 25.5)
   solar_linke = 3, solar_albedo = 0.2, solar_step_h = 0.5, hydric_pas_k = 0.02,
-  hydric_n_controle = 30L
+  hydric_n_controle = 30L,
+  # descente d'echelle du climat SAFRAN (mission 033), valeurs provisoires
+  safran_interpolation = "bilineaire", hydric_node_res_m = 1000, ru_min_placettes = 5L,
+  # calibration sur la GRECO (mission 035), valeurs provisoires : part minimale du disque de
+  # 700 m couverte par la geologie, poids (en placettes) de la moyenne generale dans
+  # l'encodage de la lithologie
+  litho_min_cover = 0.5, litho_encoding_k = 10, soilgrids_ph = TRUE,
+  # blocs de la validation croisee du pipeline : cv_block_m absent ou null = portee estimee
+  # (le chiffre publie, le plus prudent) ; cv_block_sensibilite_m = taille de la sensibilite
+  cv_block_sensibilite_m = 8358, cv_min_blocs_par_pli = 4,
+  # controle par essence et sensibilite (mission 037) : valeurs provisoires, sans source, a
+  # verifier (docs/referentiels.md, section 36)
+  essence_part_pure = 0.75, essence_min_placettes = 15L, essence_alerte_ecart = 0.5,
+  essence_alerte_ratio = 0.5, essence_alerte_pente = 0.2,
+  bdforet_controle = FALSE, bdforet_tampon_m = 50, bdforet_min_polygones = 5L,
+  # carte trophique locale (ancrages GBIF) : ne remplace la regionale que si elle fait mieux en
+  # validation croisee (mission 037) ; valeurs provisoires, sans source, a verifier
+  local_gain_min = 0.02, local_min_ancrages = 20L, local_min_blocs = 10L, local_ic_niveau = 0.95,
+  local_bootstrap = 1000L,
+  # reprise sur incident reseau des telechargements (mission 026), provisoire
+  download_retries = 3L,
+  # bioclimat et RU plus fins (mission 039, arbitrages du 2026-11-20) : temperature corrigee du
+  # relief par le gradient lu dans SAFRAN, MNT BD ALTI de 250 m, RU de carte apprise ; climat
+  # retire du trophique (decision de Pascal du 2026-11-20) ; bilan lateral desactive
+  climat_temperature = "corrigee", trophique_climat = "sans", ru_carte = "apprise",
+  mnt_large_res_m = 250, bilan_lateral = FALSE, bilan_lateral_ru_mm = c(-30, 0, 60),
+  # bilan lateral : logit multinomial du tableau 20 de Piedallu et al. (2006, HAL hal-00835906,
+  # p. 53 imprimee ; reference : apports), A VERIFIER (unites de la courbure, indice de Moore,
+  # MNT de 50 m non donnes) ; meme valeur que config.yml (cle absente = cette valeur)
+  bilan_lateral_coef = list(
+    depart = c(constante = -0.926, curv150 = 2.659, idr_1500 = 3.410, moore = -0.395),
+    equilibre = c(constante = 0.459, curv150 = 1.327, idr_1500 = 1.379, moore = -0.176))
 )
 
 .config_reel <- function(cfg) {
@@ -112,8 +157,17 @@ read_config <- function(path = "config.yml") {
       stop("`", k, "` doit \u00eatre true ou false.", call. = FALSE)
     }
   }
+  # maille de calcul du MRVBF (mission 027) : par defaut celle de la grille
+  if (is.null(cfg$mrvbf_res_m)) cfg$mrvbf_res_m <- cfg$resolution_m
+  if (!is.numeric(cfg$mrvbf_res_m) || length(cfg$mrvbf_res_m) != 1L ||
+      !is.finite(cfg$mrvbf_res_m) || cfg$mrvbf_res_m <= 0) {
+    stop("`mrvbf_res_m` doit \u00eatre un nombre strictement positif (m).", call. = FALSE)
+  }
   logique("offline")
   logique("forest_mask")
+  logique("soilgrids_ph")
+  logique("bdforet_controle")
+  est_chaine_cfg <- function(x) is.character(x) && length(x) == 1L && !is.na(x)
   entier_pos <- function(k, x = cfg[[k]]) {
     if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 1 || x != round(x)) {
       stop("`", k, "` doit \u00eatre un entier >= 1.", call. = FALSE)
@@ -138,6 +192,101 @@ read_config <- function(path = "config.yml") {
   x <- cfg$hydric_n_controle
   if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0 || x != round(x)) {
     stop("`hydric_n_controle` doit \u00eatre un entier >= 0.", call. = FALSE)
+  }
+  if (!est_chaine_cfg(cfg$safran_interpolation) ||
+      !cfg$safran_interpolation %in% c("bilineaire", "proche")) {
+    stop("`safran_interpolation` doit valoir bilineaire ou proche.", call. = FALSE)
+  }
+  x <- cfg$hydric_node_res_m
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0) {
+    stop("`hydric_node_res_m` doit \u00eatre un nombre > 0 (m).", call. = FALSE)
+  }
+  entier_pos("ru_min_placettes")
+  x <- cfg$litho_min_cover
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0 || x > 1) {
+    stop("`litho_min_cover` doit \u00eatre un nombre dans [0, 1].", call. = FALSE)
+  }
+  for (k in c("cv_block_m", "cv_block_sensibilite_m")) {
+    x <- cfg[[k]]
+    if (!is.null(x) && (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0)) {
+      stop("`", k, "` doit \u00eatre un nombre > 0 (m) ou null.", call. = FALSE)
+    }
+  }
+  x <- cfg$cv_min_blocs_par_pli
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0) {
+    stop("`cv_min_blocs_par_pli` doit \u00eatre un nombre >= 0.", call. = FALSE)
+  }
+  x <- cfg$litho_encoding_k
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0) {
+    stop("`litho_encoding_k` doit \u00eatre un nombre >= 0.", call. = FALSE)
+  }
+  cfg$ru_min_placettes <- as.integer(cfg$ru_min_placettes)
+  x <- cfg$essence_part_pure
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0.5 || x > 1) {
+    stop("`essence_part_pure` doit \u00eatre un nombre dans ]0,5 ; 1].", call. = FALSE)
+  }
+  for (k in c("essence_alerte_ecart", "essence_alerte_ratio", "essence_alerte_pente",
+              "bdforet_tampon_m")) {
+    x <- cfg[[k]]
+    if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0) {
+      stop("`", k, "` doit \u00eatre un nombre >= 0.", call. = FALSE)
+    }
+  }
+  x <- cfg$local_gain_min
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0) {
+    stop("`local_gain_min` doit \u00eatre un nombre >= 0.", call. = FALSE)
+  }
+  x <- cfg$local_ic_niveau
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0 || x >= 1) {
+    stop("`local_ic_niveau` doit \u00eatre un nombre dans ]0, 1[.", call. = FALSE)
+  }
+  for (k in c("local_min_ancrages", "local_min_blocs", "local_bootstrap")) {
+    entier_pos(k)
+    cfg[[k]] <- as.integer(cfg[[k]])
+  }
+  for (k in c("essence_min_placettes", "bdforet_min_polygones")) {
+    entier_pos(k)
+    cfg[[k]] <- as.integer(cfg[[k]])
+  }
+  x <- cfg$download_retries
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 1 || x != round(x)) {
+    stop("`download_retries` doit \u00eatre un entier >= 1.", call. = FALSE)
+  }
+  cfg$download_retries <- as.integer(x)
+  logique("bilan_lateral")
+  choix <- list(climat_temperature = c("corrigee", "bilineaire"),
+                trophique_climat = c("actuel", "corrige", "sans"),
+                ru_carte = c("apprise", "maille"))
+  for (k in names(choix)) {
+    if (!est_chaine_cfg(cfg[[k]]) || !cfg[[k]] %in% choix[[k]]) {
+      stop("`", k, "` doit valoir ", paste(choix[[k]], collapse = ", "), ".", call. = FALSE)
+    }
+  }
+  x <- cfg$mnt_large_res_m
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 250) {
+    stop("`mnt_large_res_m` doit \u00eatre un nombre >= 250 (m, maille large).", call. = FALSE)
+  }
+  x <- unlist(cfg$bilan_lateral_ru_mm)
+  if (!is.numeric(x) || length(x) != 3L || anyNA(x)) {
+    stop("`bilan_lateral_ru_mm` doit donner trois valeurs (mm) : d\u00e9part, \u00e9quilibre, apports.",
+         call. = FALSE)
+  }
+  cfg$bilan_lateral_ru_mm <- as.numeric(x)
+  cf <- cfg$bilan_lateral_coef
+  nm <- c("constante", "curv150", "idr_1500", "moore")
+  ok <- is.list(cf) && all(c("depart", "equilibre") %in% names(cf)) &&
+    all(vapply(cf[c("depart", "equilibre")], function(z) all(nm %in% names(z)) &&
+                 all(vapply(z[nm], is.numeric, logical(1))), logical(1)))
+  if (!ok) {
+    stop("`bilan_lateral_coef` doit donner depart et equilibre : ", paste(nm, collapse = ", "),
+         ".", call. = FALSE)
+  }
+  cfg$bilan_lateral_coef <- lapply(cf[c("depart", "equilibre")], function(z) unlist(z[nm]))
+  for (k in c("mnt_large_path", "soilgrids_texture_path")) {
+    v <- cfg[[k]]
+    if (!is.null(v) && (!is.character(v) || length(v) != 1L)) {
+      stop("`", k, "` doit \u00eatre un chemin ou absent.", call. = FALSE)
+    }
   }
   if (!cfg$emprise %in% c("test", "ser")) {
     stop("`emprise` doit valoir test ou ser.", call. = FALSE)

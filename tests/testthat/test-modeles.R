@@ -218,3 +218,110 @@ test_that("predict_raster transmet les plis spatiaux à CAST::aoa", {
   predict_raster(m, synth$rasters)
   expect_null(recu$cv)
 })
+
+# --- encodage par la moyenne de la reponse (mission 035) ---------------------------------
+test_that("target_encoding : moyenne retrecie vers la moyenne generale, formule exacte", {
+  e <- target_encoding(c("a", "a", "a", "b", NA), c(1, 2, 3, 10, 99), k = 2)
+  expect_equal(e$niveau, c("a", "b"))
+  expect_equal(e$n, c(3L, 1L))
+  g <- mean(c(1, 2, 3, 10))   # la ligne NA est ignoree
+  expect_equal(attr(e, "generale"), g)
+  expect_equal(e$valeur, c((3 * 2 + 2 * g) / 5, (1 * 10 + 2 * g) / 3))
+  # k = 0 : moyennes brutes ; niveau rare tire vers g quand k augmente
+  expect_equal(target_encoding(c("a", "b"), c(1, 5), k = 0)$valeur, c(1, 5))
+  g3 <- 10 / 3   # moyenne generale de (10, 0, 0)
+  expect_lt(abs(target_encoding(c("a", "b", "b"), c(10, 0, 0), k = 50)$valeur[1] - g3),
+            abs(target_encoding(c("a", "b", "b"), c(10, 0, 0), k = 1)$valeur[1] - g3))
+  expect_error(target_encoding(c("a", "b"), c(1, 2, 3)), "longueur")
+  expect_error(target_encoding(c("a", "b"), c(1, 2), k = -1), "k")
+  expect_error(target_encoding(c(NA, NA), c(1, 2)), "Aucune")
+})
+
+test_that("apply_target_encoding : niveau inconnu -> moyenne generale, NA reste NA", {
+  e <- target_encoding(c("a", "a", "b"), c(1, 3, 10), k = 1)
+  v <- apply_target_encoding(c("a", "b", "z", NA), e)
+  expect_equal(v[1:2], e$valeur)
+  expect_equal(v[3], attr(e, "generale"))
+  expect_true(is.na(v[4]))
+  expect_error(apply_target_encoding("a", data.frame(a = 1)), "target_encoding")
+})
+
+test_that("oof_target_encoding : la reponse d'une ligne n'entre jamais dans son propre encodage", {
+  x <- rep(c("a", "b", "c"), 8)
+  y <- as.numeric(1:24)
+  f <- rep(1:4, each = 6)
+  o1 <- oof_target_encoding(x, y, f, k = 1)
+  y2 <- y
+  y2[5] <- 1e6
+  o2 <- oof_target_encoding(x, y2, f, k = 1)
+  expect_equal(o1[5], o2[5])                  # sa propre reponse ne compte pas
+  expect_false(isTRUE(all.equal(o1[f != f[5]], o2[f != f[5]])))   # les autres plis, si
+  expect_equal(o1[f == f[5]], o2[f == f[5]])
+  expect_error(oof_target_encoding(x, y, rep(1, 24)), "plis")
+})
+
+test_that("spatial_cv(encode) : pas de fuite ; l'encodage naif sur toutes les donnees en a une", {
+  skip_if_not_installed("mgcv")
+  set.seed(4)
+  n <- 240
+  d <- data.frame(x = runif(n, 1000000, 1040000), y = runif(n, 6800000, 6840000),
+                  loc_precision_m = 10)
+  d$lev <- paste0("f", sample(120, n, replace = TRUE))   # ~2 lignes par niveau, sans lien
+  d$g <- rnorm(n)                                        # reponse independante du niveau
+  naif <- d
+  naif$coarse_enc <- apply_target_encoding(d$lev, target_encoding(d$lev, d$g, k = 0))
+  r_naif <- spatial_cv(naif, "g", "coarse_enc", method = "gam", block_size = 8000)$global[["r2"]]
+  r_ok <- spatial_cv(d, "g", "coarse_enc", method = "gam", block_size = 8000,
+                     encode = list(var = "lev", name = "coarse_enc", k = 5))$global[["r2"]]
+  expect_gt(r_naif, 0.2)    # fuite : R2 positif alors que la reponse est du bruit
+  expect_lt(r_ok, 0.1)      # sans fuite : pas de pouvoir predictif
+  expect_error(spatial_cv(d, "g", "coarse_enc", encode = list(var = "absente", name = "coarse_enc")),
+               "encode")
+  # deux variables encodees : liste de specifications
+  d$lev2 <- paste0("h", sample(10, n, replace = TRUE))
+  r2 <- spatial_cv(d, "g", c("coarse_enc", "coarse_enc2"), method = "gam", block_size = 8000,
+                   encode = list(list(var = "lev", name = "coarse_enc", k = 5),
+                                 list(var = "lev2", name = "coarse_enc2", k = 5)))
+  expect_true(is.finite(r2$global[["r2"]]))
+  expect_lt(r2$global[["r2"]], 0.1)
+})
+
+test_that("encode_by_blocks : colonne hors pli, encodage complet, lignes sans niveau retirees", {
+  set.seed(2)
+  n <- 80
+  d <- data.frame(x = runif(n, 1000000, 1030000), y = runif(n, 6800000, 6830000),
+                  lev = sample(c("a", "b", "c"), n, TRUE), g = rnorm(n))
+  d$lev[1:3] <- NA
+  r <- encode_by_blocks(d, "g", "lev", "enc", k = 5, block_size = 8000)
+  expect_equal(nrow(r$data), n - 3)
+  expect_equal(r$retirees, 3)
+  expect_true(all(is.finite(r$data$enc)))
+  expect_s3_class(r$data, "sf")
+  expect_equal(sf::st_crs(r$data)$epsg, 2154)
+  # l'encodage complet reproduit target_encoding sur les lignes gardees
+  expect_equal(r$encoding, target_encoding(d$lev[-(1:3)], d$g[-(1:3)], 5))
+  # la reponse d'une ligne ne change pas sa propre valeur encodee
+  d2 <- d
+  d2$g[10] <- 1e6
+  r2 <- encode_by_blocks(d2, "g", "lev", "enc", k = 5, block_size = 8000)
+  i <- which(rownames(r$data) == "10")
+  expect_equal(r$data$enc[i], r2$data$enc[i])
+  expect_error(encode_by_blocks(d, "absente", "lev"), "colonnes")
+})
+
+test_that("encode oof = FALSE : apprentissage encode avec toutes ses lignes, test sans fuite", {
+  skip_if_not_installed("mgcv")
+  set.seed(4)
+  n <- 240
+  d <- data.frame(x = runif(n, 1000000, 1040000), y = runif(n, 6800000, 6840000), loc_precision_m = 10)
+  d$lev <- paste0("f", sample(120, n, replace = TRUE))
+  d$g <- rnorm(n)
+  r <- spatial_cv(d, "g", "coarse_enc", method = "gam", block_size = 8000,
+                  encode = list(var = "lev", name = "coarse_enc", k = 5, oof = FALSE))
+  expect_lt(r$global[["r2"]], 0.1)     # la reponse du pli de test n'entre jamais dans son encodage
+  # encode_by_blocks(oof = FALSE) : encodage complet, y compris pour la ligne elle-meme
+  e <- encode_by_blocks(d, "g", "lev", "enc", k = 2, block_size = 8000, oof = FALSE)
+  expect_equal(e$data$enc, apply_target_encoding(d$lev, e$encoding))
+  o <- encode_by_blocks(d, "g", "lev", "enc", k = 2, block_size = 8000, oof = TRUE)
+  expect_false(isTRUE(all.equal(o$data$enc, e$data$enc)))
+})

@@ -56,3 +56,18 @@ Seuils et résolution de config.yml, provisoires.
 ## Qui veille, qui tranche
 
 Relecteur, puis l'orchestrateur.
+
+## Complément du 2026-11-18 (orchestrateur)
+
+- Depuis 021 : la carte hydrique à 25 m (`hydrique_25m.tif`, méthode `biljou_topo`) fait partie du run ; contrôler `k_sv` et `is_topo` sur relief réel (contraste nord/sud, pourtour), et l'écart table/calcul direct.
+- Le worktree n'a pas `data/` : créer un lien `data -> /home/pascal/dev/sylvostation/data` pour réutiliser le cache (SAFRAN, etc.) ; ne jamais versionner `data/`.
+- Ne pas exécuter dans le dépôt principal (son code peut changer pendant le run).
+- **Pour la mission 023 (page pkgdown)** : laisser les sorties sous `data/sorties/D11/` et inscrire dans le compte rendu leur chemin, la liste des fichiers et l'emprise exacte (EPSG:2154).
+- Ordre : 4 dalles d'abord ; rendre un point d'étape (chiffres, durée) avant les 225.
+
+## Relance du 2026-11-18 (après 026 et 025)
+
+- Grille à 20 m (ADR 0007) ; sorties renommées (`hydrique.tif`, `grad_hydrique_carte`) ; reprise réseau active (`download_retries: 3`) ; `gbif_anchors` vide signalé.
+- Point d'étape du premier essai : `anchors` en erreur sur 4 dalles, LiDAR 2,8 min par dalle, `ifn_gradients` 21 min (journal).
+- Réglages d'exécution à reprendre : `demo: false`, `max_tiles: 4`, `tichy_path: "data/cache/Indicator.values-tables-2022-11-07-Zenodo.v2.xlsx"` (non commités).
+- Le premier worktree de 018 (code d'avant 026 et 025) n'est plus à utiliser.

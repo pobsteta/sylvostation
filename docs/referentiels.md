@@ -585,6 +585,9 @@ write.table(out, "ifn_texture_dictionnaire.csv", sep = ";", quote = TRUE, row.na
 
 ## 25. Descente d'échelle hydrique : moduler BILJOU par la topographie
 
+> Note du 2026-11-18 : ce paragraphe a été rédigé pour la grille de 25 m. Depuis l'ADR 0007, lire
+> `resolution_m` (20 m) ; les mesures historiques à 25 m sont laissées telles quelles.
+
 - **Décision éclairée :** quelle grandeur la mission 021 module par la topographie (RU, ETP,
   rayonnement, apports latéraux) pour la carte de l'indice `Istress` à 25 m, par quelle
   équation, sans coefficient inventé.
@@ -758,6 +761,183 @@ carte modulée et les placettes ne sont donc pas sur la même échelle : l'écar
 
 ---
 
+# Passe 6 (mission 024, 2026-11-18) : cartes de comparaison
+
+## 26. Cartes de comparaison (stations, habitats, végétation) sur l'emprise test
+
+- **Décision éclairée :** quelle référence ouverte, au format SIG, sert à comparer la carte des
+  stations de D11 sur l'emprise test, et selon quel protocole (matrice de confusion par types
+  regroupés ou corrélation des gradients).
+- **Rédigé par :** agent `acquereur`, le 2026-11-18. **Propriétaire :** Pascal (délégué à
+  l'orchestrateur).
+- **Outils :** `WebSearch`, `WebFetch` (résumeur : les `numberMatched` et `timeStamp` sont ceux
+  du serveur ; les listes d'entités de 140 lignes au plus sont comptées par le résumeur), PDF
+  enregistrés par l'outil et lus en image page par page. **Rien d'exécuté en R, rien téléchargé
+  dans le dépôt.** GeoPackage de Pascal (`guides-stations-forestieres.gpkg`) : **lu par
+  l'orchestrateur et le relecteur (`ogrinfo`)** ; les identifiants, titres, dates, statuts et URL
+  des guides viennent de cette lecture, transmise à l'agent.
+- **Règle des 700 m : non concernée.** La comparaison se fait de grille à grille ; aucune
+  extraction n'a lieu aux placettes IFN, et les relevés des CBN qui entraînent CarHab ne sont pas
+  utilisés.
+- **Hôtes joints :** `data.geopf.fr` (WFS, CSW, WMS-R), `www.ecologie.gouv.fr`, `www.patrinat.fr`,
+  `assets.patrinat.fr`, `digitale.cbnhdf.fr`, `inventaire-forestier.ign.fr`, `cloud.cnpf.fr`.
+  **Refusés ou muets :** `inpn.mnhn.fr` (HTTP 500 ou page « Visualisateur CarHab » vide, y compris
+  pour la notice du Haut-Rhin), `hal.science` (page anti-robots « Access Denied »),
+  `www.grand-est.developpement-durable.gouv.fr` (HTTP 403 sur les PDF des DOCOB),
+  `cartes.gouv.fr` (page vide sans JavaScript).
+- Abréviation : `EMPRISE` = `CQL_FILTER=INTERSECTS(geom,SRID=2154;POLYGON((1007000 6790000,1022000 6790000,1022000 6805000,1007000 6805000,1007000 6790000)))`.
+
+### 26.1 Cartes trouvées
+
+| Carte | État | Producteur, année | Format, accès vérifié | Licence | Échelle | Nomenclature | Part de l'emprise |
+|---|---|---|---|---|---|---|---|
+| **CarHab, habitats du Haut-Rhin (68)** | **vérifié** (service interrogé) | PatriNat (OFB-MNHN-CNRS-IRD), IGN, EVS (univ. Saint-Étienne), CBN ; métadonnée publiée le 2023-06-01 ; livrable départemental « Version : Juin 2024 » (dictionnaire de l'Aisne, p. 4, même série) | WFS `WFS&REQUEST=GetFeature&TYPENAMES=Carhab_habitat:habitats_carhab` (trouvé par `GetCapabilities&NAMESPACE=Carhab_habitat` : un seul type, `DefaultCRS` EPSG:2154) ; GeoPackage départemental `https://assets.patrinat.fr/files/donnees/carhab/CarHab_68_Haut-Rhin.zip` (répond ; **528 030 697 octets**, environ 528 Mo, d'après le `content-length` relevé par l'orchestrateur ; contenu non ouvert ; **jamais dans `inst/extdata`** ; la page PatriNat dit ces liens « temporaires » et annonce une redirection vers `https://inpn.mnhn.fr/donnees-outils/donnees-SIG/CarHab` d'ici début 2027) ; téléchargement Géoplateforme `https://data.geopf.fr/telechargement/resource/CARHAB` (lu dans la métadonnée, non ouvert) | **Licence Ouverte / Open License** (Etalab), métadonnée CSW `https://data.geopf.fr/csw?SERVICE=CSW&VERSION=2.0.2&REQUEST=GetRecordById&ID=INPN-CARHAB_HABITATS&OUTPUTSCHEMA=http://www.isotc211.org/2005/gmd&ELEMENTSETNAME=full` ; `useLimitation` « Aucune contrainte » | 1/25 000 ; variables au pas de 10 m ; polygones d'au moins 0,5 ha (5 000 m²) | 1 habitat = 1 physionomie (code à 4 chiffres, 26 postes) × 1 biotope (code à 6 chiffres, 8 paramètres : littoralité, étage de végétation, ombroclimat, variante bioclimatique, enneigement, continentalité, **acidité édaphique**, **humidité édaphique**) ; correspondances EUNIS 2012 et HIC dans un GeoPackage séparé du livrable | **97,47 % de l'emprise** (part du département, § 5 : 219,302 / 225 km²), toute l'emprise avec 67 et 88 ; décomptes au § 26.2 |
+| CarHab, Bas-Rhin (67) et Vosges (88) | **vérifié** (lien de téléchargement listé) ; présence dans le WFS **non attribuée** | idem | `https://assets.patrinat.fr/files/donnees/carhab/CarHab_67_Bas-Rhin.zip`, `…/CarHab_88_Vosges.zip` (liens lus sur la page PatriNat, non ouverts) | idem | idem | idem | 67 : 3,931 km², 88 : 1,768 km² (§ 5). Dans le WFS, `layer LIKE 'CarHab_67%'` et `'CarHab_88%'` → 0 ; **126** polygones de l'emprise ont `layer` = `habitats_carhab` (93) ou vide (33) : département non dit. |
+| Cartes d'habitats des DOCOB Natura 2000 « Hautes-Vosges » (secteurs Tanet-Deux Lacs, Hohneck, etc.) | **piste** (titres de PDF par la recherche ; PDF refusés, 403) | PNR des Ballons des Vosges, 2005-2008 (ex. « Réalisation : PNRBV / FD - Fonds de carte IGN - Janvier 2007 », extrait de recherche) | **PDF seulement** ; aucune couche SIG publiée trouvée (data.gouv.fr, DataGrandEst non trouvés) | non dite | non dite | Habitats d'intérêt communautaire (codes Natura 2000) | **Non mesurée** : aucun secteur n'a pu être situé par rapport à l'emprise (le secteur Tanet-Deux Lacs est probablement à l'ouest, hors emprise : déduction, non vérifiée). |
+| BDGveg_FR (carte de la végétation du CNRS numérisée) | **piste** (résumés : Leguédois et al., *Cybergeo* 2011, `https://hal.archives-ouvertes.fr/hal-01018998/file/LeguedoisCybergeo2011.pdf`, non lu) | CNRS, feuilles de 1947-1991 | scan géoréférencé 1/200 000 ; vecteur harmonisé de végétation potentielle 1/1 000 000 ; diffusion actuelle non vérifiée | non vérifiée | 1/200 000 et 1/1 000 000 | Séries de végétation | Toute l'emprise, mais trop grossière pour une grille de 25 m. |
+| Carte prédictive AgroParisTech (Gégout et al. 2008) | **non diffusée** (§ 21) | AgroParisTech | — | — | 50 m | 59 types | Le massif vosgien ; référence du brief (§ 9), non ouverte. |
+
+**Rien trouvé** : aucune carte de stations forestières levée sur le terrain (ONF, CNPF) publiée au
+format SIG sur l'emprise ; les recherches web ne renvoient que des documents d'aménagement en PDF.
+
+### 26.2 CarHab sur l'emprise : décomptes (WFS, 2026-11-18, entre 11:10 et 11:13 UTC)
+
+Polygones **qui recoupent** le carré (non découpés : un polygone à cheval compte en entier). Ce
+sont des **nombres de polygones, pas des surfaces** : les surfaces exigent le téléchargement.
+
+| Requête (`WFS&REQUEST=GetFeature&TYPENAMES=Carhab_habitat:habitats_carhab&RESULTTYPE=hits&…`) | `numberMatched` |
+|---|---|
+| `BBOX=1007000,6790000,1022000,6805000,EPSG:2154` | 6 378 |
+| `EMPRISE` | **6 376** |
+| `EMPRISE AND layer LIKE 'CarHab_68%'` | 6 250 (reste 126, voir § 26.1) |
+| `EMPRISE AND occupation='foret'` | **3 103** |
+
+Forêt (`occupation='foret'`, 3 103 polygones), par modalité (sommes vérifiées : 3 103 chacune) :
+
+| Paramètre | Modalités (nombre de polygones) |
+|---|---|
+| `acidite_edaphique` | `très acide` 1 166 ; `légèrement acide` 1 375 ; `neutre` 495 ; `basique` 67 |
+| `humidite_edaphique` | `assez sec` 786 ; `mésique` 1 416 ; `humide à nappe circulante` 761 ; `légèrement humide` 127 ; `détrempé à nappe stagnante` 13 (ces deux derniers comptés par le résumeur sur 140 entités renvoyées) |
+| `etage_de_vegetation` | `collinéen` 1 970 ; `montagnard` 1 130 (= 3 103 − 1 970 − 3) ; `subalpin` 3 (biotope `132022`, très acide, mésique) |
+
+**Schéma** (`DescribeFeatureType`, 36 éléments) : `id_polygone_carhab`, `code_hab_carhab`,
+`nom_complet_hab`, `nom_simplifie_hab`, `code_biotope`, `littoralite`, `etage_de_vegetation`,
+`ombroclimat`, `continentalite`, `variante_bioclimatique`, `acidite_edaphique`,
+`humidite_edaphique`, `enneigement`, `code_physio`, `nom_physio`, `physio_source`,
+`physio_info_comp`, `physio_majoritaire`, `pourc_physio_maj`, `occupation`, `milieu`,
+`biotope_minoritaire`, `pourc_biot_min`, `cd_biot_mod`, `surface` (double), `commentaire`,
+`cd_hab`, `id_sinp_evenement`, `id_sinp_habitat`, `layer`, `path`, `geom`
+(`gml:MultiSurfacePropertyType`), `conformite_physio_departementale`,
+`conformite_biotope_departementale`, `commentaire_conformite_physio_departementale`,
+`commentaire_conformite_biotope_departementale`. Tous texte sauf `surface` et `geom`. Les quatre
+champs de conformité sont `null` sur les 20 entités lues (`BBOX=1013000,6797000,1014000,6798000`) ;
+leur décompte sur l'emprise a échoué (le serveur a renvoyé une page de métriques Prometheus) :
+**non vérifié**.
+
+**Méthode CarHab** (webinaire du ministère, `https://www.ecologie.gouv.fr/sites/default/files/documents/Me%CC%81thodologie_CarHab.pdf`, 20 avril 2023, diapositives 6, 8, 14, 21, 22 ; dictionnaire de l'Aisne,
+`https://digitale.cbnhdf.fr/aide/CarHab_02_Aisne_LISEZ_MOI_metadonnees_dictionnaire.pdf`, juin 2024, p. 4-9) :
+biotopes prédits par forêt aléatoire supervisée sur des polygones d'entraînement des CBN, à partir
+de **RGE ALTI 5 m, BD TOPAGE, AURELHY 1971-2000, géologie BRGM 1/50 000 harmonisée, SoilGrids
+250 m** ; physionomies par Sentinel-2, BD Ortho IRC, BD Forêt V2, BD TOPO, RPG. Le ministère écrit :
+« Cartes des Biotopes et Physionomies de végétation = Cartes prédictives », à utiliser « comme une
+information de potentialité », « pas adapté » « pour des analyses fines au niveau communal ».
+**Notice du Haut-Rhin** (`https://inpn.mnhn.fr/viewer-carto/CarHab/geoserver/www/CarHab_68_Haut-Rhin_Notice.pdf`) :
+**inaccessible** à l'agent ; d'après les extraits du moteur de recherche seulement (non lus) :
+juin 2024, « 34 biotopes » traités sur « 54 présents », les 20 autres aquatiques et amphibies.
+
+### 26.3 Guides du GeoPackage de Pascal qui recoupent l'emprise
+
+| id | Titre (consigne) | Statut (consigne) | Lien | État du lien | Contenu |
+|---|---|---|---|---|---|
+| 94 | Le choix des essences forestières dans les Vosges alsaciennes (1993) | actif | `https://cloud.cnpf.fr/index.php/s/d4y6bMj9r5TeZei` | **répond** ; partage Nextcloud d'un fichier nommé **`ClimVosges.pdf`** (taille et date non affichées) : le nom ne correspond pas au titre, **à vérifier** | non lu |
+| 95 | même titre | obsolète | `https://inventaire-forestier.ign.fr/typologie_stations/typo/consultation/GS_vosges-alsaciennes.pdf` | **répond**, fichier de plus de 10 Mo (limite de l'outil), non lu | non lu |
+| 97 | Le choix des essences forestières dans les Vosges cristallines lorraines (1995) | obsolète | `https://inventaire-forestier.ign.fr/typologie_stations/typo/consultation/GS_vosges-cristallines-lorraines.pdf` | **vérifié** : PDF scanné, 52 pages, lu en image p. 1-14 | Guide du CRPF de Lorraine-Alsace. **Clé de détermination et fiches, pas de carte des stations** (« la clé de détermination des stations forestières, la carte d'identité de ces stations », p. 3 ; la seule carte, p. 5, est la zone d'utilisation et trois ensembles de roches). Zone : « Hautes-Vosges lorraines cristallines », limitée à l'est « par la ligne de crêtes séparant les départements du Haut-Rhin et des Vosges » (p. 4) : dans l'emprise, au plus la partie vosgienne (1,768 km², § 5). Groupes indicateurs (p. 11) : « station très acide », « acide », « peu acide », « assez riche », « riche » ; eau : « sol gorgé d'eau en permanence », « sol temporairement inondé ». |
+| 83 | Ried de l'Ill et Nonnenbruch (1996) | actif (`est_actif` = 1, `a_stations` = 1, gpkg) | `https://inventaire-forestier.ign.fr/typologie_stations/typo/consultation/GS_ried-ill-nonnenbruch.pdf` ; `https://grandest.cnpf.fr/sites/grandest/files/2022-02/guide_nonnenbruch.pdf` | IGN : HTTP 200, PDF (relevé par l'orchestrateur) ; pour l'agent, fichier de plus de 10 Mo, **non lu**. CNPF : refusé à l'orchestrateur, et `ECONNREFUSED` pour l'agent le 2026-11-18 : **à revérifier** | **Carte jointe : non vérifié** (PDF non lu). Guide de plaine ; dans l'emprise, au plus la part hors massif (C41 : 0,879 km², L2 : 2,437 km², § 1). |
+
+Les codes de stations des guides (couche `stations`) n'ont pas été lus : ils ne servent pas à la
+comparaison cartographique (aucun guide n'a de carte), seulement à l'étape 6 du brief (lecture
+forestière).
+
+### 26.4 Correspondance avec nos gradients (proposée, à valider)
+
+| Notre gradient | Champ CarHab | Ordre proposé (1 = bas) | Ce qui permet | Ce qui empêche |
+|---|---|---|---|---|
+| Trophique | `acidite_edaphique` | `très acide` 1, `légèrement acide` 2, `neutre` 3, `basique` 4, `hyperbasique` 5 (absent de l'emprise) ; modalités lues sur la diapositive 6 du webinaire (lecture d'image : liste exhaustive **à vérifier** dans la notice nationale). **Décision provisoire de l'orchestrateur (2026-11-18) :** `neutre` est une classe à part entière, **jamais fusionnée avec `basique`** sur roche cristalline (même si la légende simplifiée les regroupe) | Échelle ordinale, même sens que notre gradient | Acidité seule (pas l'azote) ; SoilGrids 250 m et géologie 1/50 000 entrent dans les deux modèles |
+| Hydrique | `humidite_edaphique` | `assez sec` 1, `mésique` 2, `légèrement humide` 3, `humide à nappe circulante` 4, `détrempé à nappe stagnante` 5. **Décision provisoire de l'orchestrateur (2026-11-18) :** ordre gardé, **provisoire, il mêle réserve en eau et engorgement** | Ordinal pour la part « sec → humide » | Mélange réserve en eau et engorgement (« nappe circulante / stagnante ») ; RGE ALTI et BD TOPAGE entrent dans les deux modèles |
+| Bioclimat | `etage_de_vegetation` (et `ombroclimat`) | `collinéen` 1, `montagnard` 2, `subalpin` 3 | Trois classes présentes | Classes larges ; AURELHY 1971-2000 contre SAFRAN 1996-2025 |
+
+### 26.5 Recommandation et protocole (proposés)
+
+**Référence ouverte retenue : CarHab 68**, polygones `occupation='foret'`. C'est la seule carte
+SIG ouverte qui couvre toute l'emprise et porte nos trois axes. Ce n'est **pas** une carte de
+stations, et elle n'est **pas indépendante** de la nôtre (écart 27) : on s'en sert pour une
+**comparaison par gradient**. Une matrice de confusion sur nos types serait trompeuse, parce que
+les nomenclatures diffèrent et que nos seuils sont provisoires (`R/typologie.R`). La carte
+AgroParisTech reste la référence du brief (§ 9), et les relevés GNSS restent l'arbitre.
+
+1. **Acquisition** (mission `dev`) : le GeoPackage départemental (`CarHab_68_Haut-Rhin.zip`) ou le
+   WFS paginé (`EMPRISE AND occupation='foret'`, 3 103 entités), mis en cache hors dépôt
+   (`data/cache/`), **jamais dans `inst/extdata`** sans décision. La licence le permettrait
+   (Licence Ouverte), mais le volume ne s'y prête pas.
+2. **Grille** : rasteriser à la résolution de `config.yml` (`resolution_m`, 20 m depuis la
+   décision de Pascal du 2026-11-18), au centre de cellule, en ne gardant que les cellules forestières
+   des deux côtés (notre masque MHC et CarHab `foret`) ; noter la part de l'emprise retenue.
+3. **Par gradient** : codage ordinal du § 26.4, puis corrélation de rang de Spearman entre notre
+   gradient continu et la classe CarHab, avec boîtes à moustaches de notre gradient par classe.
+   Ensuite, discrétiser notre gradient en autant de classes que CarHab, aux **mêmes proportions
+   de surface**, pour ne pas dépendre de nos seuils, et calculer le kappa pondéré et l'accord à
+   une classe près.
+4. **Types regroupés** (contrôle seulement) : nos types sont projetés sur la légende simplifiée
+   CarHab (acide ou basique × sec, mésique ou humide × étage). On en tire une matrice de
+   confusion **en surface**, sans conclusion sur la justesse.
+5. **Désaccords** : les ventiler par formation BD Charm-50 (§ 5), tranche d'altitude et position
+   topographique, puis placer une part des relevés GNSS dans ces zones (brief § 9, étape 5).
+
+**Trois points au sol** (Pascal) :
+
+1. Polygone forestier **`habitats_carhab.3446233`** (plantation forestière, 30,0 ha ;
+   **x 1 013 345–1 014 021, y 6 797 836–6 798 796**, lu le 2026-11-18 par `FEATUREID`) : CarHab y
+   donne « neutre », montagnard, hyperhumide, mésique (biotope `338802`, « substrat basique » en
+   légende simplifiée), sur un massif cristallin. (Le point x 1 013 500, y 6 797 500 proposé
+   d'abord tombe dans `habitats_carhab.3533621`, milieu ouvert, d'après le relecteur.)
+   Regarder les espèces indicatrices de richesse (Aspérule, Mercuriale contre Luzule blanchâtre,
+   Myrtille, guide 97 p. 11) et la roche.
+2. **x 1 008 095–1 008 755, y 6 795 550–6 796 490** : les 3 seuls polygones forestiers
+   « subalpin » de l'emprise (biotope `132022`, très acide, mésique ; le plus grand fait
+   15,4 ha). Regarder si c'est une hêtraie-sapinière d'altitude (montagnard) ou une forêt de crête
+   subalpine : c'est la limite du gradient bioclimatique.
+3. **Coin nord-ouest, x 1 006 363–1 007 932, y 6 803 760–6 804 940** (emprise des polygones
+   relevée par le relecteur, **en partie hors de l'emprise test**) : 5 polygones de
+   résineux « détrempé à nappe stagnante », très acides, montagnards (biotope `324966`, de 1,8 à
+   4,0 ha). Leurs identifiants (`habitats_carhab.126025xx`) ne sont pas de la série des polygones
+   du 68 lus ici (`344xxxx` à `353xxxx`), d'où un département **à vérifier** (écart 25). Regarder s'il y a de
+   la tourbe ou un gley près de la surface, là où notre gradient hydrique (réserve utile, TWI) peut
+   dire autre chose.
+
+### 26.6 Complément du 2026-11-19 (mission 031) : lecture réelle du WFS, exécutée en R
+
+- **Lecture paginée vérifiée** (`sf::read_sf` sur l'URL `GetFeature`, `SRSNAME=EPSG:2154`,
+  `SORTBY=id_polygone_carhab`, `COUNT=500`, `STARTINDEX` par pas de 500) : **3 103 polygones**
+  `occupation='foret'`, soit le `numberMatched` du § 26.2. Modalités lues (aucune absente de
+  l'ordre du § 26.4, aucune valeur vide) : acidité `très acide` 1 166, `légèrement acide` 1 375,
+  `neutre` 495, `basique` 67 ; humidité `assez sec` 786, `mésique` 1 416, `humide à nappe
+  circulante` 761, `légèrement humide` 127, `détrempé à nappe stagnante` 13 : les
+  décomptes de `légèrement humide` et `détrempé à nappe stagnante`, qui reposaient sur 140
+  entités, sont **confirmés**. Étage : `collinéen` 1 970, `montagnard` 1 130, `subalpin` 3.
+- **Pièges de lecture** : GDAL ne rend pas le CRS du GML (`st_crs` absent : on pose 2154,
+  `DefaultCRS` du § 26.1, puis on vérifie la plausibilité des x et y) ; la géométrie est une
+  `MULTISURFACE` (WKB 12), que GEOS refuse (`ParseException`) : conversion en `MULTIPOLYGON` par
+  `ogr2ogr -nlt MULTIPOLYGON` (`sf::gdal_utils`), après quoi les 3 103 géométries sont valides ;
+  une page a échoué par moments (`Failed to read TopoJSON data`, panne passagère, constatée deux fois) :
+  nouvel essai.
+- **Surface** : les 3 103 polygones entiers (non découpés) font 18 162,7 ha d'après le champ
+  `surface` (18 162,2 ha d'après la géométrie). Champ `layer` des 3 103 : `CarHab_68_Haut-Rhin_Habitats_CarHab`
+  2 978, `habitats_carhab` 93, vide 32.
+- **Décalage du chiffre de 26.1** : 126 polygones (93 + 33) sont de département non dit sur
+  toutes occupations ; en forêt, 93 + 32 = 125. Le département reste **à vérifier**.
+
+---
+
 ## Écarts relevés entre sources
 
 1. Le brief cite la couche `IGNF_LIDAR-HD_METADONNEE:metadata` : elle existe, l'écart est
@@ -834,6 +1014,25 @@ carte modulée et les placettes ne sont donc pas sur la même échelle : l'écar
 24. Rayonnement : la couche `rayonnement` de sylvostation est hors atmosphère, sans ombres
     ni diffus ; Piedallu et Gégout (2008, notice) trouvent le rayonnement avec nébulosité bien
     meilleur que le ciel clair (R² 0,78 contre 0,46).
+25. CarHab, emprise : le WFS compte 6 378 polygones par `BBOX` et 6 376 par `INTERSECTS` ; seuls
+    6 250 portent `layer` = `CarHab_68_…` ; les 126 autres (`habitats_carhab` ou vide) ne disent
+    pas leur département, et aucun ne porte `CarHab_67` ni `CarHab_88` alors que l'emprise touche
+    ces deux départements (§ 26.2).
+26. CarHab, acidité : 495 polygones forestiers « neutre » et 67 « basique » sur un massif dont les
+    plus grandes formations sont des gneiss et granites (§ 5). Pas forcément faux (champ de
+    fractures de Ribeauvillé, colluvions), mais la légende simplifiée range « neutre » avec
+    « basique » (« Habitat forestier sur substrat basique et mésique », biotope `338802`,
+    montagnard, hyperhumide ; polygone forestier `habitats_carhab.3446233`, 30 ha,
+    x 1 013 345–1 014 021, y 6 797 836–6 798 796 ; le point x 1 013 500, y 6 797 500 d'abord proposé
+    tombe en milieu ouvert) : à confronter à la géologie.
+27. CarHab, indépendance : les biotopes sont prédits avec RGE ALTI, BD TOPAGE, géologie BRGM et
+    SoilGrids, sources proches des nôtres (§ 5, § 16, § 18). Une concordance avec CarHab ne prouve
+    pas que nos gradients sont justes ; seuls les relevés des CBN qui l'entraînent sont une
+    source distincte.
+28. Guide 94 (consigne : actif, 1993) : le lien CNPF partage un fichier nommé `ClimVosges.pdf`,
+    nom sans rapport apparent avec le titre (§ 26.3).
+29. Notice CarHab du Haut-Rhin : le moteur de recherche cite une mention de la Moselle dans son
+    texte (copie possible d'une autre notice) ; notice non lue, inaccessible à l'agent.
 
 ## Dépendances et statut du jour (2026-11-17)
 
@@ -854,6 +1053,11 @@ carte modulée et les placettes ne sont donc pas sur la même échelle : l'écar
 - Vérifié le 2026-11-18 (mission 021, exécuté en R) : § 25.8 (unité de `SSI` dans le document
   de Météo-France, options de `r.sun` de GRASS 8.4.2, source de `penman_pet()`, coût de
   `r.sun`, écart table / calcul direct).
+- Vérifié le 2026-11-18 (passe 6, mission 024, WebFetch seul, rien exécuté ni téléchargé) :
+  § 26 (WFS CarHab `Carhab_habitat:habitats_carhab`, schéma, décomptes de l'emprise, licence
+  par la métadonnée CSW ; guide 97 lu en image p. 1-14). **Non lus** : notice CarHab du Haut-Rhin
+  (INPN muet), notice nationale (HAL refusé), guides 94 et 95, contenu des zip CarHab, PDF des
+  DOCOB (403). **Pistes** : DOCOB Natura 2000 Hautes-Vosges, BDGveg_FR.
 - **Pistes, à ne pas coder** : Baseflor (§ 14), EcoPlant (§ 14), contenu du zip TAXREF v18
   (§ 15), GlobalSoilMap France pH, texture et réserve utile 90 m (§ 18), fiches de la
   référence AgroParisTech voisines (§ 21).
@@ -867,3 +1071,1166 @@ carte modulée et les placettes ne sont donc pas sur la même échelle : l'écar
   le nom de l'archive IFN change à chaque campagne ; l'URL `url_npl` du LiDAR contient la
   date d'édition (2024-12-20) ; la page PatriNat de TAXREF v18 sera retirée « dans les
   prochains mois » ; le millésime est dans le nom des couches TOPAGE.
+
+## 26. Sentinel-2 : grille et bandes à 20 m (mission 025)
+
+Source vérifiée le 2026-11-18 : SentiWiki, https://sentiwiki.copernicus.eu/web/s2-products et
+https://sentiwiki.copernicus.eu/web/s2-mission (aucun téléchargement de données).
+
+- **Tuiles** : produits L1C et L2A découpés en tuiles de 110 km x 110 km, définies en
+  **UTM/WGS84** sur un pas de 100 km (recouvrement de 10 km). Le CRS n'est donc **pas** EPSG:2154.
+- **Bandes à 20 m** : B5 (705 nm), B6 (740 nm), B7 (783 nm), B8a (865 nm), B11 (1610 nm), B12
+  (2190 nm). Bandes à 10 m : B2, B3, B4, B8 ; à 60 m : B1, B9, B10.
+- **Conséquence** : une grille Lambert-93 de 20 m ne se superpose pas pixel à pixel aux tuiles
+  (projections différentes) ; les bandes à 20 m se **rééchantillonnent** sur notre grille
+  (ADR 0007). Fuseau UTM de la SER D11 (Vosges, environ 7 degrés est, donc 32N) : **à vérifier**.
+- **Non vérifié** : nom des produits Sentinel-2 L2A servis par le fournisseur retenu, URL et
+  licence d'accès (mission 023), méthode de rééchantillonnage conseillée (bilinéaire ou moyenne).
+
+## 27. SOPHY (banque de données phytosociologiques) : accès fermé, localisation grossière (mission 030)
+
+- **Décision éclairée :** intégrer ou non SOPHY à la composante régionale (maille large) de la
+  typologie, GRECO D et SER D11.
+- **Propriétaire :** Pascal (délégué à l'orchestrateur). **Rédigé par :** agent `acquereur`,
+  mission 030, le 2026-11-18. **Outils :** `WebFetch` (pages résumées par un petit modèle ;
+  les deux PDF ont été enregistrés par l'outil et **lus en image page par page**) et
+  `WebSearch`. Rien téléchargé dans le dépôt, rien exécuté en R.
+- **URL consultées le 2026-11-18 :**
+  [A] Garbolino E., De Ruffray P., Brisse H., Grandjouan G. (2012). *The phytosociological
+  database SOPHY as the basis of plant socio-ecology and phytoclimatology in France.*
+  Biodiversity & Ecology 4 : 177-184, DOI 10.7809/b-e.00074,
+  https://www.biodiversity-plants.de/biodivers_ecol/publishing/b-e.00074.pdf (fiche GIVD p. 178,
+  « Information as of 2012-09-23 ») ;
+  [B] fiche GIVD en ligne https://www.givd.info/ID/EU-FR-003 (« Last update 2024-02-19 ») ;
+  [C] site SOPHY https://sophy.tela-botanica.org/ et ses pages `locrel.htm`, `bilan.htm`,
+  `historique01.htm`, `tabphyto.htm`, `nblocal.htm` (« Mise à jour du 10 janvier 1999 ») ;
+  [D] EVA, accueil https://euroveg.org/eva-database/ , liste des bases
+  https://euroveg.org/eva-database/databases, procédure
+  https://euroveg.org/eva-database/obtaining-data, règles
+  https://euroveg.org/download/eva-rules.pdf (« approved … Vienna on 26 May 2012 », PDF du
+  2022-11-08, 4 p.) ;
+  [E] GBIF : https://api.gbif.org/v1/dataset/search?q=SOPHY ,
+  https://api.gbif.org/v1/dataset/f823053d-0d53-4b3b-b52e-fb85fe847dd0 , recherche
+  d'occurrences du même jeu (facette `coordinateUncertaintyInMeters`, et rectangle
+  lon 5,5-8,5, lat 47,3-49,2) ;
+  [F] fiche GIVD de VegFrance https://www.givd.info/ID/EU-FR-004.
+  **Refusée :** https://www.idiv.de/en/sdiv/working-groups/wg-pool/splot/consortium-and-contributing-databases.html
+  (404) ; le chiffre sPlot 209 864 n'est connu que par l'extrait du moteur de recherche (non vérifié).
+
+| Point | État | Source | Résultat |
+|---|---|---|---|
+| Producteur | **vérifié** | [A] p. 177-178 ; [B] | Créée par H. Brisse et P. de Ruffray (Strasbourg, puis Univ. Paul Cézanne, Marseille), démarrée en 1978 ([C] `historique01.htm`). Propriétaires : « Henry Brisse, Patrice de Ruffray, Emmanuel Garbolino et TELA-BOTANICA (private) » ([A] p. 178) ; même liste sans « (private) » en [B]. Gardien EVA : E. Garbolino ([D]). |
+| Code GIVD | **vérifié** | [A] p. 177 ; [B] ; [D] | `EU-FR-003`. |
+| Accès | **vérifié** | [A] p. 178 ; [C] ; [D] | « Availability: according to a specific agreement », « Online upload: no », « Online search: no » ([A] p. 178). Le site [C] n'offre **aucun téléchargement de relevés** ni de conditions d'usage (seule une liste de référence `impaldoc.exe`). Dans EVA : « SOPHY (209 900 plots, semi-restricted access) » ([D] liste). Régime 2 semi-restreint : réservé aux « data contributors only (i.e. custodians of databases included in EVA or persons approved by one of the custodians) » ([D] règles, art. 4, p. 2) ; délai d'au moins trois semaines ([D] procédure). |
+| Licence | **vérifié : aucune licence ouverte** | [A] ; [B] ; [C] ; [D] art. 5 p. 3 | Aucune licence publiée pour la base. Par EVA : « The applicants are not allowed to pass any data obtained from EVA … to third parties », « non-commercial purposes only », mandat de trois ans après livraison ([D] art. 5, p. 3). **Incompatible avec un dépôt public** et avec le test du successeur. Les relevés sont des transcriptions de tableaux publiés ([A] p. 177 ; [C] `tabphyto.htm`) : les droits des publications d'origine restent à considérer (non vérifié). |
+| Citation | **vérifié** | [A] p. 177 | Garbolino et al. 2012, Biodiversity & Ecology 4 : 177-184, DOI 10.7809/b-e.00074. EVA impose en plus la citation de Chytrý et al. 2016, Applied Vegetation Science 19 : 173-180 ([D], page d'accueil EVA, lue en résumé seulement). |
+| Version, volume national | **vérifié (chiffres discordants, voir écarts)** | [A] p. 178 ; [B] ; [C] `bilan.htm` ; [D] | 212 244 relevés, 4 500 sources, 4 598 taxons valides, plots de 1 à 400 m², pays BE 14,0 %, CH 1,0 %, ES 5,0 %, FR 79,0 %, IT 1,0 % ([A] p. 178). Statut « ongoing capture ». [B] : 212 244 (mise à jour 2024-02-19). [D] : 209 900. [C] : 192 352 relevés en janvier 2009 (dernière ligne du bilan). Part forestière : 52 731 relevés « Shadow — Forests of temperate Europe with sciaphilous plants » sur l'ensemble de la base ([A] tableau 1, p. 183 ; classes hiérarchiques, non additives). |
+| Dates des relevés | **vérifié** | [A] p. 178 | Période 1915-2010. < 1919 : 0,1 % ; 1920-29 : 0,7 ; 1930-39 : 2,2 ; 1940-49 : 1,0 ; 1950-59 : 6,0 ; 1960-69 : 12,0 ; 1970-79 : 19,0 ; 1980-89 : 23,0 ; 1990-99 : 25,0 ; 2000-09 : 10,5 ; inconnu : 0,5 (total 100,0). **64,0 % des relevés sont antérieurs à 1990** (somme calculée par l'agent). |
+| Précision de localisation | **vérifié (documentation)** ; **non vérifié sur des relevés de D11** (inaccessibles) | [C] `locrel.htm` ; [A] p. 178 ; [E] | Trois niveaux : « 1. 100 à 500m ; 2, 0,5 à 5 km ; 3, plus de 5 km » ; niveau 1 = coordonnées fournies ou relevé situé sur une carte ; 2 = lieu-dit (« centre de gravité visuel du lieu ») ; 3 = « coordonnées du chef-lieu de la commune » ([C] `locrel.htm`). Coordonnées en « grades et milligrades » ; légende du tableau : « Latitude en grades et milligrades (Paris) » (méridien de Paris indiqué par la source ; datum, NTF probable, **à vérifier**). GIVD 2012 : « point coordinates less precise than GPS, up to 1 km: 70% ; small grid (not coarser than 10 km): 20% ; political units or only on a coarser scale (>10 km): 10% » ([A] p. 178). Contrôle interne : erreur signalée si l'écart entre centroïde de commune et coordonnées dépasse 10 km ([A] p. 178). **Aucun relevé n'atteint 25 m.** |
+| Deuxième source de précision | **vérifié** | [E] | Seul jeu trouvé sur GBIF : jeu GBIF « ACQUISITION_CBNMC - SOPHY » (PatriNat, DOI 10.15468/ky7a8n, CC BY 4.0, créé 2022-10-18, « Données communiquées par H. BRISSE »), 93 019 occurrences. `coordinateUncertaintyInMeters`, décompte complet (14 valeurs, somme 93 019) : 2 821 m : 90 007 ; 61 556 : 1 553 ; 57 689 : 532 ; 51 572 : 440 ; 62 239 : 288 ; 47 236 : 138 ; 6 674 : 30 ; 5 000 : 17 ; 3 949 : 4 ; 6 250 : 3 ; 3 467 : 2 ; 3 775 : 2 ; 4 277 : 2 ; 5 226 : 1. **Aucune occurrence sous 2 821 m.** Emprise : lat 44,26-46,77, lon 2,06-5,16 (Massif central) ; **0 occurrence** dans le rectangle lon 5,5-8,5, lat 47,3-49,2 (Vosges). |
+| Volume GRECO D, SER D11 | **inaccessible** | [A] fig. 1 p. 179 ; [C] | Aucun décompte régional publié. La carte nationale ([A] fig. 1) montre des relevés dans le Nord-Est ; le site cite une classification des relevés des « Hautes-Vosges » ([C] `historique01.htm`). Le décompte exige une demande au gardien. À comparer : IFN, GRECO D 9 392 lignes `PLACETTE`, D11 6 475 (§ 7). |
+| Référentiel taxonomique | **vérifié (documentation)** ; correspondance TAXREF **non vérifiée** | [A] p. 177 ; [B] ; [C] `tabphyto.htm` | Codes CFVVF (Brisse et Grandjouan 1971), puis Flora Europaea, puis Index de Kerguélen (Brisse et Kerguélen 1994), puis BDNFF (Bock 2004) ([A] p. 177). [B] annonce encore Fournier 1961. Pseudo-taxons par classe d'abondance ([A] p. 178). Passage BDNFF → TAXREF `CD_NOM` : **à vérifier** (pas de table de correspondance trouvée). |
+| Format | **vérifié** | [A] p. 177-178 ; [C] `tabphyto.htm` | Tableaux texte au format de la publication source, en-tête `NREF`, `TA`, `NB`, titre ; lignes : code CFVVF et coefficients d'abondance-dominance ; fin de tableau `9999`. Base MySQL, export « plain text file ». Identifiant de relevé à 8 chiffres RéféTbRl. |
+
+**Règle des 700 m (CLAUDE.md).** SOPHY ne peut jamais servir à une extraction fine (précision
+toujours > 25 m). À maille large, seuls les relevés de niveau 1 (100 à 500 m) sont au moins
+aussi bien placés que les placettes IFN (700 m) ; les niveaux 2 et 3, et les 30 % de la base
+localisés au-delà de 1 km, dont 20 % sur une grille de 10 km au plus et 10 % au-delà de 10 km
+([A] p. 178), dépassent le rayon de 700 m de la géologie dominante.
+**Décision de l'orchestrateur (relecture 030, 2026-11-18) :** niveaux 2 et 3 refusés (plus de
+700 m) ; seul le niveau 1 serait convertible (`loc_precision_m` = 500, tiré du champ de
+précision par relevé), comme le code le fait déjà pour GBIF.
+
+**Recommandation : écarter pour la calibration ; piste éventuelle : nommer les types, sous
+convention avec le gardien, sans dépôt.**
+
+**Ce que SOPHY ajouterait aux placettes IFN.** Des relevés phytosociologiques complets (toutes
+strates, coefficients d'abondance-dominance) et nommés par leurs auteurs (syntaxons), utiles
+pour **nommer** les types ; mais protocole et surface hétérogènes (1-400 m²), relevés anciens
+(64 % avant 1990), part non forestière, et localisation le plus souvent moins bonne que l'IFN.
+Pour **calibrer** la composante régionale, l'IFN (protocole fixe, 2005-2025, Licence Ouverte)
+reste supérieur.
+
+**Bases comparables.** EcoPlant `EU-FR-005` : 5 030 relevés,
+« restricted access » ([D] ; déjà écarté au § 14). VegFrance `EU-FR-004` : 3 058 relevés,
+« semi-restricted access » ([D]) ; 25 341 selon [F] (mise à jour 2025-11-25) ; couverture
+régionale et part forestière non publiées. EVA : mêmes règles que ci-dessus (pas de
+transmission à des tiers, usage non commercial). Toutes fermées à un dépôt public.
+
+**Écarts relevés entre sources (§ 27).**
+1. Volume : 212 244 ([A] 2012, [B] 2024) ; 209 900 ([D]) ; 209 864 (sPlot, extrait de moteur
+   de recherche, page 404) ; 192 352 en janvier 2009 ([C]). Cause probable : dates différentes
+   et doublons retirés à l'entrée dans EVA (non vérifié).
+2. Précision : [C] annonce un niveau 1 « 100 à 500 m », [A] « up to 1 km » pour 70 % ; le seul
+   jeu trouvé sur GBIF ([E]) n'a **aucune** occurrence sous 2 821 m. Cause probable : PatriNat a
+   attribué une incertitude par défaut (communale ?) au lieu du niveau SOPHY (non vérifié).
+3. Nomenclature : BDNFF (Bock 2004) dans [A], Fournier 1961 dans [B] (fiche GIVD jamais
+   mise à jour sur ce champ ?).
+4. VegFrance : 3 058 relevés ([D]) contre 25 341 ([F]) : EVA n'a sans doute reçu qu'une partie.
+5. Numérotation de ce document : deux sections portent le n° 26 (cartes de comparaison,
+   Sentinel-2).
+
+## 28. MRVBF et HAND sur MNT LiDAR à 5 m : paramètres et diagnostic (mission 027)
+
+Diagnostic du 2026-11-18 sur les 4 dalles du run de la mission 018 (MNT à 5 m,
+`1013-6798`, `1014-6797`, `1014-6798`, `1014-6799`, 4 km² ; 30 tronçons TOPAGE, 4,3 km, soit
+1,08 km/km²). Références vérifiées par Crossref (titre, revue, volume, pages) le 2026-11-18 :
+Gallant et Dowling 2003, *Water Resources Research* 39(12), doi:10.1029/2002WR001426 ; Rennó
+et al. 2008, *Remote Sensing of Environment* 112, 3469-3481, doi:10.1016/j.rse.2008.03.018 ;
+Nobre et al. 2011, *Journal of Hydrology* 404, 13-29, doi:10.1016/j.jhydrol.2011.03.051 ;
+Barnes, Lehman et Mulla 2014, *Computers & Geosciences* 62, 117-127,
+doi:10.1016/j.cageo.2013.04.024. Le texte des articles n'a pas été lu (résumés seulement).
+
+### 28.1 MRVBF (`r.valley.bottom`, extension GRASS, lue en entier le 2026-11-18)
+
+| Point | État | Source | Constat |
+|---|---|---|---|
+| Seuil de pente `t_slope` | **vérifié** (manuel) | `~/.grass8/addons/docs/html/r.valley.bottom.html` | Défaut 16 (%), « conçu pour un MNT de 25 m » ; « divisé par 2 à chaque pas (grossissement x 3) au-dessus de 25 m » ; exemple : MNT de 6 m, `t_slope=40`. |
+| Seuil aux mailles fines | **provisoire, à vérifier** | prolongement de la règle du manuel | t = 16 x 2^(log3(25 / maille)) : **44,2 à 5 m**, 18,4 à 20 m, 39,4 à 6 m (le manuel donne 40). |
+| `t_vf` | **vérifié** (code) | script `r.valley.bottom`, ligne `t_vf = float(options["t_rf"])` | Défaut documenté 0,3, mais le script lit `t_rf` (0,35). sylvostation passe `t_vf=0.3 t_rf=0.3`. |
+| Niveaux | **vérifié** (exécuté) | message `step` de l'extension | 8 pas sur le MNT de 5 m (5, 5, 15, 45, 135, 405, 1 215, 3 645 m) ; le seuil est divisé par 2 à chaque pas. |
+| Cause du MRVBF quasi nul | **vérifié** (exécuté) | calcul de contrôle | Pente médiane des cellules du réseau TOPAGE à 5 m : **23 %** (12,95°), au-dessus du seuil de 16 % (8 % au pas 2) : aplanissement < 0,5 même en fond de vallon. Ce n'est ni l'unité, ni la lecture de la sortie (Float64), ni la marge de `NA` (résultat identique sans marge). |
+
+Chiffres (MNT à 5 m, 160 000 cellules) :
+
+| | médiane | q90 | max | part >= 0,5 | part >= 1,5 | médiane sur le réseau | réseau >= 0,5 |
+|---|---|---|---|---|---|---|---|
+| avant (`t_slope=16`, `t_vf`=0,35) | 5,4e-7 | 0,18 | 2,96 | 3,6 % | 0,5 % | 0,004 | 28 % |
+| après (`t_slope=44,2`, `t_vf=0,3`) | 0,17 | 1,32 | 3,98 | 23,8 % | 7,9 % | 1,04 | 68 % |
+| `t_slope=44,2`, `t_vf`=0,35 | 0,10 | 0,77 | 3,96 | 15,0 % | 4,5 % | 0,87 | 62 % |
+
+Calcul à la maille de la grille (décision de l'orchestrateur du 2026-11-18 : MNT agrégé à
+20 m, `t_slope` = 18,4 %, `t_vf` = 0,3, résultat rééchantillonné en bilinéaire sur 5 m ;
+`derive_terrain(mrvbf_res = 20)`), mêmes 4 dalles, même emprise (160 000 cellules à 5 m) :
+
+| | médiane | q90 | max | part >= 0,5 | part >= 1,5 | médiane sur le réseau | réseau >= 0,5 |
+|---|---|---|---|---|---|---|---|
+| avant (16 %, 5 m) | 0,0 | 0,18 | 2,96 | 3,6 % | 0,5 % | 0,004 | 28 % |
+| 5 m, 44,2 % | 0,17 | 1,32 | 3,98 | 23,8 % | 7,9 % | 1,03 | 68 % |
+| 20 m, 18,4 % | 0,0 | 0,39 | 2,90 | 7,6 % | 0,8 % | 0,60 | 58 % |
+
+Sur la grille de 20 m (moyenne des valeurs à 5 m, 10 000 cellules) : part >= 0,5 de 2,7 %
+(018), 24,1 % (5 m), 7,4 % (20 m) ; sur le réseau : 13,6 %, 73,8 %, 52,7 % ; corrélation 5 m /
+20 m : 0,85. **Lecture** : à 20 m, le MRVBF est plus sélectif (7,4 % des cellules >= 0,5,
+contre 24 %), reste net sur le réseau (médiane 0,6) et sort du domaine extrapolé ; il
+**perd les fonds étroits** (< 40 à 60 m de large, part >= 1,5 : 0,8 % contre 7,9 %). Aucune
+des deux mailles n'est validée sur le terrain ; le calcul à 5 m reste la référence de
+comparaison. Durée GRASS (machine chargée) : 3,9 min à 20 m, 4,4 min à 5 m.
+
+Le manuel situe le fond de vallon à partir de 0,5 (0,5 à 1,5 : fonds étroits et pentus ;
+> 1,5 : fonds larges). Valeurs de 0 à environ 4 ici : relief vosgien à vallons étroits.
+
+### 28.2 HAND (`hauteur_reseau`)
+
+| Point | État | Constat |
+|---|---|---|
+| Part de `NA` (21,8 % à 20 m, 23,5 % à 5 m) | **vérifié** (exécuté) | 70 % des `NA` finissaient dans **40 cuvettes intérieures** du MNT (directions D8 sans remplissage ; jusqu'à 6 589 cellules, 16 ha, par cuvette), 30 % sortaient du MNT. **Défaut corrigé** : franchissement des cuvettes par leur col (`.route_pits`, inondation prioritaire, Barnes et al. 2014). Reste : l'eau qui sort de l'emprise avant de rencontrer le réseau (`NA` légitime ; moindre sur 225 dalles). |
+| Valeurs de 200 à 325 m | **vérifié** (exécuté) | Ce n'est pas un défaut de calcul : corrélation 0,93 entre HAND et distance au réseau ; les cellules > 200 m (16 %) sont à 555 m médians du réseau, à 817 m d'altitude médiane (MNT de 504 à 919 m). Le réseau TOPAGE (1,08 km/km²) ne remonte pas jusqu'aux têtes de bassin. |
+| Densification par seuil d'accumulation | **piste, non retenue** (aucun seuil sourcé) | Réseau TOPAGE + cellules de surface drainée D8 >= S (MNT non rempli) ; voir 28.3. Le HAND publié (Rennó 2008, Nobre 2011) part d'un réseau extrait du MNT par seuil : valeur du seuil **à lire** dans ces articles avant de choisir. |
+
+### 28.3 Avant et après sur les 4 dalles (MNT à 5 m, sortie agrégée à 20 m)
+
+Grille de 20 m (10 000 cellules renseignées), moyenne des valeurs à 5 m comme
+`real_terrain()`. Le recalcul « avant » reproduit exactement l'objet `terrain` du store de 018.
+
+| | MRVBF médiane | q90 | max | part >= 0,5 | HAND médiane | q90 | max | `NA` |
+|---|---|---|---|---|---|---|---|---|
+| avant | 2,5e-6 | 0,24 | 1,84 | 2,7 % | 88,7 m | 238 m | 325 m | 21,8 % |
+| après | 0,21 | 1,19 | 3,95 | 24,2 % | 86,8 m | 227 m | 325 m | 10,1 % |
+
+Sensibilité du HAND à une densification (MNT à 5 m, cuvettes franchies) :
+
+| Seuil S | cellules réseau | `NA` | médiane | q90 | max |
+|---|---|---|---|---|---|
+| TOPAGE seul | 0,47 % | 11,0 % | 86,6 m | 227 m | 325 m |
+| + 50 ha | 0,51 % | 7,1 % | 86,3 m | 224 m | 325 m |
+| + 10 ha | 0,68 % | 2,6 % | 74,3 m | 182 m | 318 m |
+| + 5 ha | 0,83 % | 2,6 % | 68,7 m | 164 m | 318 m |
+| + 2 ha | 1,21 % | 1,2 % | 59,1 m | 149 m | 318 m |
+
+### 28.4 Vallons des 4 dalles à confronter à une vue QGIS (Lambert-93, x = est, y = nord)
+
+Dalles du run (convention LiDAR HD, § 2 : la dalle `XXXX-YYYY` couvre x de XXXX à XXXX+1 km et
+y de YYYY-1 à YYYY km) : `1013-6798` (x 1013-1014, y 6797-6798), `1014-6797` (y 6796-6797),
+`1014-6798` (y 6797-6798), `1014-6799` (y 6798-6799) ; emprise du MNT lue sur le raster :
+x 1 013 000-1 015 000, y 6 796 000-6 799 000. (Les dalles `1013-6803` à `1014-6804` citées dans
+d'autres notes sont d'un autre jeu, hors de ces 4 dalles.) Toponymes : champ `TopoOH` de
+TOPAGE. Valeurs lues sur les rasters de MRVBF (cellule de 5 m contenant le point, `terra::extract`),
+altitude lue sur le MNT :
+
+| Lieu | x (est) | y (nord) | Dalle | Cellule de 5 m (index) | Altitude | MRVBF 5 m (44,2 %) | MRVBF 20 m (18,4 %) |
+|---|---|---|---|---|---|---|---|
+| Ruisseau le Strengbach, fond de vallon (26 cellules de 20 m >= 1,5 aux deux mailles, toutes sur ce ruisseau) | 1 013 470 | 6 797 810 | 1013-6798 | 95 295 | 735,2 m | 3,97 | 2,84 |
+| Ruisseau l'Adelsbach | 1 014 790 | 6 798 790 | 1014-6799 | 17 159 | 538,5 m | 2,87 | 1,51 |
+| Ruisseau le Muesbach | 1 014 330 | 6 796 730 | 1014-6797 | 181 867 | 608,4 m | 1,15 | 1,25 |
+| Crête (contrôle : point haut à plus de 150 m de tout tronçon) | 1 014 390 | 6 796 090 | 1014-6797 | 233 079 | 904,8 m | 0,00 | 0,00 |
+
+Les cellules sont indexées sur le MNT de 5 m (1 ligne = 400 cellules, du nord au sud). À
+confronter : le fond du Strengbach doit apparaître comme un fond plat bordé de versants, la
+crête non. Les moyennes à 20 m de la grille (Strengbach 3,65 à 5 m, 2,78 à 20 m) diffèrent
+de ces valeurs de cellule.
+
+# Passe 7 (mission 029, 2026-11-18) : plan d'échantillonnage GNSS
+
+Outils : `curl` et R (`sf`), exécutés par l'agent `dev` de la mission 029. Fichiers
+temporaires hors dépôt, rien n'entre dans `inst/extdata`.
+
+## 29. BD TOPO : tronçons de route (accès au terrain) : vérifié
+
+| Point | État | Commande ou source | Résultat |
+|---|---|---|---|
+| Couche et champs | **vérifié** | `WFS&REQUEST=DescribeFeatureType&TYPENAMES=BDTOPO_V3:troncon_de_route` | Géométrie `geometrie` ; champs utiles : `cleabs`, `nature`, `fictif`, `etat_de_l_objet`, `importance`, `prive`, `acces_vehicule_leger`, `acces_pieton`, `piste_dfci` (et 80 autres). Titre au GetCapabilities : « BD TOPO® : Tronçons de route », résumé « BD TOPO® V3 2026-09-15 » ; `DefaultCRS` EPSG:4326, EPSG:2154 en `OtherCRS`. Pas de `MetadataURL`. |
+| Décompte sur l'emprise test | **vérifié** | `WFS&REQUEST=GetFeature&TYPENAMES=BDTOPO_V3:troncon_de_route&BBOX=1007000,6790000,1022000,6805000,urn:ogc:def:crs:EPSG::2154&RESULTTYPE=hits` (2026-11-18T15:22:57Z) | `numberMatched` = **17 316** (le BBOX déborde, § 2 : boîte des tronçons lus x 1 005 604–1 023 089, y 6 788 913–6 805 896). |
+| Lecture complète | **vérifié** | même requête, `&SRSNAME=EPSG:2154&OUTPUTFORMAT=application/json&COUNT=5000&STARTINDEX=0,5000,10000,15000` | 17 316 tronçons, 17 316 `cleabs` distincts, lus par `sf` en EPSG:2154. |
+| Modalités de `nature` | **vérifié** (inventaire complet de l'emprise) | décompte `table()` | Bretelle 2 ; **Chemin 3 667** ; Escalier 30 ; Rond-point 138 ; **Route à 1 chaussée 5 893** ; Route à 2 chaussées 69 ; **Route empierrée 3 857** ; **Sentier 3 660**. |
+| Modalités de `acces_vehicule_leger` | **vérifié** | idem | A péage 7 ; Libre 13 106 ; Physiquement impossible 3 760 (dont les 3 660 sentiers et les 30 escaliers, 64 routes à 1 chaussée, 4 routes empierrées, 2 chemins) ; Restreint aux ayants droit 443 (231 routes à 1 chaussée, 151 routes empierrées, 61 chemins). |
+| Autres champs | **vérifié** | idem | `prive` : FALSE 17 298, TRUE 1, NA 17 ; `fictif` : FALSE 17 313, TRUE 3 ; `etat_de_l_objet` : En service 17 314, En projet 2. |
+| Licence | **vérifié** | `https://www.data.gouv.fr/api/1/datasets/?q=BD%20TOPO` | Jeu « BD TOPO® » (id `61489083dc4223219e50cc35`, organisation IGN) : `license` = **`lov2`** (Licence Ouverte 2.0). La licence propre à la couche WFS `BDTOPO_V3` n'est pas lue (pas de `MetadataURL`, CSW de la Géoplateforme en erreur 500 sur les requêtes `GetRecords` essayées) ; on suppose la même. |
+
+**Règle d'accès retenue (mission 029, décision du 2026-11-18) :** `nature` parmi Route à 1
+chaussée, Route à 2 chaussées, Bretelle, Rond-point, Route empierrée, Chemin
+(`ACCESS_NATURES`) ; on écarte Sentier, Escalier, `fictif` vrai, `etat_de_l_objet` différent
+de « En service » et `acces_vehicule_leger` = « Physiquement impossible ». Le privé
+(`prive`), « Restreint aux ayants droit » et « A péage » sont **signalés**
+(`acces_restreint`), pas exclus.
+
+## 30. Paquet `clhs` (hypercube latin conditionné) : vérifié (exécuté)
+
+| Point | État | Commande | Résultat |
+|---|---|---|---|
+| Installation | **vérifié** | `install.packages("clhs", repos = "https://cloud.r-project.org")` (bibliothèque utilisateur, 2026-11-18) | Version **0.9.2**, publiée sur le CRAN le 2025-10-20 ; licence GPL (>= 2) ; dépend de `ggplot2`, `sf`, `raster`, `reshape2`, `plyr`, `cluster`, `Rcpp`. |
+| Signature | **vérifié** | `args(clhs:::clhs.data.frame)` | `clhs(x, size, must.include = NULL, can.include = NULL, cost = NULL, iter = 10000, use.cpp = TRUE, temp = 1, tdecrease = 0.95, weights = list(numeric = 1, factor = 1, correlation = 1), eta = 1, obj.limit = -Inf, length.cycle = 10, simple = TRUE, progress = TRUE, track = NULL, use.coords = FALSE, ...)` ; méthodes pour `data.frame`, `sf`, `SpatRaster`, `SpatVector`, `Raster*`, `SpatialPointsDataFrame`. |
+| Variante à coût | **vérifié** (aide et code lus) | `?clhs`, `deparse(clhs:::clhs.data.frame)` | Aide : « associate a cost to each individual and take it into account during the optimisation process (Roudier et al., 2012) ». `cost` = nom ou indice de la colonne de coût ; avec `use.cpp = TRUE` (défaut), le coût passe au C++ (`CppLHS(..., cost_mode = TRUE)`), les coûts infinis sont ramenés à 1000. |
+| `can.include` | **vérifié** (aide) | `?clhs` | « The algorithm will use all of `x` as the reference distribution, but will only select samples from [can.include] » ; seulement en C++. C'est ce qui permet de garder toute la forêt comme référence et de ne tirer que les cellules accessibles et homogènes. |
+| Facteurs | **vérifié** (exécuté, tests de la mission 029) | — | Une colonne `factor` (géologie) est traitée comme catégorielle (`weights$factor`). |
+| Reproductibilité | **vérifié** (exécuté) | `set.seed(2)` deux fois, puis `set.seed(3)` | Mêmes indices avec la même graine, indices différents avec une autre : le C++ suit le générateur de R. |
+| Références | Minasny et McBratney 2006, DOI `10.1016/j.cageo.2005.12.009` (fiche de mission) ; Roudier et al. 2012 (cité par l'aide, **non lu**). | | |
+
+## 31. Échelle de Braun-Blanquet : **à vérifier**
+
+| Point | État | Source | Résultat |
+|---|---|---|---|
+| Échelle d'abondance-dominance (`r`, `+`, `1` à `5`) | **à vérifier** (non lue) | Braun-Blanquet J., 1964, *Pflanzensoziologie*, 3e éd., Springer, Wien | Formule usuelle : `r` un ou très peu d'individus ; `+` peu abondant, recouvrement très faible ; `1` nombreux, recouvrement < 5 % ; `2` 5 à 25 % ; `3` 25 à 50 % ; `4` 50 à 75 % ; `5` > 75 %. Citée de mémoire, sans accès à l'ouvrage (mission 029). |
+
+## 32. Descente d'échelle du climat SAFRAN (mission 033, 2026-11-19)
+
+| Point | État | Source | Résultat |
+|---|---|---|---|
+| Grille SAFRAN-SIM2 | **vérifié** (§ 25, lu en mission 020) | `LAMBX`, `LAMBY` en hm, Lambert II étendu (EPSG:27572), mailles de 8 km | Les centres sont les nœuds de l'interpolation ; la conversion se fait en EPSG:27572 puis Lambert-93 (x = est, y = nord). |
+| Interpolation bilinéaire entre centres de mailles | **à vérifier** (aucune référence publiée lue) | Choix de la mission 033 | Pondération des quatre mailles voisines ; bord d'extrait : poids renormalisés (extrapolation constante). Le champ est continu et lissé à 8 km. Ce n'est pas une méthode de descente d'échelle physique : aucune information de relief. |
+| Réseau de calcul de 1 km pour BILJOU | **à vérifier** (compromis coût / lissage) | `hydric_node_res_m: 1000` | Le saut résiduel entre nœuds voisins (médiane de |ΔIstress| 1,9 sur 20 m) vient de ce pas ; réversible par la config. |
+| Gradient vertical de température (option A) | **différée** | Γ mesuré dans le plan de 033 : −0,19 à −0,50 °C/100 m selon la maille (instable) ; aucune valeur publiée lue | Non implémentée : aucune correction d'altitude. Mission d'acquisition à prévoir (Γ, altitudes de maille). |
+| CHELSA (option C), RU par géologie (option D) | **différées** | Plan de 033 | À acquérir ou à évaluer ; la RU reste uniforme par maille et cause le saut résiduel d'Istress à la limite. |
+| RU de maille à moins de 5 placettes | **provisoire** | `ru_min_placettes: 5` | Repli sur la médiane des mailles de l'emprise (D11 : une maille sur 9, 2 placettes, `9720_23610`). Seuil non sourcé. |
+| Règle des 700 m | **respectée** | CLAUDE.md | Climat et RU : variables larges, croisables avec les placettes IFN ; k (r.sun) reste refusé aux placettes (`assert_no_fine_extract_on_ifn()`). |
+
+## 33. Relevés floristiques ouverts, localisés à 25 m ou mieux, en D11 et GRECO D (mission 036)
+
+- **Décision éclairée :** peut-on calibrer le lien entre gradients (trophique, hydrique) et relief
+  fin LiDAR sur des relevés ou occurrences **ouverts**, sans EcoPlant ni SOPHY (accès sur demande,
+  refusés par Pascal) ; et laquelle des sources trouvées entre dans la chaîne.
+- **Propriétaire :** Pascal (délégué à l'orchestrateur). **Rédigé par :** agent `acquereur`,
+  mission 036, le 2026-11-19. **Outils :** `WebFetch` (pages résumées par un petit modèle ; les
+  décomptes de l'API GBIF sont ceux du serveur, les **dépouillements de facettes** de plus de
+  30 entrées sont comptés par le résumeur, donc approchés), `WebSearch`, lecture en image de
+  trois PDF enregistrés par l'outil. **Pas de `curl`, pas de R** : aucun polygone SER croisé,
+  aucun fichier téléchargé, rien dans `inst/extdata`, aucun compte, aucune demande d'accès.
+- **Emprise des décomptes GBIF :** rectangle lon 6,6-7,4, lat 47,8-48,6 (consigne), plantes
+  vasculaires (`taxonKey=7707728`), `hasCoordinate=true`, `hasGeospatialIssue=false`, **toutes
+  années**, `coordinateUncertaintyInMeters=0,25`, requêtes du 2026-11-19. **Ce rectangle n'est
+  pas D11** : il contient la plaine d'Alsace et une part de la Lorraine, et ignore l'ouest de
+  D11 (lon < 6,6). Sensibilité : (a) cœur de massif lon 6,8-7,2, lat 47,9-48,5 : 40 757
+  occurrences à ≤ 25 m ; (b) bande ouest lon 6,2-6,6 : 19 554, dont **13 136 IFN** et 50 + 5
+  des deux jeux utiles ci-dessous (l'ouest n'ajoute rien d'exploitable). Part en D11 des
+  chiffres ci-dessous : **non mesurée** (croisement avec `ser_l93.shp` à faire en R).
+- **URL consultées le 2026-11-19 :** API GBIF `https://api.gbif.org/v1/occurrence/search` (facettes
+  `datasetKey`, `eventDate`, `locality`, `speciesKey`, `year`, `coordinateUncertaintyInMeters`) et
+  `https://api.gbif.org/v1/dataset/<clé>` ; Sabatini et al. 2021, *Global Ecol. Biogeogr.* 30 :
+  1740-1764, DOI 10.1111/geb.13346 (PDF `https://www.africamuseum.be/publication_docs/Sabatini et al 2021 GEB.pdf`,
+  pages 1-20 lues en image) ; `https://doi.org/10.25829/idiv.3474-40-3292` (redirige vers
+  `https://idata.idiv.de/ddm/Data/ShowData/3474`) ; `https://www.idiv.de/en/splot/splotopen.html` ;
+  `https://ces-unsw-edu-au.github.io/cesdata/docs/vegetation-plots/global/sPlotOpen` ; Dietz L.
+  et al. 2023, *Rev. For. Fr.* 74(4) : 481-, `https://revueforestierefrancaise.agroparistech.fr/article/download/7899/33491`
+  (pages 2-5) ; `https://b2find.eudat.eu/dataset/edb097c4-268f-5959-a44a-529394c4124b` ;
+  métadonnées INRAE Nancy SapVF
+  `https://appgeodb.nancy.inrae.fr/donnees/documentations/bdd/db_phyto/source_complementaire/SapVF/SapVF_metadonnees_pour_BDD.pdf`.
+  **Inaccessibles :** `entrepot.recherche.data.gouv.fr` (API et OAI : page « Access Denied » du
+  filtre Anubis, non contourné), `hal.inrae.fr` (idem), `isidore.science` (403),
+  `search-data.ubfc.fr` (Anubis), `agroenvgeo.data.inra.fr` (hôte introuvable),
+  `appgeodb.nancy.inra.fr` (hôte introuvable), `inpn.mnhn.fr` (hôte non ouvert, § « hôtes refusés »).
+
+### 33.1 Décompte GBIF à ≤ 25 m déclarés, par jeu (96 350 occurrences)
+
+Somme des jeux = 96 350 (vérifiée). Licences : § 8 et pages `dataset/<clé>` (relues ici pour les
+jeux CardObs, naturgucker).
+
+| Jeu (`datasetKey`) | n à ≤ 25 m | Licence | Lecture |
+|---|---|---|---|
+| IFN (`e5f16d86-…`) | 40 144 (41,7 %) | CC BY 4.0 | **Exclu** : placettes à 700 m déclarées à 1 m (§ 8). |
+| Pl@ntNet automatically identified (`14d5676a-…`) | 23 694 | CC BY 4.0 | **Écarté** : identification automatique, non validée. |
+| Observation.org (`8a863029-…`) | 11 777 | **CC BY-NC 4.0** | **Écarté** (licence). |
+| Pl@ntNet observations (`7a3679ef-…`) | 6 222 | CC BY 4.0 | Une photo = une espèce ; dates : 11 jours à ≥ 5 occurrences, 2 à ≥ 10 ; pas de `recordedBy` ; **non échantillonné** (facettes seules). Non retenu comme relevé. |
+| **naturgucker (NABU)** (`6ac3f774-…`) | **6 143** | CC BY 4.0, DOI 10.15468/uc1apo | Voir 32.2. |
+| iNaturalist (`50c9509d-…`) | 4 879 | **CC BY-NC 4.0** | **Écarté** (licence). |
+| **CardObs** (11 jeux d'observateurs, dont `7d2dc1b9-…`) | **≈ 3 007** | CC BY 4.0 (pages de jeux relues) | Voir 32.2. |
+| INPN Espèces (`7247dc2e-…`) | 448 | CC BY 4.0 | Incertitude 10 m ; 3 observateurs, points isolés (20 lus : 1 espèce par point, vignes, prairies) : **pas des relevés**. |
+| Autres (11 jeux) | 36 | — | Non examinés. |
+
+**Jeux régionaux de flore : aucun à ≤ 25 m.** Flore d'Alsace (SBA, `72b6bac4-…`) : 199 435
+occurrences dans le rectangle, incertitudes de 1 529 m à 7 997 m (30 premières valeurs, 112 467
+occurrences), **583 à ≤ 1 000 m**. CBAL (`69580c67-…`) : 26 077 ; incertitudes 1 583 m à 7 997 m,
+**95 à ≤ 1 000 m**. Ce sont les données des CBN en diffusion ouverte : **floutées à la commune**
+(cohérent avec les CBN de Brest, qui diffusent sur OpenObs « à la commune ou à la maille 5x5 km
+selon sensibilité », recherche web, non lu à la source). Les occurrences sans valeur
+d'incertitude sont refusées par la règle du projet.
+
+### 33.2 Les deux jeux qui passent le filtre
+
+**CQQCOQP.** *Pourquoi :* observations naturalistes, pas des relevés de calibration. *Qui :*
+naturgucker = réseau social de NABU (citoyens), CardObs = outil de PatriNat (OFB, MNHN, CNRS, IRD),
+naturalistes expérimentés. *Quoi :* occurrences d'espèces (humaines, `HUMAN_OBSERVATION`).
+*Comment :* point par espèce (naturgucker) ; liste d'espèces posée sur un point de lieu-dit
+(CardObs). *Où :* voir ci-dessous. *Quand :* naturgucker 2007-2026 (2021 : 2 683 sur 6 143) ;
+CardObs principal 2007-2021. *Combien :* incertitude **déclarée**, jamais mesurée par la source.
+
+| Point | naturgucker | CardObs (jeu principal `7d2dc1b9-…`, DOI 10.15468/gc267b) |
+|---|---|---|
+| Occurrences ≤ 25 m, rectangle ; cœur de massif | 6 143 ; 1 162 | 1 196 ; 412 |
+| Incertitude déclarée | **25,0 m** sur tous les enregistrements lus (40) | **5,0 m** sur les 20 lus |
+| Regroupement possible | `recordedBy` : **un seul code haché pour 6 050 occurrences sur 6 143** (observateurs non séparables) ; 400 jours, dont 156 à ≥ 10, 85 à ≥ 20, 39 à ≥ 50 occurrences | 1 observateur dominant ; 30 jours (18 à ≥ 10, 13 à ≥ 20) ; **45 lieux-dits, 25 à ≥ 10 espèces, 17 à ≥ 20** |
+| Géométrie lue | 20 + 20 enregistrements : points **individuels**, étalés sur 1,2 à 2 km par jour ; au plus 3-4 espèces aux mêmes coordonnées (Senones 2022-06-14 : 4 espèces à 3 m, 3 à 1 m) ; Thann 2021-10-20 : 20 points distincts | 12 espèces aux **mêmes coordonnées** (48,34486 ; 7,38116, lieu-dit « Neuematten ») le 2012-06-09, puis 6 + 1 + 1 aux deux autres lieux-dits |
+| `locality` | **n'est pas un lieu** : cellule UTM de 25 km (17 valeurs, `UTM25_32T_0350_5275`…), à ne pas confondre avec les « 25 m » | nom de lieu-dit |
+| Qualité de détermination | non renseignée | « Non réalisable » (la plupart), « Probable » (3 sur 20) |
+| Autres jeux CardObs (à ≤ 25 m) | — | `0200e5ab-…` 678 (une seule année, 2023, 9 jours) ; `aa79690b-…` 466 (2012, 2018 ; lieux dont Lac de Sewen 108) ; `c9147f19-…` 340 ; `130eea59-…` 148 ; `99ce61d0-…` 66 ; `0c7bfc03-…` 43 |
+
+**Volume utile.** naturgucker + 8 jeux CardObs : 9 080 occurrences, **1 017 espèces** ; 281 espèces
+à ≥ 10 points, **61 à ≥ 30, aucune à ≥ 100** (dépouillement de facettes par le résumeur :
+somme 8 607 ≠ 9 080, voir écarts).
+
+**Deux sources pour la précision.** (1) déclaration : 25 m et 5 m ; (2) géométrie des points :
+naturgucker met bien des points distincts (3 m entre deux espèces d'une même mare, 570 m entre
+deux stations) : **cohérent avec un pointage au GPS ou sur carte, incompatible avec un calage sur
+grille**. CardObs : les 12 espèces du point « Neuematten » mêlent source (`Caltha palustris`,
+`Chrysosplenium alternifolium`), lande sèche (`Genista sagittalis`, `Festuca trachyphylla`) et
+hêtre : **cette liste couvre plus que 5 m** ; le point est un centre de lieu-dit, pas une
+placette. La précision de 5 m vaut pour la coordonnée, pas pour l'étendue du relevé.
+**Aucune des deux précisions n'est vérifiée contre un repère de terrain.**
+
+### 33.3 sPlotOpen (Sabatini et al. 2021) : écart avec le § 27
+
+| Point | État | Source | Résultat |
+|---|---|---|---|
+| Contenu | **vérifié** | article p. 6, 11 | 95 104 relevés de 105 jeux, 114 pays, 1888-2015, surface 0,03 à 40 000 m² (médiane 100 m²), espèces vasculaires. Rééchantillonné pour équilibrer l'espace climatique : **non représentatif d'une région** (p. 18). |
+| France | **vérifié** | tableau 1 p. 14 | **Un seul jeu français : `EU-FR-003` SOPHY, 7 986 relevés en accès ouvert** (custodien E. Garbolino, suppléant P. De Ruffray). **Ni EcoPlant (`EU-FR-005`), ni VegFrance (`EU-FR-004`).** Vosges : part **non comptée** (fichier non téléchargé). |
+| Précision | **vérifié (documentation)** | tableau 2 p. 17 ; p. 9 | `Location_uncertainty` **1 à 2 750 m**, renseigné pour 95 075 relevés ; les relevés au-dessus de **3 km** ont été retirés avant le rééchantillonnage. Pour SOPHY, niveaux 100-500 m, 0,5-5 km (§ 27) : **aucun relevé à 25 m attendu** ; minimum du jeu français **non lu**. Pour les jeux de l'iDiv, une valeur manquante est remplacée par la médiane du jeu avec un signe négatif (recherche web sur le code `splot3_build`, non lu à la source) : à tester sur le fichier. |
+| Licence | **non vérifié pour les fichiers** | page iData sans licence ; article CC BY 4.0 | Les propriétaires ont **donné permission d'ouvrir** les relevés (p. 10). Licence de `sPlotOpen.zip` : **à lire sur la page iData** (version 2.0, 2023) avant tout usage. |
+| Accès | **vérifié** | DOI ; page du guide CES | `https://idata.idiv.de/ddm/Data/DownloadZip/3474?version=5047` (taille non publiée) ; tables `header`, `DT`, `CWM_CWV`, `metadata`, `references`, fichiers texte à tabulations ; `Latitude`/`Longitude` WGS84. Taxons harmonisés sur un référentiel propre à sPlot (pas TAXREF). |
+
+**Écart avec le § 27 :** le § 27 conclut « accès fermé, aucune licence ouverte » ; sPlotOpen publie
+7 986 relevés de la même base SOPHY. Les deux sont vrais : SOPHY entière reste fermée, ce
+sous-ensemble a été ouvert par ses propriétaires. Il **n'améliore pas la précision** (toujours
+> 25 m, donc inutilisable pour la calibration fine), mais il peut servir à **nommer les types**
+à maille large (niveau 1 de SOPHY, 100-500 m) **sans demande d'accès**. Dernier contrôle
+nécessaire : lire `Location_uncertainty`, `Country` et les coordonnées dans l'en-tête
+(un téléchargement de l'orchestrateur, hors mission 036).
+
+### 33.4 Réseaux de placettes, sols, jeux de recherche
+
+| Source | État | Résultat |
+|---|---|---|
+| RENECOFOR (ONF) | **piste, non vérifiée** | 102 placettes en forêt publique (source secondaire) ; relevés floristiques décennaux. **Aucun jeu ouvert avec coordonnées trouvé** (recherche web ; `onf.fr/renecofor` non ouvert). Part vosgienne inconnue. Non retenu. |
+| RMQS (GIS Sol) | **piste, source primaire inaccessible** | Grille de 16 km ; les jeux publiés utiliseraient les coordonnées du **centre de maille** (« erreur » d'attribuer la valeur à la parcelle), licence Etalab 2.0 pour les cartes (extrait de recherche d'un jeu AgroEnvGeo, page non lue). **Écarté** (maille 16 km, pas de coordonnées réelles). |
+| **Dietz et al. : trouées de la tempête de 1999 et peuplements voisins** (DOI 10.15454/AZNS3A, UMR Silva, 2020, **Etalab 2.0**) | **piste sérieuse, contenu non vu** | 139 placettes de 20 m de diamètre en trouée (relevés floristiques 2002 et 2018) + 139 en forêt non perturbée (2018), températures, altitude, surface ; **145 sites dans la GRECO Grand Est** dont la partie vosgienne (carte, fig. 1 p. 483 de l'article ; points en D11 **non comptés**) ; **pH eau de l'horizon 0-5 cm** mesuré à chaque site (p. 485), fosse pédologique. **Précision des coordonnées non publiée** sur les pages lues ; l'entrepôt est derrière un filtre anti-robot (non contourné). Données **ouvertes, sans demande** : à télécharger depuis un navigateur. Biais : trouées de tempête, sites ciblés sur des problèmes de régénération. |
+| INRAE Nancy, essais de fertilisation de la sapinière (SapVF) | **piste faible** | 4 sites (Vologne et Mortagne, versant lorrain, grès ; Grendelbruch et Russ, versant alsacien, granite de Kagenfels) × 10 placettes de 30 m de côté ; relevé de 1985-1990. Pas de coordonnées dans les 4 pages lues ; conditions d'accès non lues. |
+| Prairies de fauche Jura-Vosges (2020) | **piste, non vue** | « données ouvertes », 66 + 66 relevés (2005-2009, 2019) selon un extrait de recherche ; prairies, pas forêt ; page bloquée (Anubis). |
+
+### 33.5 Recommandation classée
+
+1. **Aucune source ouverte trouvée ne fournit, à ce jour, de vrais relevés forestiers à ≤ 25 m
+   en D11 en nombre suffisant.** Les relevés précis restent fermés (EcoPlant, SOPHY) ; les jeux
+   ouverts précis sont des occurrences, les jeux de relevés ouverts sont flous.
+2. **Calibration « par espèce » sur GBIF (naturgucker + CardObs, CC BY 4.0)** : la seule voie
+   immédiate et libre. Le lien relief-gradient se teste **espèce par espèce** (pour chaque espèce
+   à ≥ 30 points, 61 espèces en tout, distribution du TWI, de la position et de la pente au
+   point, comparée à la valeur indicatrice de l'espèce, § 14), pas relevé par relevé. À faire
+   **après** croisement avec le polygone D11, filtre `loc_precision_m` ≤ 25 (valeurs déclarées : 25 et 5),
+   exclusion de l'IFN. Limites : échantillonnage opportuniste (chemins, bords de route),
+   déterminations non validées, un code observateur haché unique sur naturgucker, précision
+   **déclarée**.
+3. **Pseudo-relevés GBIF : trop peu pour calibrer** (≈ 25 lieux-dits à ≥ 10 espèces dans CardObs ;
+   naturgucker pose des points isolés) et, pour CardObs, la liste couvre plus que le point.
+   À garder comme **contrôle visuel**, pas comme jeu de calibration.
+4. **Dietz et al. (Etalab 2.0)** : meilleure piste pour les **relevés avec pH mesuré** ; à
+   ouvrir par un humain depuis un navigateur : lire les coordonnées, leur précision, le nombre de
+   sites en D11 et la colonne du pH. Si les coordonnées sont au GPS : jeu de calibration trophique
+   de quelques dizaines de sites.
+5. **sPlotOpen** : pas pour la calibration fine (> 25 m) ; utile pour **nommer les types** à maille
+   large, après lecture de `Location_uncertainty` et de la licence des fichiers.
+6. **Écartés :** jeux CC BY-NC (Observation.org, iNaturalist), Pl@ntNet identifié par
+   algorithme, jeux de CBN floutés (Alsace), INPN Espèces (points isolés), RMQS (maille 16 km),
+   IFN (700 m).
+7. **Licence et dépôt public :** seuls naturgucker et CardObs (CC BY 4.0) pourraient donner un
+   extrait dans `inst/extdata`, avec DOI dans `SOURCES.md` (10.15468/uc1apo ; 10.15468/gc267b et
+   un DOI par jeu CardObs) ; **ne pas recopier `recordedBy`** (noms d'observateurs dans CardObs,
+   données personnelles). Dietz : Etalab 2.0, compatible, DOI 10.15454/AZNS3A.
+
+### 33.5 bis Mise en œuvre dans `clean_occ()` (mission 037, 2026-11-19)
+
+`clean_occ()` écarte par défaut, dans cet ordre (chaque occurrence n'est comptée que par le premier motif
+qui l'écarte) : (1) les licences non commerciales (code normalisé `CC_BY_NC*`, y compris « CC BY-NC 4.0 »
+écrit en toutes lettres) ; (2) les jeux Pl@ntNet `14d5676a-2c54-4f94-9023-1e8dcd822aa0` (« automatically
+identified ») et `7a3679ef-5582-4aaa-81f0-8c2545cafc81` (« observations »), clés lues au § 8 ;
+(3) les licences absentes, `UNSPECIFIED`, `UNSUPPORTED` ou hors famille CC BY et CC0 (la fiche 037 veut du CC
+BY seulement ; paramètre `exclude_unknown_licence`).
+
+**Écart avec le § 33.5 :** le § 33.5 n'écarte que le jeu Pl@ntNet identifié par algorithme (`14d5676a-…`) et
+classe le jeu d'observations `7a3679ef-…` comme « non retenu comme relevé ». L'exclusion de `7a3679ef-…`
+vient de la **fiche 037** et va au-delà du § 33.5 ; les deux jeux restent écartés.
+`PLANTNET_GBIF_DATASET_KEYS` est une liste **non exhaustive hors emprise (à vérifier)**. Les effectifs par
+motif sont rendus (message et attribut `ecartees`).
+
+### 33.6 Écarts relevés entre sources (§ 33)
+
+1. IFN : 41,7 % des occurrences à ≤ 25 m ici (rectangle, toutes années) contre 40,5 % au § 8
+   (emprise test, 2000-2026) ; 96 350 toutes années contre 96 151 depuis 2000 (199 avant 2000).
+2. § 27 (SOPHY fermée, sans licence ouverte) contre sPlotOpen (7 986 relevés SOPHY ouverts) :
+   voir 32.3.
+3. CardObs : 5 m déclarés contre une liste d'espèces qui couvre une source et une lande sèche.
+4. naturgucker : `coordinateUncertaintyInMeters` = 25 et `locality` = cellule UTM de 25 km : même
+   nombre, deux sens ; la valeur « 25 m » n'a pas pu être confirmée par une documentation du jeu
+   (description sans précision de localisation).
+5. Dépouillements de facettes par le résumeur : espèces 8 607 contre 9 080 (473 occurrences
+   sans `speciesKey` ou erreur de comptage) ; CardObs `aa79690b-…` : jours 432 contre 466.
+6. Numérotation : deux sections portent déjà le n° 26 (§ 27, écart 5) ; ce § 33 suit le dernier
+   numéro lu (§ 31).
+
+### 33.7 Trois points au sol (à vérifier par Pascal)
+
+1. **Senones, mare ou prairie humide, 48,308254 ; 6,965473** (naturgucker, 2022-06-14) : quatre
+   espèces à 3 m (`Lysimachia nummularia`, `L. vulgaris`, `Caltha palustris`, `Juncus acutiflorus`) ;
+   et **48,307926 ; 6,973337**, trois espèces de pelouse sèche (`Briza media`, `Bromus erectus`,
+   `Genista sagittalis`) à 570 m. Y a-t-il bien une zone humide ici et de la pelouse là, à ≤ 25 m
+   du point ?
+2. **Thann (Haut-Rhin), 47,837933 ; 7,061987 et 47,840321 ; 7,061588** (naturgucker, 2021-10-20) :
+   `Aruncus dioicus` et `Lunaria rediviva`, espèces de ravins frais. Les points tombent-ils bien
+   dans un ravin ou en bas de versant ? C'est le test du lien relief-gradient en miniature.
+3. **Lieu-dit « Neuematten », 48,34486 ; 7,38116** (CardObs, 2012-06-09) : 12 espèces à un même
+   point, dont source et lande sèche. Le point est-il une placette ou un centre de lieu-dit ?
+   **Ce point est peut-être hors de D11** (piémont de Villé, polygone non croisé).
+
+**Question de contrôle :** quelle décision cette donnée va-t-elle éclairer ? Si la calibration
+relief-gradient se fait sur des occurrences GBIF à 25 m (espèce par espèce) faute de relevés
+ouverts, ou s'il faut attendre le jeu de Dietz et al. ou l'accès fermé.
+
+## 34. Richesse chimique continue du substrat : données géochimiques ouvertes en D11 et GRECO D (mission 038)
+
+- **Décision éclairée :** retient-on, comme prédicteur à maille large du niveau trophique, une
+  richesse chimique continue du substrat (équivalent du rapport Si/(Ca+Mg+Fe) de Piedallu et al.
+  2006, brief § 2.4) tirée de données ouvertes, ou garde-t-on la lithologie de la BD Charm-50
+  (§ 5) classée par rang.
+- **Propriétaire :** Pascal (délégué à l'orchestrateur). **Rédigé par :** agent `acquereur`,
+  mission 038, le 2026-11-19. **Outils :** `WebSearch`, `WebFetch` (pages résumées par un petit
+  modèle), lecture en image de PDF enregistrés par l'outil (R 39979, RP-57133-FR, plaquette IRM,
+  avis BOAMP 25-44109). **Pas de `curl`, pas de R** : aucun fichier de données téléchargé, aucun
+  décompte de points en D11 (pas de croisement avec `ser_l93.shp`), rien dans `inst/extdata`,
+  aucun compte, aucune demande d'accès. **Liste de contrôle** : non jointe à la consigne.
+- **Surfaces de référence (§ 1) :** D11 5 319,0 km² ; D12 4 017,9 km² ; GRECO D 9 336,9 km².
+  Les « points attendus » ci-dessous sont **la densité publiée multipliée par la surface** :
+  ordres de grandeur, pas des décomptes.
+- **URL et documents consultés le 2026-11-19 :**
+  `https://infoterre.brgm.fr/rapports/RP-57133-FR.pdf` (Cary, Maton, Piantone, BRGM, déc. 2008,
+  188 p. ; pages 5-6, 19-28 lues en image), `http://infoterre.brgm.fr/rapports//RR-39979-FR.pdf`
+  (BRGM R 39979, déc. 1997, 21 p. + figures en volume séparé ; pages 1-8, 13-16 lues),
+  `https://www.horbourg-wihr.fr/wp-content/uploads/2025/05/Plaquette-BRGM-inventaire-national-ressources-minerales.pdf`
+  (BRGM, 2025, 6 p.), `https://www.boamp.fr/telechargements/FILES/PDF/2025/04/25-44109.pdf`
+  (avis BRGM Explore n° 25-44109, 17/04/2025, pages 1-6 lues),
+  `https://www.bgs.ac.uk/geology-projects/applied-geochemistry/international-geochemistry/foregs/`,
+  `https://dev.s3webdav.containers.wur.nl/projects/wosis/repository/not_imported/ZZ-FOREGS/ForegsData.php.htm`
+  et `…/disclaimer.php` (**copie** de la page du GTK, pas l'original), `https://gemas.eurogeosurveys.org/`,
+  recherche web sur Nédeltcheva et al. 2006 (*Chem. Geol.* 231 : 1-15, DOI
+  10.1016/j.chemgeo.2005.12.012, résumé seulement).
+  **Inaccessibles ou sans résultat :** `weppi.gtk.fi` (certificat expiré, deux essais),
+  `sigminesfrance.brgm.fr` (hôte introuvable), `infoterre.brgm.fr/page/geoservices-ogc` (404),
+  `geoservices.brgm.fr/geologie` (erreur MapServer), `core.ac.uk/download/9697177.pdf` (403),
+  API `data.gouv.fr` pour « géochimie sédiments » (0 jeu ; une seule requête), `RP-61745-FR.pdf`
+  (9 Mo, texte non extrait : **non lu**).
+
+### 34.1 Les sources, classées (CQQCOQP condensé)
+
+| Source | Pourquoi / Qui | Quoi, éléments | Où, densité | Quand, précision | Licence, accès | Verdict |
+|---|---|---|---|---|---|---|
+| **A. BRGM, Inventaire minier : sédiments de ruisseau et sols** (base géochimique, ex-SIG Mines France) | Prospection de gîtes métalliques par le BRGM (service public), pas de la fertilité. | ICP-AES multi-éléments ; en Vosges, R 39979 p. 13-14 cartographie Ag, As, Ba, Cd, Cr, Cu, **Fe₂O₃** (0,1 %), Mo, **MnO**, Ni, **P₂O₅**, Pb, Sb, Sn, W, Zn : **ni Si, ni Ca, ni Mg, ni K** dans cette étude. La liste des couches d'InfoTerre (capture p. 24 de RP-57133, lisibilité moyenne) montre aussi **Calcium, Magnésium, Fer, Lithium, Phosphore**… ; la fiche d'échantillon (p. 25) porte des colonnes d'oxydes **illisibles** à cette résolution. | **Vosges couvertes** (RP-57133 p. 22 : massifs hercyniens « Massifs central et armoricain, Vosges » ; figure 7 p. 23 : carrés noirs sur le massif vosgien). Base nationale : > 280 000 échantillons + ≈ 60 000 SNEAP (2008) ; **0,5 à 3 échantillons par km²**, couverture < 20 % du territoire. Si cette densité vaut pour D11 : **≈ 2 700 à 16 000 points** (à mesurer). Cours d'eau de 2ᵉ ordre ≤ 1 km, bassin de quelques km² (R 39979 p. 13). | Campagnes 1975-1991 (RP-57133 p. 21) ; « plus de 15 ans » (R 39979) ; la plaquette de 2025 dit « 1970 et 1995 ». Limites de détection 10-20 ppm « élevées ». Localisation : « système de géoréférencement variable suivant les zones » (p. 21-22) : **précision non publiée**. Échantillon = **un point de cours d'eau intégrant un bassin**, pas une placette. | **Sans licence nommée** dans ce qui a été lu. RP-57133 : « Document public » ; « les données brutes […] visualisables sur InfoTerre ou **librement téléchargeables** sur sigminesfrance » (p. 24, texte de 2008). Rapports « © BRGM, ne peut être reproduit […] sans l'autorisation expresse du BRGM ». **Aucun téléchargement ouvert vérifié aujourd'hui** : InfoTerre fermé depuis le 21 oct. 2026 (§ 5), `sigminesfrance` introuvable, `data.gouv.fr` : 0 jeu. | **Seule source avec la densité et Ca, Mg, Fe. Accès et licence à établir par un humain avant tout usage.** |
+| **B. BRGM, nouvel Inventaire des ressources minérales (IRM)** | Actualisation pour les métaux critiques (France 2030, ANR). | Sédiments de ruisseau + géophysique héliportée ; cibles Sn, W, Sb, Ba, F, Mo, Au, Pb-Zn. Éléments majeurs non précisés. | **Vosges = 1 des 5 zones** (plaquette p. 4, carte : un secteur au nord-est, étendue exacte non lue). Avis 25-44109 : lots Cévennes, Morvan-Brévenne, Massif central, Guyane ; **pas de lot Vosges** dans cet avis (autre avis non trouvé). | Départ fin 2024, 5 ans ; 18 mois de prélèvements pour les lots de 2025. Densité non publiée. | « La publication régulière de résultats tout au long du processus » (plaquette p. 4) ; licence et dates **inconnues**. | **À surveiller, pas utilisable aujourd'hui.** |
+| **C. FOREGS (Atlas géochimique de l'Europe, 2005)** | Fond géochimique européen, EuroGeoSurveys, publié par le GTK. | Sédiment de ruisseau, eau, sol de surface (0-25 cm), sous-sol, humus, plaine d'inondation ; XRF (majeurs, dont probablement Si, Ca, Mg, Fe : **liste d'éléments non lue**), ICP-MS, ICP-AES. | **≈ 1 station pour 4 700 km²** (BGS) : **≈ 1 station en D11, ≈ 2 en GRECO D** (non comptées). | Coordonnées converties de systèmes nationaux en coordonnées géographiques (page « disclaimer ») ; précision non publiée. Fichiers de 2006-2007. | Fichiers zip (Excel) gratuits, un fichier par milieu, pays extractible par un champ de code. **Pas de licence nommée** ; copyright EuroGeoSurveys/GTK ; citation de Salminen (2005) et mention de l'atlas imposées. | **Contrôle seulement** : trop clairsemé pour une carte en D11. |
+| **D. GEMAS (sols agricoles et prairies, 2014)** | EuroGeoSurveys + Eurometaux. | 39-42 éléments par XRF (totaux), 52-53 après eau régale. | **1 site pour 2 500 km²** (≈ 2 en D11) ; 2 211 + 2 118 échantillons. **France dans le jeu : non confirmé** (un code « FRA » vu dans une légende de brochure). | 2008-2009 (non lu à la source). Sols **cultivés** : peu de forêt. | **Pas d'accès libre vérifié** : contrat avec le président du groupe d'experts, résultats « librement » disponibles deux ans après le rapport qualité (date non lue). Le CC BY 4.0 de data.gov.ie ne vaut **que** pour la copie irlandaise. | **Écartée** (densité, sols cultivés, accès). |
+| **E. Analyses de roches (CRPG Nancy, GEOROC, thèses)** | Pétrologie ; base citée par le brief pour Piedallu et al. 2006. | Roches totales, majeurs (SiO₂, CaO, MgO, Fe₂O₃). | Points isolés par faciès. | — | **Aucune base ouverte vosgienne trouvée** (CRPG : page historique de 1989-1990 seulement ; GEOROC : rien de vosgien dans les résultats). **Absence non prouvée** : GEOROC et les annexes de thèses (HAL, ex. tel-00755354) n'ont pas été interrogés à la source. | **Non retenue**, piste à fouiller par recherche directe. |
+| **F. Eaux de ruisseaux** (Nédeltcheva et al. 2006) | Étude INRAE/AgroParisTech de 95 bassins forestiers sur granite. | Ca, Mg, K, Na, Si, SO₄, ANC, pH à l'étiage. | 95 bassins, granite vosgien seul. | Jeu **non trouvé en accès ouvert**. | — | **Pas une source de données ; une validation** (34.3). |
+
+**Aucune source ouverte et téléchargeable n'a été vérifiée aujourd'hui qui donne Si, Ca, Mg et Fe à
+une densité utile en D11.** Le rapport Si/(Ca+Mg+Fe) de Piedallu et al. **n'est pas reproductible**
+avec le jeu de l'étude vosgienne de 1997 (pas de Si, Ca, Mg).
+
+### 34.2 Règle des 700 m et système de coordonnées
+
+- Compatible **à une condition** : un échantillon de sédiment de ruisseau représente un bassin de
+  quelques km², pas un point de 25 m. Il ne doit donc jamais être extrait aux coordonnées d'une
+  placette comme variable fine ; il se traite comme un prédicteur à maille large (valeur moyenne
+  par bassin ou par formation de la BD Charm-50), croisable avec l'IFN comme la « géologie
+  dominante dans un rayon de 700 m ». `loc_precision_m` : **valeur inconnue** pour A, C, D ;
+  ne pas la renseigner par défaut, la poser à `NA` tant qu'elle n'est pas lue (la règle refuse
+  alors l'extraction fine, ce qui est voulu).
+- Coordonnées : A et B en système national de l'époque (Lambert II étendu visible p. 24 de
+  RP-57133, capture d'écran) à reprojeter en EPSG:2154 à l'import ; C en géographique (système non
+  nommé, supposé WGS84 : **à vérifier**).
+
+### 34.3 Deux sources par point : ce qui concorde, ce qui diverge
+
+1. **Le substrat règle la chimie du ruisseau.** Nédeltcheva et al. 2006 (95 bassins, granites
+   vosgiens) : le calcium s'explique par la teneur en hornblende, le magnésium par celle de la
+   biotite et de la hornblende, Si suit Na ; Ca, Mg et le pH baissent avec les précipitations.
+   RP-57133 p. 23 : les signaux des sédiments de ruisseau et des sols sont « relativement
+   comparables à l'échelle locale ». Deux sources d'origine différente (eaux d'étiage, sédiments)
+   disent la même chose : **le ruisseau lit la roche**. Concordance : on peut avancer.
+2. **Le Fer des sédiments n'est pas la richesse du substrat.** R 39979 p. 3 : les fortes
+   teneurs en Pb, Zn, Cu, Ag, As se concentrent dans les districts de **Sainte-Marie-aux-Mines**,
+   **La Croix-aux-Mines**, **Plancher-les-Mines**, **Auxelles**, **Giromagny** ; p. 15 : le fer
+   se trouve en pyrite et en oxydes autant que dans les minéraux ferromagnésiens. Un Fe de
+   sédiment élevé peut venir d'une minéralisation, pas de biotite. **Écart de sens** : à traiter en
+   ne gardant que Ca et Mg (non confirmés en Vosges), ou en excluant les bassins miniers.
+3. **Le rapport de Piedallu n'a pas été retrouvé.** La recherche web n'a trouvé ni Si/(Ca+Mg+Fe)
+   ni Stussi 1995 ni la base du CRPG ; ce que dit le brief à ce sujet reste **non vérifié par
+   l'acquéreur**.
+
+### 34.4 Écarts relevés entre sources (§ 34)
+
+1. Période de l'inventaire minier : 1975-1991 (RP-57133) ; « plus de 15 ans » (R 39979) ;
+   1970-1995 (plaquette 2025).
+2. Taille de la base : > 280 000 échantillons (RP-57133, 2008, lu) contre 343 067 échantillons de
+   sédiments de ruisseau + 96 924 de géochimie (résumé de moteur de recherche d'un rapport
+   BRGM, **RP-61745-FR non lu**).
+3. GEMAS : 2 211 + 2 118 échantillons (site du projet) contre 2 108 + 2 023 (résumés EGU 2014) ;
+   39 contre 41-42 éléments en XRF ; 53 contre 52 après eau régale.
+4. FOREGS : 1 station pour 4 700 km² (BGS, GEUS) contre 1 pour 5 000 km² (cible du réseau de
+   référence mondial).
+5. Fiche d'échantillon de l'inventaire : la capture de RP-57133 (fig. 9) cite « Arnault (88) » ;
+   commune non vérifiée (lecture d'une capture d'écran, à confirmer sur l'original).
+6. Le CC BY 4.0 de la copie irlandaise de GEMAS ne s'étend pas à l'original (aucune licence
+   nommée sur le site du projet).
+
+### 34.5 Recommandation classée
+
+1. **Ne pas bâtir de raster de richesse chimique continue à partir de données ouvertes
+   aujourd'hui** : rien de téléchargeable et libre n'a été vérifié pour Si, Ca, Mg, Fe en D11.
+2. **Garder la lithologie de la BD Charm-50 (§ 5) comme prédicteur de substrat**, classée
+   par rang de richesse (ordinal, avec l'incertitude affichée). Appui publié : Nédeltcheva et al.
+   2006 (hornblende → Ca, biotite → Mg). Le classement par minéraux est **une proposition à
+   valider**, non une nomenclature.
+3. **Piste à ouvrir par un humain (Pascal) : l'Inventaire minier du BRGM** (source A) : seule
+   source avec ≈ 0,5 à 3 points par km² et Ca, Mg, Fe. Vérifier : (a) un téléchargement existe-t-il
+   encore après la refonte d'InfoTerre (bêta annoncée fin décembre 2026) ; (b) la licence ; (c) les
+   colonnes Ca, Mg, Si, K ; (d) la précision des coordonnées. Si oui : **moyenne par formation
+   BD Charm-50**, sans extraction aux coordonnées des placettes ; un extrait dans `inst/extdata`
+   seulement avec licence nommée.
+4. **IRM (source B)** : relancer la recherche quand les premiers résultats Vosges seront publiés.
+5. **FOREGS** : un contrôle de sens (1 station en D11) ; **GEMAS, F, E** : écartées pour l'instant.
+
+### 34.6 Trois points au sol (à vérifier par Pascal)
+
+Aucune coordonnée n'est donnée : le référentiel ne permet pas de les établir sans inventer.
+
+1. **Granite de Kaysersberg (`h3M2Ka`) contre gneiss à sillimanite (`Smæsill`)**, emprise test
+   (§ 5, 21,45 et 27,16 km²) : deux roches cristallines voisines, l'une riche en biotite,
+   l'autre en sillimanite. Le sol et le sous-bois diffèrent-ils (humus, pH, espèces acidiphiles) ?
+   C'est le test de ce que le substrat cristallin apporte au-delà de « cristallin ».
+2. **Grès vosgien contre granite de Kagenfels**, sites d'essais de fertilisation de l'INRAE (§ 33.4 :
+   Vologne et Mortagne sur grès ; Grendelbruch et Russ sur granite) : le sol sur granite est-il
+   franchement plus riche que sur grès ? Si la différence est faible, une échelle ordinale à
+   deux classes suffit.
+3. **Districts miniers de Sainte-Marie-aux-Mines et La Croix-aux-Mines** (R 39979) : y a-t-il, à
+   l'échelle du versant, des teneurs en fer et en métaux sans lien avec la richesse du sol
+   forestier ? Si oui, le Fe des sédiments ne doit pas servir de proxy de richesse.
+
+**Question de contrôle :** quelle décision cette donnée va-t-elle éclairer ? Si le trophique à
+maille large s'appuie sur une richesse chimique mesurée, ce qui exige l'accès à l'Inventaire minier
+du BRGM, ou sur la lithologie de la BD Charm-50 classée par rang.
+
+
+# Passe 8 (mission 035, 2026-11-19) : calibration sur toute la GRECO D
+
+## 35. Calibration régionale sur la GRECO D : effectifs, géologie, pH SoilGrids, encodages
+
+Mesures exécutées le 2026-11-19 sur les placettes IFN de la GRECO D (store du run 018 en lecture
+seule pour `ifn`, `indicateurs` ; SAFRAN, BD Charm-50 et SoilGrids lus avec le code de la
+branche `mission-035-calibration-greco`). Scripts et sorties : scratchpad de la session, non
+versés. R² par blocs spatiaux : blocs de 8 358 m (portée estimée en 018), 5 plis, `ranger` 500
+arbres, **moyenne de 5 affectations de blocs aux plis** (graines 1 à 5) ; IC à 95 % et gain par
+bootstrap de blocs (1 000 tirages, graine de plis 1). Réponse : indice trophique de Tichý
+(historique), sauf mention.
+
+### 35.1 Effectifs : où se perdaient les placettes
+
+| Étape | n | Perdues | Cause |
+|---|---|---|---|
+| lignes `PLACETTE` de la GRECO D (D11 6 475, D12 2 917) | 9 392 | | une ligne par visite |
+| avec relevé `ECOLOGIE` | 5 354 | 4 038 | la 2e visite n'a ni écologie ni flore |
+| relevé en saison (avril à septembre) | 3 024 | 2 330 | `filter_releves(months = 4:9)` |
+| sans incident récent | 2 923 | 101 | `NINCID`, `INCID` |
+| trophique calculable | **2 894** (D11 2 116, D12 778) | 29 | aucune espèce à valeur indicatrice |
+| avec climat SAFRAN | 187 en 018 ; **2 894** ici | 2 707 en 018 | **cache SAFRAN périmé** |
+| avec lithologie (disque couvert à 50 % ou plus) | 2 893 | 1 | disque hors des 7 départements |
+| apprentissage trophique final (avec pH SoilGrids) | 2 893 | | |
+| apprentissage hydrique | 2 827 | 67 | réserve utile ou BILJOU manquant |
+
+Le « 187 » de 018 n'était pas une limite des données : la cible `safran` demande la boîte de
+toutes les placettes de la GRECO, mais `fetch_safran()` renvoyait tout fichier
+`emprise_<année>.csv` existant sans regarder l'emprise, donc les 12 mailles lues en 017.
+Corrigé : le nom du fichier porte désormais l'emprise (`emprise_<année>_x<boîte>_m<marge>.csv`).
+**À vérifier** : le mécanisme exact dans le run 018 (confirmé par la lecture du code et par la
+chute à une seule étape, non par un nouveau `tar_make` complet).
+
+### 35.2 SAFRAN sur la GRECO D
+
+| Point | Résultat |
+|---|---|
+| Emprise lue | boîte des placettes (909 550 à 1 060 558 est ; 6 723 356 à 6 912 236 nord) + marge de 5,66 km : **497 mailles** (182 portent des placettes) |
+| Coût | 30 `.csv.gz` complets déjà en cache (aucun téléchargement) ; filtrage en R : **25 min** ; 30 fichiers filtrés de 284 Mo au total (colonnes lues seulement) ; `read_safran` 72 s et 436 Mo en mémoire (5 446 126 lignes) ; `safran_climate` 65 s ; `ifn_real_gradients` 126 s |
+| Résultat | 2 894 placettes avec climat bilinéaire (033) ; hydrique 2 827 |
+
+### 35.3 BD Charm-50 : 4 départements ajoutés
+
+Téléchargés le 2026-11-19 depuis `https://infoterre.brgm.fr/telechargements/BDCharm50/GEO050K_HARM_0DD.zip`
+(même motif que § 5 ; `unzip -t` sans erreur) : 054 (12 327 478 octets), 057 (20 790 543),
+070 (25 721 862), 090 (4 906 068). Avec 067, 068, 088 : 39 643 polygones, **666 formations**
+(`NOTATION`), lecture 64 s. Le site InfoTerre est annoncé fermé (§ 5) : copie locale dans
+`data/cache/bdcharm`, hors dépôt. **Placette `DEP` = 52 (1) : non couverte** (département non lu).
+
+Lithologie dominante dans 700 m (règles provisoires 008, non validées) : 2 893 placettes avec
+géologie. Classes dominantes : grès 744, conglomérat 740, granite 502, `non_classe` 296,
+gneiss/migmatite 227, marne/argile 144, alluvions 133, colluvions/éboulis 28, glaciaire 41,
+calcaire 18, lœss 18, roche basique 2.
+
+**Formations sans règle (jamais affectées)** : 170 formations (1 465 km² sur 25 774 km² lus) ;
+155 d'entre elles tombent dans les disques (435 km²) ; 296 placettes ont `non_classe` pour classe
+dominante. Les plus étendues dans les disques : `h2-3LãER` (leucogranite d'Épinal et de Remiremont,
+32 km²), `h2PK` et `h2PK3` (complexe volcanique de Plancher-Bas, 31 et 21 km²), `h2ã4CFS` (granodiorite du
+Champ-du-Feu, 21 km²), `h2-3ã3Sn` (monzogranite de Senones), `h2öáq`, `d-h`, `h2Góá` (volcanites),
+`P` (épandages de piémont), `o-s` (schistes de Steige), `FzI` (limons de l'Ill). Les règles
+provisoires manquent surtout les roches cristallines dont la description ne commence pas par
+« granite » (« leucogranite », « massif granitique », « monzogranite »). **Décision de Pascal**
+(règles à ajouter, jamais par défaut). Défauts observés des règles actuelles, non corrigés ici :
+« Grès vosgien … souvent conglomératique » (`t1b`) → `conglomerat` (règle 1 avant grès) ;
+« Calcaires oolithiques … marnes » (`j2b2`) → `marne_argile` (règle 11 avant calcaire).
+
+### 35.4 pH SoilGrids 2.0 (`phh2o`, 0-5 cm)
+
+| Point | État | Résultat |
+|---|---|---|
+| Source | **vérifié** (lu en 019, § 18 ; relu le 2026-11-19) | `https://files.isric.org/soilgrids/latest/data/phh2o/phh2o_0-5cm_mean.vrt` (3,5 Mo, `HTTP 200`), Homolosine, 250 m, `Int16`, pH × 10, `NoDataValue` −32768, CC BY 4.0 (ISRIC) à citer |
+| Lecture d'une fenêtre | **vérifié** (exécuté) | `terra::rast("/vsicurl/…")`, `crop` sur la fenêtre transformée, `project` bilinéaire vers Lambert-93 à 250 m : **9 s, 1,8 Mo** pour la GRECO D (772 × 621 cellules, 6,7 % sans valeur), pH de 4,15 à 7,3 |
+| Moyenne dans 700 m | fait | `soilgrids_disk_mean()` : fenêtre circulaire de 5 × 5 cellules de 250 m (coins exclus) ; `raster_at_points()` : interpolation bilinéaire, règle des 700 m appelée avant |
+| Exactitude sur la France | **non évaluée** | SoilGrids est modélisé avec le climat et le relief comme covariables (fiche ISRIC) : information partagée avec nos prédicteurs, non indépendante ; aucune confrontation à des mesures françaises ici |
+| Corrélation | mesurée | pH SoilGrids (moyenne 700 m) et indice trophique : **0,35** sur 2 893 placettes (0,06 à 0,09 sur les 96 placettes de la seule fenêtre du plan) |
+
+### 35.5 R² par blocs spatiaux
+
+| Jeu | Prédicteurs | R² (moyenne de 5) | Gain, IC 95 % (graine 1) |
+|---|---|---|---|
+| 2 894 placettes | climat bilinéaire (033) | **-0,127** [-0,199 ; -0,088] | |
+| 2 893 | climat | -0,129 | |
+| 2 893 | + lithologie provisoire, facteur | 0,146 | +0,288 [0,235 ; 0,347] |
+| 2 893 | + lithologie encodée (classe, hors pli) | 0,090 | +0,219 [0,160 ; 0,279] |
+| 2 893 | + lithologie encodée (classe, toute la partie d'apprentissage) | 0,151 | |
+| 2 021 (3 départements) | climat / + facteur / + encodée hors pli | -0,101 / 0,124 / 0,073 | +0,216 [0,164 ; 0,266] / +0,181 [0,113 ; 0,245] |
+| 2 893 | + classe encodée + pH SoilGrids | 0,170 | pH : +0,084 [0,049 ; 0,122] sur classe hors pli |
+| 2 893 | formation encodée (k = 10) | 0,196 [0,135 ; 0,243] | +0,121 [0,069 ; 0,168] sur la classe hors pli |
+| 2 893 | formation encodée (k = 30) | 0,193 | |
+| 2 893 | classe + formation | 0,212 | +0,134 [0,087 ; 0,178] |
+| 2 893 | **classe (toute la partie) + formation (hors pli) + pH** | **0,270** | **+0,405 [0,333 ; 0,480]** sur le climat seul ; R² [0,199 ; 0,311] (graine 1 : 0,259) |
+| 2 893 | idem, formation non hors pli | 0,242 | |
+| 2 893 | **sans aucun prédicteur climatique** (classe + formation + pH) | 0,265 | le climat apporte +0,005 (climat de la maille ou bilinéaire : 0,270 dans les deux cas) |
+| 2 893 | contrôle : roche observée IFN (`ROCHE`, encodée) | 0,056 | |
+| 2 893 | contrôle : `ROCHE` + classe | 0,129 | +0,035 [0,009 ; 0,058] sur la classe seule |
+| 2 893 | **contrôle : humus observé (`HUMUS`, encodé) + classe** | **0,406** | non utilisable pour la carte |
+
+**Taille des blocs (correction de la relecture 1).** Tous les R² ci-dessus sont calculés avec
+des blocs de **8 358 m** (portée estimée en 018 sur l'emprise test). Le pipeline, lui, publie
+par défaut (`cv_block_m: null`) la **portée estimée sur la réponse, 22 121 m pour le trophique de
+la GRECO D (37 blocs)**, le chiffre le plus prudent :
+
+| Blocs | Modèle final (classe + formation + pH) | Climat seul | Gain sur le climat seul |
+|---|---|---|---|
+| **portée estimée, 22 121 m (publié)** | **0,193** [0,087 ; 0,275] | -0,263 | +0,449 [0,290 ; 0,621] |
+| 8 358 m (sensibilité, `cv_block_sensibilite_m`) | 0,270 [0,199 ; 0,311] | -0,129 | +0,405 [0,333 ; 0,480] |
+
+(moyennes de 5 affectations de plis ; IC et gain : bootstrap de blocs, graine de plis 1 ;
+le modèle final contient la même géologie et le même pH dans les deux cas). Le R² du pipeline
+est donc d'environ **0,19** et non 0,27 : les blocs plus grands retirent l'autocorrélation
+spatiale résiduelle. Les deux lignes figurent dans `val_stats` et le rapport.
+
+**Hydrique : même sensibilité, et alerte.** Relance réelle de 018 avec la calibration (2026-11-20,
+2 827 placettes, prédicteurs climatiques seuls ; IC par bootstrap de blocs, calculés sur les
+prédictions de `cvs` du store du run pour la portée estimée, hors store pour 8 358 m) :
+
+| Blocs | R² hydrique | IC 95 % | Blocs occupés |
+|---|---|---|---|
+| portée estimée, 76 736 m (publié) | 0,285 | [-0,288 ; 0,385] | **8** |
+| 8 358 m (sensibilité) | **0,358** (5 graines : 0,355 à 0,369) | [0,248 ; 0,442] | 162 |
+| 20 000 m (non publié) | 0,309 | | |
+
+À la portée estimée, 8 blocs se partagent 5 plis et un pli de 240 placettes (R² -1,62) porte le
+chiffre global : R² par pli -0,18 / 0,12 / 0,04 / -1,62 / 0,16. La portée n'est pas plafonnée
+(ce serait un changement de méthode) ; la table de validation porte `blocs`, `k`,
+`blocs_insuffisants` (seuil `cv_min_blocs_par_pli` = 4 blocs par pli, **provisoire, à
+vérifier**) et une alerte en clair, et la sensibilité à blocs fixes est calculée pour chaque
+gradient. Trophique à titre de comparaison : 37 blocs (publié, 0,194) et 163 blocs (0,272).
+
+Lecture : le climat seul n'a aucun pouvoir (R² < 0) ; la géologie (formation) et le pH de sol
+apportent presque tout ; la formation (`NOTATION`, 666 niveaux) bat la classe lithologique
+provisoire à 12 niveaux ; la carte géologique explique plus que la roche notée par l'IFN
+(0,196 contre 0,056). L'**humus**, relevé sur le terrain, explique le trophique (0,41) parce qu'il
+est lui-même une conséquence de la richesse du sol que reflète la flore : **contrôle de plafond,
+jamais prédicteur de carte**, circularité possible avec l'indice floristique. Le R² (0,19 à blocs prudents, 0,27 à blocs de 8 358 m) reste
+sous la référence de 0,36 (Vosges ; autre méthode, autres données).
+
+**Climat plus proche voisin contre bilinéaire (033)** : sur les mêmes 2 893 placettes, le climat
+seul donne +0,045 avec la valeur de la maille (166 valeurs distinctes de `t_moy`) et -0,129 avec
+l'interpolation bilinéaire (1 628 valeurs) ; avec la lithologie (classe hors pli) : 0,130 et
+0,090. L'interpolation bilinéaire, lissée à 8 km, n'ajoute pas d'information et dégrade la
+validation par blocs. Une fois la géologie et le pH dans le modèle, les deux climats donnent le
+même R² (0,270) et le modèle **sans climat** 0,265 : à l'échelle de la GRECO D, avec des mailles
+de 8 km, le climat SAFRAN n'apporte quasiment rien au modèle régional ; il reste utile comme
+variable explicite pour les scénarios (brief § 2). **À trancher avec la relecture de 033** (clé
+`safran_interpolation`).
+
+### 35.6 Réponse trophique : ancienne et nouvelle côte à côte
+
+Indice de Tichý (moyenne de `ph` et `azote` des espèces à valeur indicatrice) : **y0** historique ;
+**y1** sans les essences arborées (`espar-cdref13.csv`, 192 `CD_REF`) ; **y2** sans essences et
+pondéré par l'abondance-dominance `ABOND` (milieux de classes 2,5 ; 15 ; 37,5 ; 62,5 ; 87,5 % :
+**à vérifier**, non sourcés) ; **y3** pondéré seul.
+
+| Réponse | n | Corrélation avec y0 | R² climat | R² climat + classe (hors pli) | R² + humus encodé |
+|---|---|---|---|---|---|
+| y0 | 2 894 | 1 | -0,129 | 0,090 | 0,406 |
+| y1 | 2 854 | 0,962 | -0,122 | 0,118 | 0,436 |
+| y2 | 2 854 | 0,940 | -0,112 | 0,110 | 0,445 |
+| y3 | 2 894 | 0,956 | -0,117 | 0,090 | 0,403 |
+| y2, modèle final (classe + formation + pH) | 2 853 | | | **0,286** [0,218 ; 0,332] (y0 : 0,270) | |
+
+Retirer les essences perd 40 placettes (aucune autre espèce indicatrice) et change peu l'indice
+(corrélation 0,96) : le peuplement pèse peu dans l'indice de Tichý ici. Le R² de y1 et y2 est un
+peu plus haut (+0,02 à +0,03) sans que les IC se séparent. **Les R² de réponses différentes ne
+sont pas strictement comparables** (variances différentes). Non activée dans `_targets.R`
+(décision de Pascal : réponse historique conservée jusqu'à arbitrage) ; la variante est
+disponible (`compute_gradients(exclude_cd_ref = read_tree_cd_ref(), abundance_weights = TRUE)`).
+
+### 35.7 À vérifier
+
+- Mécanisme exact du « 187 » dans le run 018 (cache SAFRAN resservi) : relire par un `tar_make`
+  complet sur copie, non fait ici (coût LiDAR).
+- Règles de lithologie (008) : provisoires, non validées ; 170 formations sans règle ; défauts
+  `t1b`, `j2b2` ; règles à décider par Pascal avant tout usage hors comparaison.
+- Aucune correction de la table de lithologie appliquée aux départements 054, 057, 070, 090.
+- Exactitude de SoilGrids sur la France ; redondance avec le climat (covariables du modèle).
+- Poids d'abondance (milieux de classes `ABOND`) ; poids `litho_encoding_k = 10` (valeurs
+  provisoires, k = 30 donne 0,193 contre 0,196).
+- Codes `ROCHED0` (2005-2024) et `ROCHED2` (2025) : mêmes codes à trois exceptions (312, 316, 932
+  absents de `ROCHED2`, rares) : joints tels quels.
+- Placette `DEP` 52 : sans géologie (département 052 non lu).
+
+
+## 36. Contrôle par essence et sensibilité : sources, seuils, mesures (mission 037, 2026-11-20)
+
+- **Décision éclairée :** vérifier que le trophique prédit ne contredit pas les essences en place, et
+  chiffrer ce que l'essence ajouterait, sans jamais la mettre dans la carte (ADR 0008).
+- **Propriétaire :** Pascal (délégué à l'orchestrateur). **Rédigé par :** `dev`, mission 037, partie 2.
+
+### 36.1 Sources
+
+| Élément | Source | État |
+|---|---|---|
+| Essence et pondération | IGN, IFN, table `ARBRE` : `ESPAR`, `C13` (circonférence, m), `W` (coefficient de pondération), `VEGET` (0 vivant, 1 chablis vivant) | **vérifié** (`metadonnees.csv`) |
+| Dictionnaire ESPAR | `espar-cdref13.csv` (`ifn_espar_cdref.csv`, code d'essence sans zéro de tête → `CD_REF`) pour les jointures ; lignes `ESPAR1` de `metadonnees.csv` (campagnes 2009 et suivantes) : `inst/extdata/ifn_espar_codes.csv`, 195 lignes, Licence Ouverte 2.0, qui en complète le nom latin de l'unité ESPAR1 (`inst/extdata/SOURCES.md`) | **vérifié** ; le code `332G` de `ARBRE` n'y figure pas ; les campagnes 2005-2008 (unités `ESPAR`, `ESPAR0`) : même codage constaté sur la GRECO D, **à vérifier** |
+| Optimum de l'essence, repère | Tichý et al. (valeurs d'indicateur, Zenodo), `ph` et `azote` de l'espèce arborée dans la table qui sert au trophique | **indicatif seulement, jamais la base d'une alerte** : Spearman 0,15 par placette, 0,29 à 0,38 par essence, contre 0,25 et 0,60 pour le trophique observé ; hêtre 5,7 contre 4,2 observé sans les arbres ; douglas et chêne rouge absents ; chêne sessile sans `ph` ni `azote` |
+| Optimum forestier publié | Rameau et al., *Flore forestière française* ; EcoPlant ; Landmann | **à vérifier, non lus** |
+| Alerte | moyenne d'essence apprise hors pli sur le trophique observé sans les essences : **47 taxons** des 344 de la table de Tichý, retirés par jointure sur `CD_REF` avec `read_tree_cd_ref()` (`espar-cdref13.csv`, TAXREF v13.0 ; cette table liste les arbres et quelques arbustes, dont *Juniperus communis*) | mesure du dépôt (pas une source externe) |
+| Regroupements BD Forêt | `FF1G01-01` (chênes décidus), `FF2G61-61` (sapin ou épicéa) ; `FF2G53-53` et `FF2-90-90` fusionnés | correspondance ESPAR **hypothèse, à vérifier** (§ 33, plan 037) |
+| Licence BD Forêt | Licence Ouverte (data.gouv.fr, `lov2`) contre « conditions générales d'utilisation des fichiers IGN » (métadonnées livrées, 2022-09-14) | **contradictoire** : option désactivée, cache hors dépôt, seules des moyennes par classe publiées |
+
+### 36.2 Seuils : valeur provisoire, sans source, à vérifier
+
+`essence_part_pure` 0,75 ; `essence_min_placettes` 15 ; `essence_alerte_ecart` 0,5 point (environ la moitié du
+RMSE de la validation croisée, 0,93) ; `essence_alerte_ratio` 0,5 ; `essence_alerte_pente` 0,2 ;
+`bdforet_tampon_m` 50. Choisis par le `dev`, modifiables dans `config.yml` ; aucune source ne les fonde.
+
+### 36.3 Mesures sur le run réel 035 (store `wt035run`, blocs 22 121 m et 8 358 m)
+
+- **Effectifs** : 2 893 placettes d'apprentissage, 2 795 avec arbres vivants, 98 sans arbre, **1 323 pures**,
+  1 472 mixtes ; 10 essences à au moins 15 placettes pures (1 246 placettes) : sapin pectiné 383, hêtre 276,
+  épicéa 264, chêne sessile 101, pin sylvestre 71, douglas 64, aulne glutineux 28, bouleau verruqueux 26,
+  chêne pédonculé 18, érable sycomore 15.
+- **Contrôle** : accord d'ordre (Spearman prédit hors pli contre moyenne d'essence apprise hors pli) 0,344
+  (blocs de 22 121 m) et 0,338 (8 358 m), contre **0,357 et 0,376** pour le trophique observé (ratio 0,96 et 0,90) ; **pente prévu contre observé par essence
+  0,31 / 0,36 : prédictions écrasées vers la moyenne** ; trois essences en alerte d'écart (> 0,5) aux deux
+  tailles : pin sylvestre (+0,89), aulne glutineux (-1,02), érable sycomore (-0,86). R² de la prédiction
+  par l'essence (essences à au moins 15 placettes) 0,17 / 0,15 contre 0,22 pour le trophique sans arbres.
+- **Sensibilité** (essence encodée dans chaque pli) : R² 0,194 -> 0,255 (**+0,061**) aux blocs de 22 121 m
+  et 0,272 -> 0,330 (**+0,058**, groupes BD Forêt : 0,326, +0,054) aux blocs de 8 358 m ; **placebo**
+  (essences mélangées) : +0,010 et +0,007, soit un gain net de l'ordre de 0,05. Le gain est positif dans les
+  cinq plis des deux tailles. C'est bien moins que les -0,1 à -0,25 que chiffrait l'ADR 0008.
+  **La cible de la sensibilité (`y0`, trophique du pipeline) contient les arbres** : le gain est donc un peu
+  circulaire ; l'effet reste faible (retirer les essences de l'indice change peu l'indice, corrélation 0,96,
+  § 35.6).
+- **Comparaison à la carte (BD Forêt)**, emprise de 15 km, intérieur à 50 m, 295 polygones purs : moyennes par
+  classe de 4,69 (pin sylvestre) à 5,07 (autres feuillus), Spearman 0,94 avec la moyenne IFN sur 6 classes
+  seulement ; le hêtre y est placé sous le sapin-épicéa, à l'inverse des placettes. Lecture, pas validation.
+
+**Limites** : une seule répartition en plis ; le contrôle n'est pas une validation indépendante (essences
+liées au climat et à la roche que le modèle voit) ; les alertes pointent surtout l'absence de relief fin,
+attendue sous la règle des 700 m ; plantations (douglas, épicéa) lues « pauvres » : limite visée par l'ADR 0008.
+
+## 37. Bioclimat et réserve utile plus fins : température corrigée du relief, MNT de 250 m, RU apprise, bilan latéral (mission 039, 2026-11-20)
+
+- **Décision éclairée :** rendre au bioclimat et à la RU de la carte le relief et les sols, sans croiser de
+  variable fine avec les placettes IFN.
+- **Propriétaire :** Pascal (délégué à l'orchestrateur, arbitrages du 2026-11-20). **Rédigé par :** `dev`, mission 039.
+
+### 37.1 Sources
+
+| Élément | Source | État |
+|---|---|---|
+| MNT de 250 m | BD ALTI (IGN), fiche `IGNF_BD-ALTI` (`https://data.geopf.fr/csw?REQUEST=GetRecordById&SERVICE=CSW&VERSION=2.0.2&OUTPUTSCHEMA=http://standards.iso.org/iso/19115/-3/mdb/2.0&elementSetName=full&ID=IGNF_BD-ALTI`) : **Licence Ouverte / Open License** (Etalab) | **vérifié** le 2026-11-20 (fiche lue) |
+| Accès | WMS raster de la Géoplateforme, `https://data.geopf.fr/wms-r/wms`, couche `ELEVATION.ELEVATIONGRIDCOVERAGE` (titre « MNT BDAlti V1 », résumé « BDAlti V1 au pas de 25m »), `FORMAT=image/geotiff` : GeoTIFF Float32, `CRS=EPSG:2154`, `BBOX=xmin,ymin,xmax,ymax`, 5 010 pixels au plus par côté | **vérifié** (requête exécutée, `HTTP 200`, altitudes plausibles : 182 à 1 205 m autour de l'emprise test) |
+| Pas de 250 m | le flux de téléchargement `https://data.geopf.fr/telechargement/resource/BDALTI` ne propose que le pas de 25 m par département (106 entrées lues) : le 250 m est demandé au WMS à 125 m puis moyenné 2 × 2 (`fetch_mnt_large()`) | rééchantillonnage du service **non documenté, à vérifier** |
+| Volume, temps | GRECO D et emprise, marge 12 km : 701 × 852 cellules, **2,4 Mo, 6 s** | mesuré |
+| Contrôle | écart au MNT de 250 m des mesures du plan (provenance non tracée alors) : moyenne 0 m, écart-type 10 m | mesuré : c'était la BD ALTI |
+| Textures SoilGrids | SoilGrids 2.0 (ISRIC, CC BY 4.0), `clay`, `sand`, `silt` (g/kg, stockés × 10), `cfvo` (cm³/dm³, × 10), moyenne, six horizons (0-5 à 100-200 cm), `https://files.isric.org/soilgrids/latest/data/<propriété>/<couche>.vrt` (même accès que le pH, § 35.4) | **vérifié** (lu) ; 24 couches, 45 Mo pour la GRECO D ; exactitude sur la France **non évaluée** |
+| Fonction de pédotransfert | euptf2 PTF01 (FC_2 − WP, pF 2,0 − 4,2), comme `ru_from_texture()` (ADR 0006) | appliquée telle quelle ; environ 3,2 mm/cm pour un limon à 20 % d'argile sans cailloux (RU à 1 m de 212 à 261 mm sur l'emprise) : valeur haute, **à vérifier** |
+| Gradient de comparaison | −0,55 °C/100 m, Rolland (2003) | **à vérifier** (non lu ; repère seulement) |
+| Altitude de référence de SAFRAN | altitude moyenne de la maille (Vidal et al. 2010, doi 10.1002/joc.2003) | **à vérifier** sur le texte ; les mesures vont dans ce sens (§ 37.2) |
+| Bilan latéral | Piedallu et al. (2006), HAL `hal-00835906`, tableau 20 (p. 53 imprimée), tableau 21, équivalents −30 / 0 / +60 mm (p. 54) | lu (copie locale, non versée au dépôt) ; coefficients **à vérifier** (unités de la courbure, calcul de l'indice de Moore, MNT de 50 m non donnés) |
+
+### 37.2 Température : méthode retenue et écart à la fiche
+
+La fiche nommait meteoland (Thornton 1997). Mesure (validation croisée, une maille SAFRAN laissée de côté,
+erreur sur sa T moyenne, GRECO D) :
+
+| Méthode | RMSE, toutes mailles | RMSE, mailles en relief |
+|---|---|---|
+| Bilinéaire (avant 039) | 0,22 °C | 0,76 °C |
+| Gradient fixe −0,55 °C/100 m | 0,11 °C | 0,17 °C |
+| **Gradient lu dans SAFRAN, maille exclue** | **0,11 °C** | **0,16 °C** |
+| meteoland 2.2.8 (75 mailles à moins de 40 km, 2011-2020) | 0,12 °C | non séparé |
+
+(Mesures du plan, reproduites par `t_correction_validation()` sur la BD ALTI : 0,224 / 0,112 / 0,111 °C ;
+0,764 / 0,171 / 0,157 °C en relief, 16 mailles. CHELSA V2.1, 1 km, contrôle indépendant : écart-type de
+l'erreur 0,55 °C en bilinéaire contre 0,23 °C avec gradient.)
+
+**Retenu (arbitrage du 2026-11-20) :** `T = T_bilinéaire + G × (z − z_bilinéaire)`, G estimé par
+`T ~ z_moy + x + y` sur les mailles de la SER (`safran_lapse_rate()`) : **−0,486 °C/100 m** sur la GRECO D
+(erreur type 0,007, R² 0,92, 475 mailles). Altitude des mailles = **moyenne** du MNT sur la maille
+(`safran_cell_altitude()`) : RMSE 0,11 contre 0,34 °C avec l'altitude du centre. meteoland n'entre pas dans
+`DESCRIPTION` : même justesse, sans dépendance ni coefficient extérieur.
+
+### 37.3 Règle des 700 m
+
+| Couche | Rôle | Classe |
+|---|---|---|
+| `coarse_t_corr_700m` | T corrigée sur la BD ALTI 250 m, moyennée dans un disque de 700 m | **large** : placettes IFN (bioclimat, hydrique, trophique si `trophique_climat: corrige`) |
+| `t_corr` | T corrigée sur le MNT de la grille | **fine** (`FINE_VARIABLES`) : carte seulement (bioclimat appliqué à la cellule) |
+| `t_corr_250`, `mnt_250` | intermédiaires | **fines** |
+| `coarse_cu_*_700m` | capacité en eau SoilGrids par horizon, moyennée dans 700 m | **large** |
+| `curv150`, `idr_1500`, `moore`, `p_*`, `bilan_lateral`, `ru_bilan_lateral` | bilan latéral | **fines** |
+
+Coût du changement d'échelle (emprise test, cellules de 20 m) : la moyenne dans 700 m porte 94 % de la
+variance de la T corrigée (résidu : écart-type 0,26 °C) ; 0,29 % des cellules hors de la plage
+d'apprentissage. Tests : `coarse_t_corr_700m` passe l'assertion, `t_corr` la déclenche.
+
+### 37.4 RU de la carte
+
+RU SoilGrids brute (diagnostic seulement, `ru_soilgrids()`, `ru_soilgrids_diagnostic()`), 2 846 placettes :
+à 1 m, **biais +137 mm** (244 mm contre 107), RMSE 148 mm, corrélation 0,27, écart-type 13 mm contre 58 ;
+à 50 cm, biais +18 mm, corrélation 0,26. La RU IFN dépend surtout de la profondeur de sondage
+(corrélation 0,66 avec `PROF2`), que SoilGrids ignore. **Retenue :** RU des placettes apprise
+(`ru_learned_data()`, forêt aléatoire) sur la lithologie et la formation encodées dans 700 m et les six
+capacités SoilGrids moyennées dans 700 m ; cellules sans prédicteur complétées par la RU de la maille
+(`ru_fill_by_cell()`). R² par blocs : § 37.6.
+
+### 37.5 Bilan latéral (option C)
+
+Câblé (`lateral_balance()`), **désactivé par défaut** (`bilan_lateral: false`), jamais ajouté à la RU de
+BILJOU. Appliqué tel quel à l'emprise test (mesure de la mission 034) : **53 % d'apports** (+60 mm) et 0 à
+0,1 % de départs, contre **27,6 % d'apports** et 25,9 % de départs observés en calibration (tableau 21) ;
+le modèle d'origine ne reclasse bien que 57,4 % des relevés (pseudo-R² 0,112). Coefficients du
+tableau 20 dans `config.yml` (`bilan_lateral_coef`, source et page en commentaire, mission 039b ;
+valeur d'une configuration sans la clé : `R/config.R`), à vérifier ; aucun coefficient dans
+`R/terrain.R` ; à recalibrer sur les points GNSS (mission 029).
+
+### 37.6 Mesures avant / après (store du run réel 035, 5 graines)
+
+Deux séries de cinq graines, sur le store du run 035 (2 893 placettes trophique, 2 827 hydrique, 2 754
+bioclimat ; RU : 2 892). **Graines de la forêt seules** (plis fixes) : écart-type du R² 0,001 à 0,005,
+négligeable. **Graines et décalage de la grille des blocs** (origine décalée de 0, 1/5, ... 4/5 du bloc :
+les plis changent) : c'est la série qui permet de lire un écart sous 0,03.
+
+| Gradient | Variante | Bloc publié (portée) | Bloc 8 358 m |
+|---|---|---|---|
+| Trophique | sans climat | 0,235 ± 0,009 (22 121 m) | 0,274 ± 0,008 |
+| Trophique | climat actuel (bilinéaire) | 0,231 ± 0,023 | 0,272 ± 0,014 |
+| Trophique | climat corrigé | 0,245 ± 0,024 | 0,292 ± 0,011 |
+| Hydrique (réponse BILJOU des placettes inchangée) | T bilinéaire | 0,280 ± 0,009 (76 736 m) | 0,368 ± 0,009 |
+| Hydrique | T corrigée | **0,328 ± 0,004** | **0,381 ± 0,009** |
+| Bioclimat contre l'indice floristique T (Tichý 2023) | T bilinéaire | −0,060 ± 0,040 (47 373 m) | −0,004 ± 0,010 |
+| Bioclimat | T corrigée | **0,036 ± 0,020** | **0,079 ± 0,013** |
+| RU apprise (géologie + SoilGrids 700 m) | — | 0,114 ± 0,010 (41 030 m) | 0,141 ± 0,005 |
+
+Écarts appariés (même partition, cinq graines) : bioclimat corrigé − actuel +0,097 ± 0,038 (portée) et
++0,083 ± 0,013 (8 358 m) ; hydrique +0,048 ± 0,011 et +0,014 ± 0,009 ; trophique corrigé − sans climat
+**+0,009 ± 0,024** (de −0,026 à +0,040) au bloc publié, +0,018 ± 0,005 à 8 358 m ; trophique actuel − sans
+climat −0,005 ± 0,022 et −0,002 ± 0,007. Au bloc publié, les trois variantes du trophique ne se
+distinguent pas : l'écart de la mesure du plan (0,231 contre 0,194, une partition) tenait à la partition.
+**Décision de Pascal (2026-11-20) : climat retiré du trophique** (`trophique_climat: sans`, défaut) ;
+`actuel` et `corrige` restent des options de `config.yml`.
+La RU apprise est validée sans réencodage de la lithologie dans les plis (encodage par le trophique, comme
+la carte) : 0,114 à 0,141, contre 0,099 pour la médiane de la maille, placette exclue, non spatiale (optimiste).
+
+Cartes avant / après (emprise test) :
+
+| Couche | q5 / q50 / q95 | Écart-type |
+|---|---|---|
+| T annuelle, bilinéaire (avant) | 8,8 / 9,4 / 10,5 °C | 0,57 |
+| T annuelle corrigée, cellule (après) | 7,6 / 9,5 / 10,7 °C | 0,93 |
+| Bioclimat avant / après (corrélation 0,84) | −1,1 / −0,07 / 1,6 ; −1,7 / 0,07 / 1,6 | 0,93 ; 1,00 |
+| RU de la carte : maille (avant) / apprise (après) | 49 / 64 / 110 mm ; 70 / 94 / 115 mm | 23 ; 14 |
+| Istress avant / T corrigée seule / T corrigée et RU apprise | 13 / 35 / 51 ; 12 / 34 / 50 ; 12 / 27 / 47 | 11,1 ; 11,2 ; 10,4 |
+
+La T corrigée suit les vallées et les crêtes, sans rectangle de maille. Sur l'emprise, le décalage de T
+des nœuds BILJOU de 1 km va de −1,7 à +1,2 °C ; la variation d'Istress due à la seule correction de T
+est corrélée à 0,89 avec le décalage de T (+2,9 points d'Istress par °C). La RU apprise n'a plus les
+rectangles de 8 km mais montre des motifs circulaires (moyennes dans 700 m apprises par la forêt
+aléatoire) et des limites franches de formations géologiques ; elle est plus haute (médiane 94 contre
+64 mm), d'où un Istress plus bas (médiane 27 contre 35). Calcul BILJOU avec la RU apprise : 2 927 s sur
+une machine chargée, contre 583 s pour le run 035 (dix valeurs de RU par nœud au lieu d'une).
+
+### 37.7 À vérifier
+
+- Rééchantillonnage du WMS BD ALTI ; Vidal et al. (2010) pour l'altitude de référence de SAFRAN ; Rolland (2003).
+- Gradient constant chaque jour dans BILJOU : inversions hivernales ignorées.
+- Capacités euptf2 à pF 2,0 (environ 3,2 mm/cm pour un limon) ; exactitude de SoilGrids en France.
+- Coefficients du tableau 20 (unités, indice de Moore lu comme le TWI).
+
+## 40. Table lithologique : 155 formations non classées de la GRECO D (mission 040, 2026-11-20)
+
+**Décision de Pascal (journal, 2026-11-20)** : table acceptée (option b) hors 7 cas tranchés
+un par un ; trois classes nouvelles ; règles complétées ; défauts `t1b` et `j2b2` corrigés ;
+10 formations laissées `non_classe`. Fichiers : `inst/extdata/lithologie_regles.csv` (27 règles,
+priorités décimales), `inst/extdata/lithologie_notations.csv` (156 notations + 42 gelées, voir 40.2 : codes, classes,
+origine, départements `dep`, source ; **aucune description BRGM**), `recode_lithology(overrides = )` et
+`read_lithology_notations()`. Source : BD Charm-50 (BRGM) ; les pages de l'annexe 1 de Piedallu
+et al. (2006) ne sont que citées. Les classes marquées « à vérifier » (notices départementales
+067, 068 non lues) restent à confirmer. Codage par `NOTATION` seule pour les règles (décision de l'orchestrateur :
+aucun gain mesuré à coder département + `NOTATION`) ; **les lignes `table` et `gele` ne valent que dans
+les départements de leur colonne `dep`** (54, 57, 67, 68, 70, 88, 90 selon la notation ; `list_formations()`
+porte le département du plus grand polygone, sans zéro de tête) : hors de ces départements,
+seules les règles s'appliquent ; si le département de la formation est inconnu (pas de colonne `dep`,
+ou `NA`), la ligne vaut quand même. **Limite :** le département retenu est celui du plus grand
+polygone de la notation (celui dont vient la description), pas l'ensemble de ses départements : une
+notation dont le plus grand polygone est hors de la colonne `dep` n'est pas touchée par la ligne, même si
+elle a des polygones dans ces départements. Les 156 notations
+sont propres à la GRECO D (`dep` fourni par `read_geology()`, champ `dep` de la BD Charm-50).
+
+**Décompte final par origine (198 lignes) : table 8 ; regle 172 ; gele 8 ; laisse 10.**
+
+### 40.1 Rejeu des motifs (store du run réel 035, 667 formations)
+
+Chaque motif a été rejoué avec `recode_lithology()` sur les descriptions de `geol_classes_placettes`
+(description du plus grand polygone, comme dans le pipeline). **Résultat : les décomptes faits à
+la main de la proposition sont exacts** (règle gagnante, première qui correspond) : 10.1 : 27 ;
+10.2 : 7 ; 10.3 : 13 ; 10.4 : 51 ; 10.5 : 9 ; 9.1 : 8 ; 9.2 : 4 ; 9.3 : 3 ; 11.1 : 4 ; 11.2 : 2 ;
+12.1 : 2 ; 6 notations par la table (+ `j1`, `rB` fixées par la table, `h2MK3(1)` reste `roche_basique` par la règle 10.5, comme dans la proposition acceptée : la décision 1 de Pascal « h2PK3, h2MK3 → volcanite » ne vise que `h2MK3(2)` (arbitrage de l'orchestrateur, 2e aller-retour ; **question à poser à Pascal**) ; 10 laissées. **Seul écart** :
+10.6 (10 notations) est scindée par la décision de Pascal sur la granodiorite du Champ-du-Feu
+(Piedallu : c) : 5 `h2ã4*` vont à `plutonite_intermediaire` par une règle 10.35 `granodiorit`
+(placée après 10.2, pour que « granodiorite du Hohwald » des schistes de Steige reste dans
+`schiste_grauwacke`) ; 5 restent `granite`. Les motifs « seuls » (hors ordre) captent plus que
+leurs décomptes (ex. 10.4 : 59 dans la liste) : c'est l'ordre qui les départage.
+
+### 40.2 Effets hors de la liste des 156 notations : candidates, décisions de Pascal
+
+**Décisions prises (Pascal, 2026-11-20, mission 040c).** Sur les 42 candidates ci-dessous,
+**34 quittent le gel** et prennent la classe des règles actuelles (lignes `regle`, `decision_pascal` =
+« Pascal 2026-11-20 ») :
+- `calcaire` (19, jurassiques, règle 10.9) : j2a-b, j3a, l2-3, j2OM, j2c2, l3b-c, j5CH, l3a1, j5cC, j6a, j3-4, j7, j5c, j4, e, j6a-c, g1-2, j6aC, g2CD ;
+- `marne_argile` (4, règle 11.2) : l3b, l3c, j5a1, j3aC ;
+- `gres` : t2a ; `rD` : `gres` partout (sa dominante est en 70) ; la variante du 90 (« Conglomérats », 4,74 km²), qui donnerait `conglomerat`, est soumise à Pascal (voir la limite ci-dessous) ;
+- `schiste_grauwacke` (5) : d7, dS, h2goO, dW, o-sÕ ; `volcanite` : d5br(ö), döq ;
+- `colluvions_eboulis` : GPx-y ; `alluvions` : FJw-x.
+
+**8 restent gelées**, avec la classe d'avant (règles d'avant la mission 040) : t3CMT (`gres`), t4c, t3B, t4b-c,
+t3BG et j1b (`calcaire`), rE-F (`gres`), d-h2(1) (`conglomerat`). Leurs lignes portent aussi
+« Pascal 2026-11-20 ».
+
+**Limite, tranchée par Pascal le 2026-11-20 : la classe est celle de la formation, pas de chaque
+description.** Une formation est classée sur la description de son **plus grand polygone** (et non du département qui a la plus grande
+surface), et cette classe vaut pour tous ses polygones, quel que soit le département. Le principe de Pascal (« on applique le premier terme de
+chaque description ») s'applique donc à la **description dominante** de chaque formation : la règle décide,
+sans ligne ajoutée, pour j3a (54), j4 (90) et l2-3 (54). Pour l3b, la dominante est en 88 (`marne_argile`). Aucune ligne `table` n'est ajoutée pour les
+variantes non dominantes (codage par NOTATION seule gardé).
+
+Variantes non dominantes dont la propre description donnerait une autre classe que celle de la formation
+(surface sur chaque emprise ; classe de la formation -> classe que donnerait la description de la variante) :
+
+| Formation | Dép. | `geol_sf` (carte, 067/068/088) | `geol_placettes` | Formation -> variante |
+|---|---|---|---|---|
+| j2a-b | 67 | absente | 8,37 km² | `calcaire` -> `marne_argile` |
+| j2a-b | 68 | absente | 0,62 km² | `calcaire` -> `marne_argile` |
+| j3a | 57 | absente | 5,31 km² | `calcaire` -> `marne_argile` |
+| j4 | 67 | absente | 0,13 km² | `calcaire` -> `marne_argile` |
+| l2-3 | 90 | absente | 0,05 km² | `calcaire` -> `marne_argile` |
+| l3b | 54 | absente | 40,30 km² | `marne_argile` -> `calcaire` |
+| rD | 90 | absente | 4,74 km² | `gres` -> `conglomerat` |
+| e | 70 | absente | 0,01 km² | `calcaire` -> `conglomerat` |
+| d7 | 70 | absente | 0,22 km² | `schiste_grauwacke` -> `non_classe` |
+
+Total : 59,75 km² pour 9 variantes sur `geol_placettes`, aucune sur `geol_sf`. Sur la carte, seule `e`
+est présente (068, 0,05 km², dominante, `calcaire`) ; j2a-b n'y figure pas. Les autres variantes non
+dominantes (`e` en 68, j3a en 88, l2-3 en 70 et 88, etc.) donnent déjà la classe de la formation. Un codage par notation et
+département (une classe par couple) lèverait cette limite ; il changerait la clé de jointure de tout le
+pipeline et demanderait une ADR.
+
+Historique : les 42 candidates et ce qu'elles donneraient (avant décision).
+
+
+Les règles s'appliquent à toutes les formations lues (667). Rejouées, elles changeraient la
+classe de **46 formations hors liste (2 557 km²)**, plus que la proposition ne l'annonçait
+(règle 10.9 : 22 formations de `marne_argile` à `calcaire`, 1 599 km² ; règle 11.2 : 9 de
+`calcaire` à `marne_argile`, 197 km² ; correction de la règle 1 : t1b, t2a, rD ; etc.).
+**Arbitrage de l'orchestrateur (délégation totale, choix prudent et réversible) : seuls les
+effets annoncés entrent**, soit t1b (décision de Pascal : grès vosgien, 522 km²), j2b2, l1-2 et
+I1-2a (annoncés pour 10.9). Les 42 autres formations **gardent la classe qu'elles avaient avant la mission 040** : elles sont
+« gelées » dans `lithologie_notations.csv` (`origine = gele`). Le gel n'impose pas une classe fixe :
+il applique à **la description de la formation** le jeu de règles d'avant,
+`inst/extdata/lithologie_regles_avant040.csv` (relecture, 2e aller-retour : une classe fixe, calculée
+sur la variante du plus grand polygone, aurait fait passer `e` de `calcaire` à `marne_argile` dans la 068, sur
+l'emprise de la carte). La colonne `classe` est indicative (variante dominante dans la GRECO D), `classe_regle`
+donne ce que dirait la règle actuelle, `surface_km2` la surface lue. Pour accepter
+un changement, supprimer la ligne de la notation. `d-h2(1)` (qui perdait sa classe,
+`conglomerat` → `non_classe`) garde `conglomerat`. Surfaces : emprise lue des 7 départements.
+
+| Notation | Classe actuelle (conservée, variante dominante) | Classe que donnerait la règle | Surface (km²) |
+|---|---|---|---|
+| `j2a-b` | marne_argile | calcaire | 271,77 |
+| `t2a` | conglomerat | gres | 160,48 |
+| `j3a` | marne_argile | calcaire | 141,51 |
+| `l3b` | calcaire | marne_argile | 82,01 |
+| `l2-3` | marne_argile | calcaire | 72,50 |
+| `j2OM` | marne_argile | calcaire | 46,20 |
+| `t3CMT` | gres | calcaire | 39,44 |
+| `t4b-c` | calcaire | marne_argile | 34,95 |
+| `j2c2` | marne_argile | calcaire | 29,36 |
+| `l3b-c` | marne_argile | calcaire | 27,67 |
+| `j5CH` | marne_argile | calcaire | 26,80 |
+| `t4c` | calcaire | marne_argile | 24,21 |
+| `rD` | conglomerat | gres | 23,81 |
+| `t3BG` | calcaire | marne_argile | 22,85 |
+| `j1b` | calcaire | marne_argile | 14,37 |
+| `l3a1` | marne_argile | calcaire | 14,16 |
+| `j5cC` | marne_argile | calcaire | 13,02 |
+| `j6a` | marne_argile | calcaire | 11,82 |
+| `l3c` | calcaire | marne_argile | 10,04 |
+| `j3-4` | marne_argile | calcaire | 9,41 |
+| `d7` | marne_argile | schiste_grauwacke | 8,34 |
+| `j5a1` | calcaire | marne_argile | 4,85 |
+| `j7` | marne_argile | calcaire | 3,64 |
+| `GPx-y` | glaciaire | colluvions_eboulis | 3,56 |
+| `j5c` | marne_argile | calcaire | 2,99 |
+| `t3B` | calcaire | marne_argile | 2,96 |
+| `j4` | marne_argile | calcaire | 2,94 |
+| `e` | marne_argile | calcaire | 1,60 |
+| `h2goO` | non_classe | schiste_grauwacke | 0,93 |
+| `rE-F` | gres | schiste_grauwacke | 0,92 |
+| `j3aC` | calcaire | marne_argile | 0,88 |
+| `d5br(ö)` | non_classe | volcanite | 0,88 |
+| `j6a-c` | marne_argile | calcaire | 0,85 |
+| `FJw-x` | non_classe | alluvions | 0,53 |
+| `dW` | non_classe | schiste_grauwacke | 0,25 |
+| `o-sÕ` | non_classe | schiste_grauwacke | 0,17 |
+| `g1-2` | marne_argile | calcaire | 0,11 |
+| `j6aC` | marne_argile | calcaire | 0,08 |
+| `g2CD` | marne_argile | calcaire | 0,06 |
+| `d-h2(1)` | conglomerat | non_classe | 0,04 |
+| `dS` | marne_argile | schiste_grauwacke | 0,01 |
+| `döq` | non_classe | volcanite | 0,01 |
+
+Total : 42 formations, 1113 km².
+
+Les 4 notations non gelées (t1b, j2b2, l1-2, I1-2a) changent bien : t1b `conglomerat` → `gres`,
+j2b2, l1-2 et I1-2a `marne_argile` → `calcaire`. Les 6 formations qui étaient `non_classe`
+hors des disques (h2goO, d5br(ö), FJw-x, dW, o-sÕ, döq) et qu'une règle classerait restent
+`non_classe` avant la décision de Pascal ; elles sont classées depuis (h2goO, dW, `schiste_grauwacke` ; d5br(ö), `volcanite` ; FJw-x, `alluvions` ; döq, `volcanite` ; o-sÕ, `schiste_grauwacke`).
+
+**Contrôle sur les deux emprises** (store `wt035run`, lecture seule) : rejeu du jeu de règles d'avant
+(sans table) contre la version actuelle, après les décisions de Pascal. `geol_placettes` : 667 formations,
+184 changent ; hors des changements annoncés au départ (156 notations, t1b, j2b2, l1-2, I1-2a), **seules les
+34 formations décidées changent**, les 34 sans exception, et **aucune des 8 restées gelées**. `geol_sf`
+(emprise de la carte) : 108 formations, 7 changent, **aucune hors annonce** ; une seule des 34 y figure, `e`, qui
+reste `calcaire`. Un test sur l'extrait réel vérifie le même invariant (`test-geologie.R`).
+
+### 40.3 Décompte `non_classe`, avant et après
+
+| | Avant | Après (décisions de Pascal sur les candidates) |
+|---|---|---|
+| Formations `non_classe` (667 lues, 25 774 km²) | 171 (1 466 km²) | 20 (202 km²) |
+| Formations `non_classe` dans les disques de 700 m | 155 (434,9 km²) | **10 (11,65 km²)** |
+| Placettes touchant ces formations (somme par formation) | 2 002 | 333 |
+| Placettes dont la classe dominante est `non_classe` | 296 | **0** |
+
+Les 10 restantes : `hydro` (183 placettes), `Hydro` (3), `X` (25), `fm` (59), `Q` (39), `Fn` (11),
+`my` (8), `Tx-y` (3), `Lz` (1), `D` (1).
+Classes dominantes dans 700 m après (2 893 placettes) : grès 1 118, granite 545, conglomérat 373,
+gneiss/migmatite 228, marne/argile 146, alluvions 144, volcanite 143, schiste/grauwacke 46,
+glaciaire 38, plutonite intermédiaire 37, calcaire 23, colluvions/éboulis 27, loess 17,
+roche basique 8.
+
+### 40.4 R² du trophique, avant et après
+
+Mesure hors pipeline (script du scratchpad), modèle final (climat + classe + formation + pH),
+2 893 placettes, même code que `_targets.R` (035), 3 graines d'affectation des plis.
+« Avant » reproduit le store (0,1938 et 0,2723, graine 1). « Après » : table, règles et décisions
+de Pascal sur les 42 candidates (34 sorties du gel, 8 gelées).
+
+| Blocs | Avant (graines 1, 2, 3 ; moyenne) | Après (graines 1, 2, 3 ; moyenne) | Écart |
+|---|---|---|---|
+| portée estimée, 22 121 m | 0,1938 ; 0,1925 ; 0,1914 ; **0,1926** | 0,2062 ; 0,2042 ; 0,2045 ; **0,2050** | +0,012 |
+| 8 358 m | 0,2723 ; 0,2721 ; 0,2729 ; **0,2724** | 0,2759 ; 0,2741 ; 0,2744 ; **0,2748** | +0,002 |
+
+Les gains restent **dans le bruit** (IC à 22 km : [0,087 ; 0,275], § 35.5) : la table ne dégrade
+pas le R² et n'en apporte pas de significatif. Son bénéfice est ailleurs : plus de placette à
+classe dominante `non_classe` (296 → 0), classes lisibles par un forestier. Les R² de § 35.5 ne
+sont pas remplacés (le run réel n'a pas été relancé).
+
+## 41. Carte trophique locale contre régionale : règle de remplacement (mission 037, 2026-11-20)
+
+- **Décision éclairée :** le modèle local (ancrages GBIF, 50 m) remplace-t-il la carte trophique régionale
+  (placettes IFN) ? **Propriétaire :** Pascal (a tranché, option b : seulement s'il fait mieux en validation
+  croisée). **Rédigé par :** `dev`, mission 037.
+- **Règle :** sur les mêmes ancrages et les mêmes plis, gain = R²(local hors pli) - R²(régional lu aux
+  ancrages, brut). Le local remplace si la borne basse de l'IC du gain (bootstrap de blocs, 95 % bilatéral,
+  1 000 tirages) dépasse 0,02. **Valeur provisoire, choix prudent de l'orchestrateur au lieu de 0, sans source, à
+  vérifier** (20 ancrages et 10 blocs minimaux : même statut). En repère seulement, les écarts-types
+  du R² sur 5 partitions mesurés en 039 (± 0,009 à 0,024, § 37 de 039) donnent un ordre de grandeur du
+  bruit de répartition des plis ; ce n'est **pas une calibration** du 0,02.
+- **Portée de l'IC :** il est **conditionnel aux prédictions hors pli figées** (une seule répartition en
+  plis, un seul ajustement) : il rend compte du choix des blocs d'ancrages, pas de la variabilité de
+  l'ajustement du local. `n_tirages` donne le nombre de tirages valides.
+- **Variables égales :** le local prend les mêmes variables larges que le régional (`vars_modele$trophic`,
+  donc il suit `trophique_climat` ; avec `sans`, aucun climat, pas de `coarse_t_corr_700m`) plus des variables fines
+  nommées (`vars_fines` : terrain fin non vide, sols), écrites dans `variables_locales` (`local_trophic_vars()`).
+  Une couche de sol préfixée `coarse_` (maille de 90 m ou plus, `stack_soil_layers`) est **large** : elle
+  n'entre dans le local que si le régional l'a ; `vars_fines` ne contient que des couches non `coarse_`.
+- **Asymétries :** (a) décalage de domaine (flore IFN sur 700 m contre listes de 50 m) : défavorise le
+  régional ; un régional recalibré hors pli est rendu pour information, **jamais comme critère** ; (b) fuite
+  possible en faveur du régional (placettes IFN d'apprentissage voisines des ancrages) : règle plus dure pour
+  le local ; (c) ancrages non représentatifs de la carte (chemins, lisières) : part de la carte dans la zone
+  d'applicabilité du local rendue.
+- **Mesure :** sur l'emprise test de 018, 2 ancrages valides après `clean_occ` (§ 33.5 bis) : la comparaison est
+  impossible et la carte régionale reste publiée. Aucun remplacement n'est mesuré sur données réelles à ce jour.

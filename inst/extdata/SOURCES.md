@@ -189,3 +189,114 @@ Extraits le 2026-11-16, mission 001 (voir `docs/referentiels.md`, § 5 et § 7).
   écriture `;`. Sert au mode réel hors ligne (`offline: true`) et à la carte hydrique de
   25 m (`hydric_stress_grid()`).
 - **Licence :** Licence Ouverte 2.0 (`lov2`, champ licence de data.gouv.fr).
+
+## `synth_reference.tif` (SYNTHETIQUE, missions 010 et 025)
+
+Carte de reference **fabriquee** (substitut de celle de Gegout et al. 2008, dont les rasters
+AgroParisTech n ont pas ete obtenus) : trois gradients vrais synthetiques (grille de 20 m, `resolution_m`),
+moyennes a 50 m, plus un bruit. Fabriquee par `inst/scripts/synth_reference.R` (refaite le
+2026-11-18, mission 025, a partir de la grille de 20 m). `synthetic = TRUE`. Aucune licence a
+respecter : aucune donnee reelle. Ne dit rien sur la vraie carte.
+
+## `carhab_extrait_emprise_test.gpkg` (CarHab 68, mission 031)
+
+- **Source :** PatriNat (OFB-MNHN-CNRS-IRD), IGN, EVS, CBN, « CarHab, habitats du Haut-Rhin
+  (68) », service WFS Géoplateforme `https://data.geopf.fr/wfs/ows`, type
+  `Carhab_habitat:habitats_carhab` (métadonnée du 2023-06-01 ; voir `docs/referentiels.md`
+  § 26), lu le 2026-11-19 (`occupation = 'foret'`, 3 103 polygones sur l'emprise test, paginés
+  par 500 ; cache `data/cache/carhab/`, hors dépôt).
+- **Traitement :** les **25 polygones forestiers** qui recoupent le carré
+  `x 1013000-1014000, y 6797000-6798000` (EPSG:2154), polygones entiers (non découpés),
+  8 champs conservés (`id_polygone_carhab`, `code_biotope`, `etage_de_vegetation`,
+  `acidite_edaphique`, `humidite_edaphique`, `occupation`, `surface`, `layer`), géométrie
+  convertie de MULTISURFACE en MULTIPOLYGON par GDAL. Fabriqué par `carhab_fetch()` puis un
+  découpage par `sf::st_intersects`. Sert aux tests de `R/carhab.R` (sans réseau). 229 Ko.
+- **Licence :** Licence Ouverte / Open License (Etalab), métadonnée CSW
+  `INPN-CARHAB_HABITATS` (`useLimitation` « Aucune contrainte »). CarHab est une carte
+  **prédictive** : ces polygones ne sont pas une vérité terrain.
+
+## `ifn_espar_cdref.csv` (mission 035)
+
+- **Source :** IGN, Inventaire forestier national, données brutes campagnes 2005 à 2025
+  (`export_dataifn_2005_2025.zip`, fichier `espar-cdref13.csv`, 193 lignes : code d'essence
+  `espar`, libellé, `cd_ref` en TAXREF v13.0), lu le 2026-11-19.
+- **Traitement :** BOM et préfixe `// ` de la ligne d'en-tête retirés ; contenu inchangé.
+- **Licence :** Licence Ouverte / Open Licence Etalab 2.0 (docs/referentiels.md § 7).
+  Citation : « IGN – Inventaire forestier national français, Données brutes, Campagnes
+  annuelles 2005 et suivantes, https://inventaire-forestier.ign.fr/dataIFN/ , site consulté le
+  2026-11-19 ».
+
+## `ifn_espar_codes.csv` (mission 037, RÉEL)
+
+- **Source :** IGN – Inventaire forestier national français, Données brutes, Campagnes
+  annuelles 2005 et suivantes, https://inventaire-forestier.ign.fr/dataIFN/ , site consulté le
+  20/11/2026. Fichier `metadonnees.csv` de l'archive
+  `https://inventaire-forestier.ign.fr/dataifn/data/export_dataifn_2005_2025.zip`
+  (export du 2026-10-07).
+- **Rôle, en complément de `ifn_espar_cdref.csv` :** `ifn_espar_cdref.csv` (fichier
+  `espar-cdref13.csv`) relie le code d'essence **sans zéro de tête** (`9`) à son `CD_REF`
+  (TAXREF v13.0) et au nom du taxon accepté ; ce fichier-ci donne le code **tel que noté dans
+  `ARBRE`** (`09`), le nom français et le **nom latin de l'unité ESPAR1** des métadonnées (avec
+  sous-espèce ou variété : « Quercus petraea subsp. petraea »). La jointure sur les taxons se
+  fait toujours par `CD_REF` (`ifn_espar_cdref.csv`) ; ce fichier n'ajoute que le nom latin
+  ESPAR1 (colonne `latin_espar1`) et sert de dictionnaire des codes d'`ARBRE`.
+- **Traitement :** lignes `ESPAR1` (unité des campagnes 2009 et suivantes) du bloc « Définition
+  des modalités pour chaque unité » : colonnes `code;nom;latin`, 195 lignes, texte d'origine.
+  Le code `332G`, présent dans la table ARBRE de la GRECO D, n'y figure pas.
+- **Licence :** Licence Ouverte / Open Licence Etalab Version 2.0.
+
+## `lithologie_notations.csv` et `lithologie_regles.csv` (mission 040, RÉEL, dérivé)
+
+- **Source :** BRGM, BD Charm-50, cartes géologiques départementales à 1/50 000 harmonisées
+  (départements 054, 057, 067, 068, 070, 088, 090), téléchargées sur InfoTerre le 2026-11-19
+  (docs/referentiels.md § 5 et § 35.3).
+- **Contenu :** uniquement des **codes de notation** (`NOTATION`) et des **classes**
+  lithologiques (14 classes dont `volcanite`, `schiste_grauwacke`, `plutonite_intermediaire`),
+  avec l'origine du classement (`table`, `gele`, `regle`, `laisse`), la règle qui le donne et une
+  source courte. **Aucune description longue** de la BD Charm-50 n'est copiée dans le dépôt ;
+  rien du texte de l'annexe 1 de Piedallu et al. (2006), seulement la mention de la page
+  qui a servi à choisir la classe (« Piedallu 2006 annexe 1 p.87 »).
+- **Établissement :** proposition de l'agent `acquereur-litho` (2026-11-20), acceptée par
+  Pascal hors 7 cas tranchés un par un (colonne `decision_pascal`) ; classes marquées « à vérifier »
+  quand la notice BRGM départementale n'a pas pu être lue.
+- **Licence :** celle de la BD Charm-50 (voir l'entrée `bdcharm50_emprise_test.gpkg` ci-dessus :
+  aucune licence nommée dans les métadonnées, « Aucune condition ne s'applique », données
+  ouvertes). La mission 040 est cadrée par l'orchestrateur comme relevant de la Licence Ouverte :
+  **écart à vérifier** ; sans conséquence ici, puisque le fichier ne reprend que des codes de
+  notation et des classes, pas de texte du BRGM. Citation : « BRGM, BD Charm-50, cartes
+  géologiques départementales à 1/50 000 harmonisées, https://infoterre.brgm.fr ».
+- **Départements :** la colonne `dep` de `lithologie_notations.csv` limite les lignes `table` et
+  `gele` aux départements où la classe a été établie (GRECO D : 54, 57, 67, 68, 70, 88, 90).
+- **`lithologie_regles_avant040.csv` :** copie du jeu de règles en vigueur avant la mission 040
+  (13 règles de mots-clés, aucune donnée BRGM), appliquée aux lignes `gele`.
+
+## `bdalti_250m_extrait.tif` (mission 039b, RÉEL)
+
+- **Source :** IGN, BD ALTI (fiche `IGNF_BD-ALTI`), lue le 2026-11-20 par le WMS raster de la
+  Géoplateforme `https://data.geopf.fr/wms-r/wms`, couche `ELEVATION.ELEVATIONGRIDCOVERAGE`
+  (« MNT BDAlti V1 », pas de 25 m), GeoTIFF Float32 demandé à 125 m puis moyenné 2 × 2
+  (`fetch_mnt_large()`, rééchantillonnage du service à vérifier ; `docs/referentiels.md` § 37).
+- **Emprise :** x (est) de 1 000 250 à 1 028 750 m, y (nord) de 6 777 000 à 6 813 500 m,
+  Lambert-93 (EPSG:2154) : les 12 mailles SAFRAN de `safran_sim2_12mailles_extrait.csv`
+  avec une marge de 6 km comptée depuis les centres des mailles, soit environ 2 km au-delà de
+  leurs bords (demi-côté de 4 km). 114 × 146 cellules de 250 m, altitude en m (arrondie au dixième), 172 à
+  1 297 m ; 40 Ko. Sert au mode réel hors ligne (`mnt_large_path`) : altitude des mailles,
+  température corrigée du relief.
+- **Licence :** Licence Ouverte / Open License (Etalab), champ licence de la fiche CSW
+  `IGNF_BD-ALTI` ; mention « Source : IGN, BD ALTI ».
+
+## `soilgrids_texture_extrait.tif` (mission 039b, RÉEL)
+
+- **Source :** ISRIC, SoilGrids 2.0, couches `clay`, `sand`, `silt`, `cfvo`, statistique
+  `mean`, six horizons (0-5, 5-15, 15-30, 30-60, 60-100, 100-200 cm),
+  `https://files.isric.org/soilgrids/latest/data/<propriété>/<propriété>_<horizon>_mean.vrt`,
+  lues le 2026-11-20 (`fetch_soilgrids_texture()`), reprojetées en Lambert-93 à 250 m
+  (bilinéaire). Attribution : « SoilGrids 2.0, ISRIC – World Soil Information » (Poggio et al.
+  2021, *SOIL* 7 : 217-240, doi 10.5194/soil-7-217-2021).
+- **Emprise :** boîte des 100 placettes de l'extrait IFN et 2 km de marge : x (est) de
+  1 005 500 à 1 024 000 m, y (nord) de 6 788 750 à 6 807 000 m, EPSG:2154 ; 74 × 73 cellules,
+  24 couches nommées `<propriété>_<horizon>_mean`. **Unités natives de SoilGrids, × 10**
+  (g/kg pour les textures, cm³/dm³ pour les cailloux), entiers 16 bits ; balise `echelle = 10`
+  lue par `soilgrids_cu()`, qui divise par 10. 151 Ko. Sert au mode réel hors ligne
+  (`soilgrids_texture_path`) : RU apprise de la carte.
+- **Licence :** CC BY 4.0 (ISRIC) ; attribution ci-dessus obligatoire.

@@ -21,6 +21,6 @@ bords sont arrondis vers l'extérieur à des multiples de \code{res}. Ainsi deux
 même résolution se superposent cellule à cellule, quelle que soit l'emprise.
 }
 \examples{
-g <- build_grid(c(xmin = 1007003, ymin = 6790010, xmax = 1007180, ymax = 6790099), res = 25)
+g <- build_grid(c(xmin = 1007003, ymin = 6790010, xmax = 1007180, ymax = 6790099), res = 20)
 terra::ext(g)
 }

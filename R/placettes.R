@@ -200,6 +200,35 @@ filter_releves <- function(ifn, min_occ = 3, months = 4:9, exclude_incidents = T
   ifn
 }
 
+#' Codes `CD_REF` des essences arborées de l'IFN
+#'
+#' Lit la table `espar-cdref13.csv` de l'archive DataIFN (colonnes `espar`, `lib_espar`,
+#' `cd_ref`, `lib_cdref` ; `CD_REF` en TAXREF v13.0, comme la flore) ou son extrait
+#' `ifn_espar_cdref.csv`. Sert à exclure les essences de l'indice trophique
+#' ([compute_gradients()], `exclude_cd_ref`) : l'indice ne décrit alors plus le peuplement
+#' (mission 035, ADR 0008). Cette table liste les essences de l'inventaire (arbres,
+#' quelques arbustes) ; elle n'est pas une liste de « strate arborée » de la flore.
+#'
+#' @param dir Dossier contenant `espar-cdref13.csv` ou `ifn_espar_cdref.csv`.
+#' @return Un vecteur numérique trié de `CD_REF`, sans doublon.
+#' @examples
+#' head(read_tree_cd_ref(system.file("extdata", package = "sylvostation")))
+#' @export
+read_tree_cd_ref <- function(dir) {
+  if (!is.character(dir) || length(dir) != 1L || !dir.exists(dir)) {
+    stop("Dossier introuvable : ", paste(dir, collapse = ", "), call. = FALSE)
+  }
+  f <- .trouver_fichier_ifn(dir, "espar-cdref13")
+  if (is.na(f)) f <- file.path(dir, "ifn_espar_cdref.csv")
+  if (!file.exists(f)) stop("espar-cdref13.csv (ou ifn_espar_cdref.csv) introuvable dans ", dir, call. = FALSE)
+  l <- readLines(f, encoding = "UTF-8", warn = FALSE)
+  l[1] <- sub("^\ufeff?(// ?)?", "", l[1])   # BOM et prefixe "// " de l'en-tete d'origine
+  d <- utils::read.delim(text = l, sep = ";", quote = "", colClasses = "character")
+  if (!"cd_ref" %in% names(d)) stop("Colonne cd_ref absente de ", basename(f), ".", call. = FALSE)
+  v <- suppressWarnings(as.numeric(d$cd_ref))
+  sort(unique(v[!is.na(v)]))
+}
+
 #' Taxons de la flore IFN sans valeur indicatrice
 #'
 #' Liste les `CD_REF` (TAXREF v13.0 pour l'IFN) présents dans `flore` mais absents de
@@ -412,6 +441,13 @@ ru_coefficients <- function(source = c("bruand2004", "provisoire")) {
 #'   soit le nom des couches ; agréger avant avec [aggregate_to_km()].
 #' @param min_res_ifn_m Maille minimale (m) d'une couche croisée avec des placettes
 #'   IFN : 1000 (brief technique, étape 5 : climat et pH agrégés à 1 km).
+#' @param exclude_cd_ref `NULL` ou vecteur de `CD_REF` (TAXREF v13) **exclus** de l'indice
+#'   trophique, par exemple les essences arborées ([read_tree_cd_ref()]) : l'indice ne
+#'   décrit alors plus le peuplement (mission 035, ADR 0008). `NULL` : aucune exclusion
+#'   (comportement historique).
+#' @param abundance_weights `TRUE` : moyenne des valeurs indicatrices pondérée par
+#'   l'abondance-dominance `ABOND` (classes 1 à 5, milieux de classes 2,5 ; 15 ; 37,5 ; 62,5 ;
+#'   87,5 % : **à vérifier**) ; `FALSE` : moyenne simple (historique).
 #' @param ru_table Vecteur nommé de coefficients mm/cm par code de texture, ou liste
 #'   `haut`, `bas` (horizon supérieur `TEXT1`, horizon inférieur `TEXT2`), voir
 #'   [ru_coefficients()]. `ru_verifie` du résultat vaut `TRUE` seulement
@@ -430,11 +466,27 @@ ru_coefficients <- function(source = c("bruand2004", "provisoire")) {
 #' head(sf::st_drop_geometry(g)[, c("id_placette", "grad_trophique", "ru_mm")])
 #' @export
 compute_gradients <- function(ifn, indicateurs = NULL, climat = NULL,
-                              ru_table = ru_coefficients(), min_res_ifn_m = 1000) {
+                              ru_table = ru_coefficients(), min_res_ifn_m = 1000,
+                              exclude_cd_ref = NULL, abundance_weights = FALSE) {
   .check_ifn(ifn)
   .check_ru_table(ru_table)
+  if (!is.null(exclude_cd_ref) && !is.numeric(exclude_cd_ref)) {
+    stop("`exclude_cd_ref` doit \u00eatre num\u00e9rique (CD_REF) ou NULL.", call. = FALSE)
+  }
+  if (!is.logical(abundance_weights) || length(abundance_weights) != 1L || is.na(abundance_weights)) {
+    stop("`abundance_weights` doit \u00eatre TRUE ou FALSE.", call. = FALSE)
+  }
   pl <- ifn$placettes
   fl <- ifn$flore
+  if (!is.null(exclude_cd_ref) && is.data.frame(fl)) {
+    fl <- fl[!fl$CD_REF %in% exclude_cd_ref, , drop = FALSE]
+  }
+  # poids de la moyenne : abondance-dominance (milieux de classes) ou 1
+  poids_abond <- function(a) {
+    w <- c(`1` = 2.5, `2` = 15, `3` = 37.5, `4` = 62.5, `5` = 87.5)[as.character(a)]
+    w[is.na(w)] <- 2.5   # abondance absente : classe la plus faible
+    as.numeric(w)
+  }
   out <- pl[, c("id_placette", "CAMPAGNE", "IDP", "source", "loc_precision_m")]
 
   # --- trophique
@@ -451,7 +503,13 @@ compute_gradients <- function(ifn, indicateurs = NULL, climat = NULL,
     }
     j <- indicateurs[match(fl$CD_REF, indicateurs$cd_ref), cols, drop = FALSE]
     avec <- !is.na(match(fl$CD_REF, indicateurs$cd_ref))
-    moy <- function(v) as.numeric(tapply(v, factor(fl$id_placette, ids), mean, na.rm = TRUE))
+    w <- if (abundance_weights && "ABOND" %in% names(fl)) poids_abond(fl$ABOND) else rep(1, nrow(fl))
+    moy <- function(v) {
+      f <- factor(fl$id_placette, ids)
+      num <- as.numeric(tapply(ifelse(is.na(v), 0, v * w), f, sum))
+      den <- as.numeric(tapply(ifelse(is.na(v), 0, w), f, sum))
+      ifelse(is.na(den) | den == 0, NaN, num / den)
+    }
     out$n_taxa_indic <- as.integer(tapply(avec, factor(fl$id_placette, ids), sum))
     out$n_taxa_indic[is.na(out$n_taxa_indic)] <- 0L
     out$grad_ph <- if ("ph" %in% cols) moy(j$ph) else NA_real_

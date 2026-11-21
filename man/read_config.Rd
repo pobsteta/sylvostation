@@ -17,13 +17,27 @@ le pipeline tourne sans réseau sur les jeux d'essai synthétiques de \code{inst
 et les clés du mode réel (mission 016, valeurs par défaut si absentes) : \code{offline}
 (\code{FALSE} ; \code{TRUE} = mode réel sans réseau sur les extraits réels de \code{inst/extdata}),
 \code{max_tiles} (\code{NULL} = toutes les dalles), \code{emprise} (\code{"test"} ou \code{"ser"}),
-\code{lidar_block_size} (3), \code{lidar_buffer_m} (20), \code{lidar_ncores} (3),
+\code{mrvbf_res_m} (maille en m du MNT sur lequel le MRVBF est calculé, multiple de 5 ;
+défaut \code{resolution_m} ; provisoire, à vérifier, mission 027), \code{lidar_block_size} (3), \code{lidar_buffer_m} (20), \code{lidar_ncores} (3),
 \code{taxref_version} (\code{"18"}, figée), \code{indicator_source} (\code{"tichy"}), \code{ru_source}
 (\code{"euptf2"}), \code{safran_annees} (1996-2025), \code{saison_vegetation} (mois 4 à 9),
 \code{bdcharm_departements}, \code{gbif_method} (\code{"search"}), \code{forest_mask} (\code{TRUE}),
-\code{forest_height_m} (5), \code{cache_dir}, la carte hydrique de 25 m (mission 021,
+\code{forest_height_m} (5), \code{cache_dir}, la carte hydrique (mission 021,
 provisoires) : \code{solar_linke} (3), \code{solar_albedo} (0,2), \code{solar_step_h} (0,5),
-\code{hydric_pas_k} (0,02), \code{hydric_n_controle} (30), \code{ifn_archive_url} et \code{taxref_url} (sans valeur
+\code{hydric_pas_k} (0,02), \code{hydric_n_controle} (30), la descente d'échelle du climat
+(mission 033, provisoires) : \code{safran_interpolation} (\code{"bilineaire"} ou \code{"proche"}),
+\code{hydric_node_res_m} (1000), \code{ru_min_placettes} (5), la calibration sur la GRECO
+(mission 035, provisoires) : \code{litho_min_cover} (0,5), \code{litho_encoding_k} (10), \code{soilgrids_ph} (\code{TRUE}), \code{cv_block_m} (\code{NULL} : portée
+estimée de la réponse) \code{cv_block_sensibilite_m} (8 358 m) et \code{cv_min_blocs_par_pli} (4),
+les choix de la mission 039 : \code{climat_temperature} (\code{"corrigee"} ou \code{"bilineaire"}),
+\code{trophique_climat} (\code{"sans"} par défaut, décision de Pascal du 2026-11-20 ;
+options \code{"actuel"} et \code{"corrige"}), \code{ru_carte} (\code{"apprise"} ou \code{"maille"}), \code{mnt_large_res_m} (250),
+\code{bilan_lateral} (\code{FALSE}), \code{bilan_lateral_ru_mm} (−30, 0, 60) et \code{bilan_lateral_coef}
+(coefficients du tableau 20 de Piedallu et al. 2006, à vérifier), l'entrée optionnelle
+\code{mnt_large_path} (MNT de 250 m local, mode hors ligne), l'entrée optionnelle
+\code{soilgrids_texture_path} (\code{NULL} par défaut : GeoTIFF à 24 couches de textures et
+cailloux SoilGrids, mode hors ligne, mission 039b),
+\code{ifn_archive_url} et \code{taxref_url} (sans valeur
 par défaut : seule source, config.yml ; exigées en ligne), et les
 entrées optionnelles \code{gnss_path}, \code{reference_path}, \code{soil_paths}, \code{tichy_path}
 (\code{NULL} si absentes : jamais remplacées).
@@ -37,7 +51,7 @@ f <- tempfile(fileext = ".yml")
 writeLines(c(
   'ser_code: "D11"',
   "emprise_test: {xmin: 1007000, ymin: 6790000, xmax: 1022000, ymax: 6805000, crs: 2154}",
-  "buffer_m: 5000", "resolution_m: 25", "crs: 2154",
+  "buffer_m: 5000", "resolution_m: 20", "crs: 2154",
   "data_dir: data", "laz_dir: data/laz", "out_dir: data/sorties",
   "ifn_precision_m: 700"), f)
 read_config(f)$ser_code

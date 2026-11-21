@@ -2,7 +2,7 @@
 % Please edit documentation in R/hydrique.R
 \name{write_hydric_grid}
 \alias{write_hydric_grid}
-\title{Écrire les couches de la carte hydrique de 25 m}
+\title{Écrire les couches de la carte hydrique}
 \usage{
 write_hydric_grid(
   r,
@@ -30,7 +30,7 @@ write_hydric_grid(
 Un \code{data.frame} (\code{fichier}, \code{format}), de façon invisible.
 }
 \description{
-Écrit \code{hydrique_25m.tif} dans \verb{out_dir/<ser_code>/} (couches \code{is_topo}, \code{nj_topo},
+Écrit \code{hydrique.tif} dans \verb{out_dir/<ser_code>/} (couches \code{is_topo}, \code{nj_topo},
 \code{is_plat}, \code{k_sv}, \code{ru_maille} de \code{\link[=hydric_stress_grid]{hydric_stress_grid()}}), en \strong{COG} si le pilote
 GDAL \code{COG} est disponible, sinon en GeoTIFF tuilé compressé, comme \code{\link[=write_outputs]{write_outputs()}}.
 Si \code{synthetic = TRUE}, le fichier est préfixé \code{synth_} (CLAUDE.md). Les cellules hors
@@ -38,7 +38,7 @@ de \code{forest} (couche \code{foret} de \code{\link[=forest_mask]{forest_mask()
 }
 \examples{
 r <- terra::rast(xmin = 1015500, xmax = 1015550, ymin = 6793500, ymax = 6793550,
-                 resolution = 25, crs = "EPSG:2154", nlyrs = 5)
+                 resolution = 20, crs = "EPSG:2154", nlyrs = 5)
 terra::values(r) <- matrix(1, 4, 5)
 names(r) <- c("is_topo", "nj_topo", "is_plat", "k_sv", "ru_maille")
 w <- write_hydric_grid(r, tempdir(), "D11", synthetic = TRUE)

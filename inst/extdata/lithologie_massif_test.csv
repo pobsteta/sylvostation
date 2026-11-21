@@ -40,13 +40,13 @@
 "FGy","27","Formation fluvio-glaciaire  (Weichsélien)",5,0.8331,"alluvions","regle",FALSE
 "t3-4E","121","Calcaire à entroques (Muschelkalk supérieur)",8,0.8044,"calcaire","regle",FALSE
 "h4","136","Carbonifère - Conglomérats, arkoses, schistes uranifères et veines de houille - (Westphalien)",10,0.8022,"conglomerat","regle",FALSE
-"l1-2","109","Calcaire à Gryphées arquées et marnes lotharingiennes (Hettangien Sinémurien)",5,0.7948,"marne_argile","regle",FALSE
-"t4C","120","Couches à cératites (Muschelkalk supérieur)",6,0.7021,"non_classe","non_classe",FALSE
+"l1-2","109","Calcaire à Gryphées arquées et marnes lotharingiennes (Hettangien Sinémurien)",5,0.7948,"calcaire","regle",FALSE
+"t4C","120","Couches à cératites (Muschelkalk supérieur)",6,0.7021,"calcaire","regle",FALSE
 "h4-5ã3Da","217","Granites des Vosges moyennes et méridionales - Granite à deux micas de Dambach-Scherwiller - (Westphalien-Stéphanien)",1,0.6853,"granite","regle",FALSE
 "I4C","103","Schistes cartons = couches à posidonomies + Marnes à H. variabilis (Toarcien inférieur à moyen)",4,0.6584,"marne_argile","regle",FALSE
 "G","32","Dépôts glaciaires indéterminés : moraines et résiduels (Pléistocène)",7,0.6023,"glaciaire","regle",FALSE
 "I4bc","102","Couches à Lytoceras Jurense et argilo-marneux à Pleydellia aalensis (Astarte voltzi) (Toarcien supérieur)",3,0.596,"marne_argile","regle",FALSE
-"I1-2a","111","Calcaires à Gryphées, marnes et calcaires ocreux (Grès médioliasique)(Hettangien Sinémurien inférieur)",4,0.559,"marne_argile","regle",FALSE
+"I1-2a","111","Calcaires à Gryphées, marnes et calcaires ocreux (Grès médioliasique)(Hettangien Sinémurien inférieur)",4,0.559,"calcaire","regle",FALSE
 "h3ôdC","196","Granites des Vosges moyennes et méridionales -  Durbachite associée au granite des Crêtes, dans la série de Ste-Marie-aux-Mines - (Namurien)",17,0.4907,"granite","regle",FALSE
 "j1a","99","Couches à Trigonia navis (Opalinum) : Marnes à nodules à L. opalinum (Aalénien inférieur)",3,0.4214,"marne_argile","regle",FALSE
 "fm","142","Filons tardi- à postorogéniques - Filon minéralisé, faille minéralisée - (Stéphanien-Lias)",44,0.4143,"non_classe","non_classe",FALSE
@@ -54,12 +54,12 @@
 "h5r1ã0","145","Granites de Vosges du Nord - Granites acides, hyperalcalins de Raon-l'Etape, des Brûlées et du Kagenfels et faciès granopyriques et rhyolitiques de bordure - (Stéphanien à Autunien ?)",8,0.3451,"granite","regle",FALSE
 "îãb-m","143","Filons tardi- à postorogéniques - Microgranite et granophyre à biotite et muscovite associés aux granites intrusifs à deux mica - (Carbonifère indifférencié)",15,0.3448,"granite","regle",FALSE
 "CFz","39","Colluvions de fonds de vallons et vallées (Weichsélien à Holocène)",8,0.3325,"colluvions_eboulis","regle",FALSE
-"j1b","98","Couches à Murchisonae : Grès calcaires à L. murchisonae (Aalénien moyen)",4,0.2934,"calcaire","regle",FALSE
+"j1b","98","Couches à Murchisonae : Grès calcaires à L. murchisonae (Aalénien moyen)",4,0.2934,"calcaire","gele",FALSE
 "r2bK","161/134","Permien - Assise de Kohlbaechel : conglomérats, arkoses, dolomies en concrétions - (Saxonien (et Thuringien))",7,0.2839,"conglomerat","regle",FALSE
 "FJx","23","Cônes de déjections des vallées vosgiennes d'âge Riss (Pléistocène moyen récent)",6,0.2553,"alluvions","regle",FALSE
 "t5-6A-M","113","Marnes irisées supérieures et Argiles de Chanville à la base (Keuper moyen)",1,0.251,"marne_argile","regle",FALSE
 "j2c","93","Grande oolithe et marnes à acuminata (Bajocien supérieur)",2,0.2454,"marne_argile","regle",FALSE
-"t3C-D","124","Muschelkalk inférieur indifférencié",1,0.2355,"non_classe","non_classe",FALSE
+"t3C-D","124","Muschelkalk inférieur indifférencié",1,0.2355,"calcaire","table",FALSE
 "æCM","156","Série métamorphique de la Croix-aux-Mines : gneiss divers, comprenant des kinzigites à grenat (socle métamorphique des Vosges moyennes et méridionales)",1,0.2289,"gneiss_migmatite","regle",FALSE
 "pîã","137/170","Filons tardi- à postorogéniques - Microgranites porphyroïdes indifférenciés - (Dévonien-Permien)",6,0.1985,"granite","regle",FALSE
 "t5G-D","114","Grès à roseaux, marnes irisées moyennes  et dolomie-moellon (Keuper moyen)",4,0.1949,"marne_argile","regle",FALSE

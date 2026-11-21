@@ -3,12 +3,15 @@
 [![CI](https://github.com/pobsteta/sylvostation/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/pobsteta/sylvostation/actions/workflows/ci.yml)
 [![Release](https://github.com/pobsteta/sylvostation/actions/workflows/release.yml/badge.svg)](https://github.com/pobsteta/sylvostation/actions/workflows/release.yml)
 [![Version](https://img.shields.io/github/v/release/pobsteta/sylvostation?label=version)](https://github.com/pobsteta/sylvostation/releases/latest)
-[![Couverture](.github/badges/couverture.svg)](https://github.com/pobsteta/sylvostation/actions/workflows/ci.yml)
+[![Couverture](https://raw.githubusercontent.com/pobsteta/sylvostation/main/.github/badges/couverture.svg)](https://github.com/pobsteta/sylvostation/actions/workflows/ci.yml)
+[![Site](https://img.shields.io/badge/site-pkgdown-blue)](https://pobsteta.github.io/sylvostation/)
 [![R](https://img.shields.io/badge/R-%E2%89%A5%204.1-276DC3)](https://www.r-project.org/)
 [![Licence : GPL-3](https://img.shields.io/badge/licence-GPL--3-blue)](LICENSE.md)
 
 Package R et pipeline `targets` qui produisent, pour une sylvoécorégion (SER) donnée
 par son seul code, un catalogue de stations forestières.
+
+**Site et premiers résultats** (carte du massif test vosgien D11, limites comprises) : <https://pobsteta.github.io/sylvostation/> (article « Résultats sur le massif test vosgien (D11) »).
 
 Voir `docs/brief.md` (ce qu'on construit), `docs/spec.md`, `docs/adr/`.
 

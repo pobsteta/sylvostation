@@ -4,7 +4,12 @@
 \alias{validate_stats}
 \title{R² et RMSE par gradient, comparés aux repères publiés}
 \usage{
-validate_stats(cv_results, reperes = .REPERES_R2, synthetic = FALSE)
+validate_stats(
+  cv_results,
+  reperes = .REPERES_R2,
+  synthetic = FALSE,
+  min_blocs_par_pli = 4
+)
 }
 \arguments{
 \item{cv_results}{Liste \strong{nommée} (un élément par gradient) de résultats de
@@ -14,11 +19,18 @@ validate_stats(cv_results, reperes = .REPERES_R2, synthetic = FALSE)
 
 \item{synthetic}{\code{TRUE} si les données sont synthétiques (balise reprise en attribut
 et en colonne).}
+
+\item{min_blocs_par_pli}{Nombre minimal de blocs occupés \strong{par pli} pour que le R² soit
+interprétable (4 par défaut ; \strong{valeur provisoire, à vérifier}, \code{cv_min_blocs_par_pli}
+de config.yml). Un R² calculé avec moins de \code{min_blocs_par_pli * k} blocs dépend de
+quelques blocs seulement.}
 }
 \value{
 Un \code{data.frame} : \code{gradient}, \code{n}, \code{r2}, \code{rmse}, \code{r2_repere},
 \code{ecart_r2} (R² moins repère), \code{atteint} (R² >= repère ; \code{NA} sans repère),
-\code{block_size}, \code{synthetic}.
+\code{block_size}, \code{blocs} (blocs occupés, \code{NA} si plis fournis), \code{k}, \code{blocs_insuffisants}
+(\code{TRUE} si \code{blocs < min_blocs_par_pli * k}), \code{alerte} (texte en clair, vide sinon),
+\code{synthetic}.
 }
 \description{
 Réunit les résultats de \code{\link[=spatial_cv]{spatial_cv()}} de chaque gradient. Les repères sont ceux du

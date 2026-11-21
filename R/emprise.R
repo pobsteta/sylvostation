@@ -14,11 +14,7 @@
   old <- options(timeout = max(3600, getOption("timeout")))
   on.exit(options(old), add = TRUE)
   tmp <- paste0(dest, ".part")
-  status <- utils::download.file(url, tmp, mode = "wb", quiet = TRUE)
-  if (!identical(as.integer(status), 0L)) {
-    unlink(tmp)
-    stop("T\u00e9l\u00e9chargement impossible : ", url, call. = FALSE)
-  }
+  .download_retry(url, tmp)  # reprise sur incident reseau (mission 026)
   file.rename(tmp, dest)
   dest
 }
@@ -144,7 +140,7 @@ get_ser <- function(ser_code, buffer_m = 0, source = c("download", "file"),
 #' @param res Résolution en mètres (cellules carrées).
 #' @return Un `SpatRaster` d'une couche, vide, en EPSG:2154.
 #' @examples
-#' g <- build_grid(c(xmin = 1007003, ymin = 6790010, xmax = 1007180, ymax = 6790099), res = 25)
+#' g <- build_grid(c(xmin = 1007003, ymin = 6790010, xmax = 1007180, ymax = 6790099), res = 20)
 #' terra::ext(g)
 #' @export
 build_grid <- function(emprise, res) {
@@ -221,11 +217,7 @@ build_grid <- function(emprise, res) {
                   paste0(names(q), "=", vapply(q, utils::URLencode, "", reserved = TRUE),
                          collapse = "&"))
     tmp <- tempfile(fileext = ".json")
-    status <- utils::download.file(url, tmp, mode = "wb", quiet = TRUE)
-    if (!identical(as.integer(status), 0L)) {
-      unlink(tmp)
-      stop("Requ\u00eate WFS LiDAR HD impossible.", call. = FALSE)
-    }
+    .download_retry(url, tmp)  # reprise sur incident reseau (mission 026)
     p <- sf::st_read(tmp, quiet = TRUE)
     unlink(tmp)
     if (!nrow(p)) break

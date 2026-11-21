@@ -27,7 +27,12 @@ test_that("synth_demo_dtm : sur la grille en Lambert-93, balisé synthétique", 
   expect_error(synth_demo_dtm("x"), "SpatRaster")
   gros <- build_grid(c(1007000, 6790000, 1014000, 6797000), 25)
   expect_error(synth_demo_dtm(gros), "dépasse")
-  expect_error(synth_demo_dtm(build_grid(c(1007000, 6790000, 1008000, 6791000), 50)), "maille")
+  # maille de la grille != maille du jeu fabrique (25 m) : ramenee par interpolation (mission 025)
+  g20 <- build_grid(c(1007000, 6790000, 1008000, 6791000), 20)
+  d20 <- synth_demo_dtm(g20)
+  expect_equal(terra::res(d20), c(20, 20))
+  expect_equal(as.vector(terra::ext(d20)), as.vector(terra::ext(g20)))
+  expect_false(anyNA(terra::values(d20)))
 })
 
 test_that("synth_demo_climat : trois couches de 1 km, convention de compute_gradients", {
@@ -78,14 +83,18 @@ test_that("synth_demo_biotic : flore et arbres fabriqués, un type par point", {
             mean(b$flore[rep(c("A", "B", "C"), 20) == "B", "sp1"]))
 })
 
-test_that("synth_demo_reference : 50 m, aligné sur la grille de 25 m, balisé", {
+test_that("synth_demo_reference : 50 m, grille de 20 m, balisé", {
   s <- demo_chaine()
   ref <- synth_demo_reference(s$truth, res = 50)
   expect_equal(terra::res(ref), c(50, 50))
   expect_equal(names(ref), names(s$truth))
   expect_equal(sylvostation:::.get_metag(ref, "synthetic"), "TRUE")
   expect_equal(terra::xmin(ref) %% 50, 0)
-  expect_error(synth_demo_reference(s$truth, res = 30), "multiple")
+  expect_error(synth_demo_reference(s$truth, res = 10), "maille")
+  # 50 m sur une grille de 20 m : pas un multiple, moyenne par reechantillonnage
+  r50 <- synth_demo_reference(s$truth, res = 50)
+  expect_equal(terra::res(r50), c(50, 50))
+  expect_equal(terra::nrow(r50), 50)   # 2 500 m / 50 m
 })
 
 test_that("synth_reference.tif du dépôt est celui que fabrique le script (même grille)", {

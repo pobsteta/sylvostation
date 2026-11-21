@@ -13,6 +13,7 @@ spatial_cv(
   k = 5L,
   weights = NULL,
   folds = NULL,
+  encode = NULL,
   ...
 )
 }
@@ -40,12 +41,24 @@ prédicteurs et \code{loc_precision_m}.}
 exemple un tirage aléatoire pour mesurer l'optimisme d'une CV non spatiale) ;
 \code{NULL} : blocs spatiaux.}
 
+\item{encode}{\code{NULL}, une liste \code{list(var, name, k, oof)} ou une liste de telles listes
+(mission 035 ; \code{oof = FALSE} encode l'apprentissage avec toute sa partie, sans plis
+internes ; défaut \code{TRUE}) : \code{var} est une
+colonne catégorielle de \code{data} (lithologie, formation) et \code{name} le nom du prédicteur
+numérique à créer (il doit figurer dans \code{predictors} ; \strong{si une colonne de ce nom existe
+déjà dans \code{data}, elle est recalculée dans chaque pli}, par exemple la colonne hors pli
+de \code{\link[=encode_by_blocks]{encode_by_blocks()}}, jamais utilisée telle quelle). Dans chaque
+pli, l'apprentissage reçoit l'encodage \strong{hors pli} (\code{\link[=oof_target_encoding]{oof_target_encoding()}}, blocs
+de la même taille) et le pli de test l'encodage de toute la partie d'apprentissage :
+la réponse du pli de test n'intervient jamais, sans fuite.}
+
 \item{...}{Transmis à \code{\link[=fit_gradient]{fit_gradient()}} (\code{num_trees}, \code{seed}, \code{points_source}).}
 }
 \value{
 Une liste : \code{par_pli} (pli, n, r2, rmse), \code{global} (r2, rmse sur toutes les
 prédictions hors pli), \code{predictions} (observé, prédit, écart-type prédit \code{sd}, pli),
-\code{block_size}, \code{k}, \code{plis}.
+\code{block_size}, \code{k}, \code{plis}, \code{n_blocs} (blocs carrés occupés par au moins un point ;
+\code{NA} si \code{folds} est fourni).
 R² = 1 - SCR/SCT par rapport à la moyenne observée ; il peut être négatif.
 }
 \description{

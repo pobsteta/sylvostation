@@ -4,23 +4,39 @@
 \alias{recode_lithology}
 \title{Recoder les formations en classes lithologiques}
 \usage{
-recode_lithology(formations, rules = read_lithology_rules())
+recode_lithology(
+  formations,
+  rules = read_lithology_rules(),
+  overrides = read_lithology_notations(),
+  rules_gele = read_lithology_rules(system.file("extdata",
+    "lithologie_regles_avant040.csv", package = "sylvostation"))
+)
 }
 \arguments{
 \item{formations}{\code{data.frame} de \code{\link[=list_formations]{list_formations()}} (colonne \code{description}).}
 
 \item{rules}{\code{data.frame} de règles, voir \code{\link[=read_lithology_rules]{read_lithology_rules()}}.}
+
+\item{overrides}{\code{data.frame} notation -> classe prioritaire sur les règles
+(\code{\link[=read_lithology_notations]{read_lithology_notations()}} par défaut) ; \code{NULL} pour n'appliquer que les règles.
+Si \code{formations} porte une colonne \code{dep} (\code{\link[=list_formations]{list_formations()}}), une ligne ne vaut que
+dans les départements de sa colonne \code{dep} ; sans \code{dep}, elle vaut partout.}
+
+\item{rules_gele}{Règles d'avant la mission 040, appliquées aux lignes \code{gele}.}
 }
 \value{
-\code{formations} avec les colonnes \code{classe}, \code{statut} (\code{regle} ou \code{non_classe})
-et \code{validated} (\code{FALSE}).
+\code{formations} avec les colonnes \code{classe}, \code{statut} (\code{regle}, \code{table}, \code{gele} ou
+\code{non_classe}) et \code{validated} (\code{FALSE}).
 }
 \description{
 Applique des règles de mots-clés (expressions régulières sur la description,
 en minuscules et sans accents) dans l'ordre de \code{priorite} : la \strong{première} règle
 qui correspond donne la classe. Une formation sans règle reçoit \code{non_classe} :
 elle n'est \strong{jamais} affectée par défaut, et un avertissement la liste.
-Les règles fournies sont \strong{provisoires} (\code{validated = FALSE} jusqu'à relecture).
+Les formations dont la notation figure dans \code{overrides} (lignes \code{origine = "table"} ou \code{"gele"},
+voir \code{\link[=read_lithology_notations]{read_lithology_notations()}}) reçoivent d'abord la classe de la table, avec le
+statut \code{table}. Les règles fournies sont \strong{provisoires} (\code{validated = FALSE} jusqu'à
+relecture).
 }
 \examples{
 f <- data.frame(notation = c("a", "b"), description = c("Granite de X", "Remblais"))

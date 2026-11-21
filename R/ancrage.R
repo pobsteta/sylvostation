@@ -11,6 +11,18 @@
 #' @export
 IFN_GBIF_DATASET_KEYS <- "e5f16d86-e225-4822-97be-a64ce17079c7"
 
+#' Jeux GBIF Pl@ntNet (identification par algorithme)
+#'
+#' `datasetKey` des deux jeux Pl@ntNet vus dans l'emprise (`docs/referentiels.md`, § 8 et
+#' § 33.1) : « Pl@ntNet automatically identified occurrences » et « Pl@ntNet
+#' observations ». Une photo = une espèce, identification non validée : `clean_occ()` les
+#' écarte par défaut. Liste **non exhaustive** : d'autres jeux Pl@ntNet peuvent exister
+#' ailleurs (à vérifier hors emprise).
+#' @format Un vecteur de caractères.
+#' @export
+PLANTNET_GBIF_DATASET_KEYS <- c("14d5676a-2c54-4f94-9023-1e8dcd822aa0",
+                                "7a3679ef-5582-4aaa-81f0-8c2545cafc81")
+
 # Clés vérifiées au § 8 de docs/referentiels.md.
 .GBIF_TRACHEOPHYTA_KEY <- 7707728L
 .GBIF_BACKBONE_KEY <- "d7dddbf4-2cf0-4f39-9b2a-bb099caae36c"
@@ -182,6 +194,9 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
       paste0("CC_", toupper(gsub("-", "_", m[[i]][2])), "_", gsub("\\.", "_", m[[i]][3]))
     } else if (!is.na(x[i]) && grepl("publicdomain/zero", x[i])) {
       "CC0_1_0"
+    } else if (!is.na(x[i]) && grepl("^\\s*CC[ _-]*(BY|0)", x[i], ignore.case = TRUE)) {
+      # ecriture en toutes lettres (« CC BY-NC 4.0 ») : meme code que les autres formes
+      gsub("^_+|_+$", "", gsub("[^A-Z0-9]+", "_", toupper(x[i])))
     } else x[i]
   }, character(1))
   out
@@ -207,6 +222,14 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
 #'    [IFN_GBIF_DATASET_KEYS]) : leur incertitude déclarée (1 m) est fausse. Si on les
 #'    garde (`exclude_datasets = character(0)`), ils sont marqués `source = "ifn"` et
 #'    `loc_precision_m = 700` (comme [mark_ifn()]) ;
+#' 2 bis. licence et Pl@ntNet, **dans cet ordre**, chaque occurrence n'étant comptée que
+#'    par le premier motif qui l'écarte : (i) licence non commerciale (code `CC_BY_NC*`,
+#'    toute variante, URL, code ou écriture en toutes lettres) si `exclude_noncommercial`
+#'    (défaut `TRUE`) ; (ii) jeux de `exclude_plantnet` (défaut [PLANTNET_GBIF_DATASET_KEYS]) ;
+#'    (iii) licence absente, `UNSPECIFIED`, `UNSUPPORTED` ou autre qu'un code `CC_BY_<n>` (variantes comprises : la variante NC dépend de `exclude_noncommercial`) ou `CC0_1_0`
+#'    (motif `licence_inconnue`) si `exclude_unknown_licence` (défaut `TRUE` : la fiche 037
+#'    veut du CC BY seulement). Les effectifs par motif sont rendus dans l'attribut
+#'    `ecartees` et dans le message émis (jamais de suppression silencieuse) ;
 #' 3. précision : `loc_precision_m` = `coordinateUncertaintyInMeters` ; elle vaut `NA`
 #'    si l'incertitude est absente **ou** si `dataGeneralizations` / `informationWithheld`
 #'    est renseigné (donnée généralisée). Sont gardés les points de précision
@@ -228,13 +251,19 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
 #'   `informationWithheld`.
 #' @param max_uncertainty Précision maximale gardée, en mètres (25).
 #' @param exclude_datasets `datasetKey` à écarter.
+#' @param exclude_noncommercial Écarter les licences `CC_BY_NC*` (`TRUE`).
+#' @param exclude_unknown_licence Écarter les licences absentes ou autres que la famille CC BY et CC0
+#'   (`TRUE`).
+#' @param exclude_plantnet `datasetKey` Pl@ntNet à écarter (défaut
+#'   [PLANTNET_GBIF_DATASET_KEYS] ; `character(0)` pour les garder).
 #' @param keep_unknown Garder les points de précision inconnue (`FALSE`).
 #' @param forest Polygones BD Forêt (`sf`, EPSG:2154, colonne `code_tfv`) ou `NULL`.
 #' @param canopy `SpatRaster` de hauteur de canopée (EPSG:2154) ou `NULL`.
 #' @param min_canopy Hauteur minimale de canopée, en mètres (5).
 #' @return Un objet `sf` (points, EPSG:2154) avec `gbif_id`, `species`, `species_key`,
-#'   `dataset_key`, `license`, `year`, `loc_precision_m`, `source`, et l'attribut
-#'   `clean_log`.
+#'   `dataset_key`, `license`, `year`, `loc_precision_m`, `source`, et les attributs
+#'   `clean_log` et `ecartees` (`data.frame` `motif`, `n` : `licence_non_commerciale`,
+#'   `plantnet`, `licence_inconnue`).
 #' @examples
 #' f <- system.file("extdata", "synth_occ.csv", package = "sylvostation")
 #' if (nzchar(f)) {
@@ -243,6 +272,9 @@ get_gbif <- function(emprise, user = Sys.getenv("GBIF_USER"),
 #' }
 #' @export
 clean_occ <- function(occ, max_uncertainty = 25, exclude_datasets = IFN_GBIF_DATASET_KEYS,
+                      exclude_noncommercial = TRUE,
+                      exclude_plantnet = PLANTNET_GBIF_DATASET_KEYS,
+                      exclude_unknown_licence = TRUE,
                       keep_unknown = FALSE, forest = NULL, canopy = NULL, min_canopy = 5) {
   if (!is.data.frame(occ)) stop("`occ` doit \u00eatre un data.frame.", call. = FALSE)
   manque <- setdiff(c("decimalLongitude", "decimalLatitude", "species"), names(occ))
@@ -288,6 +320,31 @@ clean_occ <- function(occ, max_uncertainty = 25, exclude_datasets = IFN_GBIF_DAT
   }
   log <- .log_step(log, "hors_jeux_exclus", nrow(pts))
 
+  # 2 bis. licence non commerciale, Pl@ntNet, licence inconnue : dans cet ordre, chaque
+  # motif compte les occurrences qu'il ecarte lui-meme (jamais en silence)
+  lic <- gsub("^_+|_+$", "", gsub("[^A-Z0-9]+", "_", toupper(as.character(pts$license))))
+  nc <- if (isTRUE(exclude_noncommercial)) !is.na(pts$license) & grepl("^CC_BY_NC", lic) else
+    rep(FALSE, nrow(pts))
+  pts <- pts[!nc, ]
+  lic <- lic[!nc]
+  log <- .log_step(log, "hors_licence_nc", nrow(pts))
+  pn <- if (length(exclude_plantnet)) {
+    !is.na(pts$dataset_key) & pts$dataset_key %in% exclude_plantnet
+  } else rep(FALSE, nrow(pts))
+  pts <- pts[!pn, ]
+  lic <- lic[!pn]
+  log <- .log_step(log, "hors_plantnet", nrow(pts))
+  inconnue <- if (isTRUE(exclude_unknown_licence)) {
+    is.na(pts$license) | !grepl("^(CC_BY(_[A-Z]+)*_[0-9]|CC0_1_0)", lic)
+  } else rep(FALSE, nrow(pts))
+  pts <- pts[!inconnue, ]
+  log <- .log_step(log, "hors_licence_inconnue", nrow(pts))
+  ecartees <- data.frame(motif = c("licence_non_commerciale", "plantnet", "licence_inconnue"),
+                         n = c(sum(nc), sum(pn), sum(inconnue)), stringsAsFactors = FALSE)
+  message("clean_occ : ", ecartees$n[1], " occurrence(s) ecartee(s) pour licence non ",
+          "commerciale, ", ecartees$n[2], " pour Pl@ntNet, ", ecartees$n[3],
+          " pour licence absente ou non reconnue.")
+
   # 3. precision de localisation
   pts$source <- "gbif"
   pts$loc_precision_m <- ifelse(pts$generalise, NA_real_, pts$incert)
@@ -323,6 +380,7 @@ clean_occ <- function(occ, max_uncertainty = 25, exclude_datasets = IFN_GBIF_DAT
   }
   rownames(pts) <- NULL
   attr(pts, "clean_log") <- log
+  attr(pts, "ecartees") <- ecartees
   pts
 }
 
@@ -500,4 +558,238 @@ load_gnss <- function(path, epsg = 2154) {
   assert_crs_2154(pts)
   pts$source <- "gnss"
   pts
+}
+
+#' Comparer le modèle trophique local (ancrages GBIF) au modèle régional (IFN)
+#'
+#' Décide si la carte trophique locale peut remplacer la carte régionale (mission 037, décision de
+#' Pascal : **le local ne remplace le régional que s'il fait mieux**). Sur les **mêmes ancrages et
+#' les mêmes plis** : le modèle local est évalué hors pli par blocs (`local_trophic$cv`) ; le modèle
+#' régional, appris sur les placettes IFN, n'a jamais vu les ancrages : on lit sa carte aux
+#' coordonnées des ancrages (x = est, y = nord, EPSG:2154). R² = 1 - SCR / SCT sur les mêmes
+#' points. Le gain est `R²(local) - R²(régional brut)`. Son **IC** vient d'un bootstrap **de blocs**
+#' (les blocs de la grille de `spatial_cv()`, rééchantillonnés avec remise) ; le local remplace le
+#' régional **seulement si** la borne basse de l'IC dépasse `gain_min`.
+#'
+#' La comparaison est **impossible** (carte régionale gardée, avertissement avec la raison, jamais un
+#' silence) si le modèle local est absent, s'il y a moins de `min_anchors` ancrages, moins de
+#' `min_blocks` blocs occupés, ou une prédiction régionale manquante.
+#'
+#' Trois asymétries, à lire avec le verdict : (a) décalage de domaine : le régional apprend des
+#' placettes IFN (flore sur 700 m), les ancrages sont des listes de 50 m ; (b) fuite possible en
+#' faveur du régional : des placettes IFN d'apprentissage voisines des ancrages ; (c) les ancrages
+#' sont là où l'on herborise (chemins, lisières), non représentatifs de la carte
+#' (`aoa_part_carte`). Le **régional recalibré hors pli** (décalage moyen appris sur les autres plis)
+#' est rendu **pour information seulement, jamais comme critère de décision**.
+#'
+#' L'IC est **conditionnel aux prédictions hors pli figées** : il rend compte du choix des blocs
+#' d'ancrages, pas de la variabilité de l'ajustement du modèle local ni de la répartition en plis.
+#'
+#' Seuils : **valeur provisoire, sans source, à vérifier**.
+#'
+#' @param local_trophic Liste de la cible `local_trophic` : `data` (`sf` des ancrages, colonne
+#'   `trophic`, EPSG:2154) et `cv` (résultat de [spatial_cv()] sur ces ancrages) ; sans modèle, `NULL`
+#'   ou une liste portant `n_complets` (effectif après exclusion des incomplets) et, si l'ajustement a
+#'   échoué, `erreur` (message d'origine).
+#' @param regional_map `SpatRaster` (une couche) de la carte trophique **régionale**, EPSG:2154.
+#' @param n_anchors Nombre d'ancrages avant exclusion des incomplets (pour le message ; `NA` ok).
+#' @param gain_min Marge minimale sur la borne basse de l'IC du gain de R² (0,02).
+#' @param min_anchors,min_blocks Effectifs minimaux (20 ancrages, 10 blocs).
+#' @param level Niveau de l'IC bilatéral (0,95).
+#' @param n_boot Tirages du bootstrap de blocs (1 000).
+#' @param seed Graine du bootstrap (l'état du générateur est restauré).
+#' @param aoa_part Part de la carte dans la zone d'applicabilité du modèle local (information).
+#' @return Une liste : `resume` (une ligne : `n_ancrages`, `n_blocs`, `k_plis`, `n_tirages` (tirages valides du
+#'   bootstrap), `r2_local`,
+#'   `r2_regional`, `r2_regional_recalibre` (information), `gain`, `ic_bas`, `ic_haut`, `niveau_ic`, `seuil_gain`,
+#'   `rmse_local`, `rmse_regional`, `biais_regional`, `aoa_part_carte`, `variables_locales` (variables du
+#'   modèle local, lues dans `local_trophic$variables`), `decision`, `motif`,
+#'   `statut_seuils`), `par_pli`, `remplace` (logique) et `publiee` (`"locale"` ou `"regionale"`).
+#' @examples
+#' set.seed(1)
+#' n <- 60
+#' d <- sf::st_as_sf(data.frame(x = runif(n, 1e6, 1.1e6), y = runif(n, 6.8e6, 6.9e6),
+#'                              loc_precision_m = 10, a = rnorm(n)),
+#'                   coords = c("x", "y"), crs = 2154, remove = FALSE)
+#' d$trophic <- d$a + rnorm(n, sd = 0.2)
+#' cv <- spatial_cv(d, "trophic", "a", k = 3, block_size = 20000, num_trees = 50)
+#' r <- terra::rast(xmin = 1e6, xmax = 1.1e6, ymin = 6.8e6, ymax = 6.9e6, resolution = 1000,
+#'                  crs = "EPSG:2154", vals = 0)
+#' compare_local_regional(list(data = d, cv = cv), r, min_blocks = 3)$resume$decision
+#' @export
+compare_local_regional <- function(local_trophic, regional_map, n_anchors = NA_integer_,
+                                   gain_min = 0.02, min_anchors = 20L, min_blocks = 10L,
+                                   level = 0.95, n_boot = 1000L, seed = 1L, aoa_part = NA_real_) {
+  if (!inherits(regional_map, "SpatRaster")) {
+    stop("`regional_map` doit \u00eatre un SpatRaster.", call. = FALSE)
+  }
+  assert_crs_2154(regional_map)
+  for (k in c("gain_min")) {
+    x <- get(k)
+    if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 0) {
+      stop("`", k, "` doit \u00eatre un nombre >= 0.", call. = FALSE)
+    }
+  }
+  if (!is.numeric(level) || length(level) != 1L || !is.finite(level) || level <= 0 || level >= 1) {
+    stop("`level` doit \u00eatre dans ]0, 1[.", call. = FALSE)
+  }
+  if (!is.numeric(n_boot) || length(n_boot) != 1L || !is.finite(n_boot) || n_boot < 10) {
+    stop("`n_boot` doit \u00eatre un entier >= 10.", call. = FALSE)
+  }
+  cols <- c("n_ancrages", "n_blocs", "k_plis", "n_tirages", "r2_local", "r2_regional", "r2_regional_recalibre",
+            "gain", "ic_bas", "ic_haut", "niveau_ic", "rmse_local", "rmse_regional", "biais_regional")
+  vars_loc <- if (is.null(local_trophic$variables)) NA_character_ else
+    paste(local_trophic$variables, collapse = ", ")
+  vide <- function(motif, n = n_anchors, nb = NA_integer_, k = NA_integer_) {
+    warning("Comparaison local / r\u00e9gional impossible : ", motif,
+            " ; carte trophique r\u00e9gionale gard\u00e9e.", call. = FALSE)
+    r <- as.data.frame(stats::setNames(as.list(rep(NA_real_, length(cols))), cols))
+    r$n_ancrages <- as.integer(n); r$n_blocs <- as.integer(nb); r$k_plis <- as.integer(k)
+    r$seuil_gain <- gain_min; r$aoa_part_carte <- aoa_part; r$variables_locales <- vars_loc
+    r$decision <- "r\u00e9gionale (comparaison impossible)"; r$motif <- motif
+    r$statut_seuils <- "valeur provisoire, sans source, \u00e0 v\u00e9rifier"
+    list(resume = r, par_pli = data.frame(), remplace = FALSE, publiee = "regionale")
+  }
+  if (is.null(local_trophic) || is.null(local_trophic$cv) || is.null(local_trophic$data)) {
+    # deux causes distinctes : effectif insuffisant (apres exclusion des ancrages incomplets) ou
+    # echec de l'ajustement (message d'origine rendu tel quel)
+    nc <- if (!is.null(local_trophic$n_complets)) local_trophic$n_complets else n_anchors
+    if (!is.null(local_trophic$erreur)) {
+      return(vide(paste0("\u00e9chec du mod\u00e8le local (", local_trophic$erreur, ")"), n = nc))
+    }
+    return(vide(paste0("effectif insuffisant : ", if (is.na(nc)) "aucun" else nc,
+                       " ancrage(s) complet(s) apr\u00e8s exclusion des incomplets pour au moins ",
+                       min_anchors, " requis"), n = nc))
+  }
+  d <- local_trophic$data
+  cv <- local_trophic$cv
+  p <- cv$predictions
+  if (!inherits(d, "sf") || nrow(d) != nrow(p) || !"trophic" %in% names(d) ||
+      max(abs(p$observe - d$trophic)) > 1e-8) {
+    stop("Les ancrages de `local_trophic$data` ne sont pas align\u00e9s sur sa validation crois\u00e9e.",
+         call. = FALSE)
+  }
+  assert_crs_2154(d)
+  xy <- sf::st_coordinates(d)  # x = est, y = nord
+  obs <- d$trophic
+  loc <- p$predit
+  reg <- as.numeric(terra::extract(regional_map[[1]], xy)[, 1])
+  ok <- is.finite(obs) & is.finite(loc) & is.finite(reg)
+  pli <- cv$plis
+  bloc <- paste(floor(xy[, 1] / cv$block_size), floor(xy[, 2] / cv$block_size))
+  n_ok <- sum(ok)
+  nb <- length(unique(bloc[ok]))
+  k <- length(unique(pli[ok]))
+  if (sum(is.finite(reg)) < length(reg)) {
+    return(vide(paste0("carte r\u00e9gionale non d\u00e9finie sur ", sum(!is.finite(reg)), " ancrage(s) sur ",
+                       length(reg)), n = n_ok, nb = nb, k = k))
+  }
+  if (n_ok < min_anchors) {
+    return(vide(paste0(n_ok, " ancrage(s) < ", min_anchors, " requis"), n = n_ok, nb = nb, k = k))
+  }
+  if (nb < min_blocks) {
+    return(vide(paste0(nb, " bloc(s) occup\u00e9(s) < ", min_blocks, " requis"), n = n_ok, nb = nb, k = k))
+  }
+  r2 <- function(o, q) 1 - sum((o - q)^2) / sum((o - mean(o))^2)
+  # regional recalibre hors pli : decalage moyen appris sur les autres plis (information seulement)
+  cal <- reg
+  for (f in unique(pli)) {
+    a <- ok & pli != f
+    cal[pli == f] <- reg[pli == f] + mean(obs[a] - reg[a])
+  }
+  par_pli <- do.call(rbind, lapply(sort(unique(pli[ok])), function(f) {
+    i <- ok & pli == f
+    data.frame(pli = f, n = sum(i), r2_local = r2(obs[i], loc[i]), r2_regional = r2(obs[i], reg[i]),
+               r2_regional_recalibre = r2(obs[i], cal[i]), stringsAsFactors = FALSE)
+  }))
+  par_pli$gain <- par_pli$r2_local - par_pli$r2_regional
+  # bootstrap de blocs : les blocs sont rééchantillonnés avec remise, le gain est recalculé
+  graine <- if (exists(".Random.seed", envir = globalenv(), inherits = FALSE))
+    get(".Random.seed", envir = globalenv()) else NULL
+  on.exit(if (is.null(graine)) {
+    if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) rm(".Random.seed", envir = globalenv())
+  } else assign(".Random.seed", graine, envir = globalenv()), add = TRUE)
+  set.seed(seed)
+  idx <- split(which(ok), bloc[ok])
+  gains <- vapply(seq_len(n_boot), function(b) {
+    i <- unlist(idx[sample.int(length(idx), replace = TRUE)], use.names = FALSE)
+    o <- obs[i]
+    sct <- sum((o - mean(o))^2)
+    if (!is.finite(sct) || sct == 0) return(NA_real_)
+    (sum((o - reg[i])^2) - sum((o - loc[i])^2)) / sct
+  }, numeric(1))
+  q <- stats::quantile(gains, c((1 - level) / 2, 1 - (1 - level) / 2), na.rm = TRUE, names = FALSE)
+  gain <- r2(obs[ok], loc[ok]) - r2(obs[ok], reg[ok])
+  remplace <- is.finite(q[1]) && q[1] > gain_min
+  motif <- sprintf(paste0("gain de R2 du local %.3f, IC %.0f %% [%.3f ; %.3f] sur %d ancrages et %d blocs : ",
+                          "%s la marge de %.3f"), gain, level * 100, q[1], q[2], n_ok, nb,
+                   if (remplace) "borne basse au-dessus de" else "borne basse non sup\u00e9rieure \u00e0", gain_min)
+  res <- data.frame(n_ancrages = n_ok, n_blocs = nb, k_plis = k, n_tirages = sum(is.finite(gains)),
+                    r2_local = r2(obs[ok], loc[ok]), r2_regional = r2(obs[ok], reg[ok]),
+                    r2_regional_recalibre = r2(obs[ok], cal[ok]), gain = gain,
+                    ic_bas = q[1], ic_haut = q[2], niveau_ic = level, seuil_gain = gain_min,
+                    rmse_local = sqrt(mean((obs[ok] - loc[ok])^2)),
+                    rmse_regional = sqrt(mean((obs[ok] - reg[ok])^2)),
+                    biais_regional = mean(reg[ok] - obs[ok]), aoa_part_carte = aoa_part,
+                    variables_locales = vars_loc,
+                    decision = if (remplace) "locale" else "r\u00e9gionale", motif = motif,
+                    statut_seuils = "valeur provisoire, sans source, \u00e0 v\u00e9rifier",
+                    stringsAsFactors = FALSE)
+  list(resume = res, par_pli = par_pli, remplace = remplace,
+       publiee = if (remplace) "locale" else "regionale")
+}
+
+#' Choisir la carte trophique publiée : régionale, ou locale si elle a gagné
+#'
+#' Rend les cartes du pipeline avec la couche trophique **régionale**, sauf si la comparaison
+#' ([compare_local_regional()]) a décidé de remplacer. Sans décision positive explicite, la carte
+#' régionale est gardée : la carte locale n'est jamais lue.
+#'
+#' @param maps_regional Liste nommée de `SpatRaster` (`trophic`, `hydric`, …) du modèle régional.
+#' @param local_map `SpatRaster` du modèle local (couches `pred`, `sd`, `sd_cv`, `di`, `aoa`) ou `NULL`.
+#' @param comparison Résultat de [compare_local_regional()] ou `NULL`.
+#' @return Une liste : `maps` (même structure que `maps_regional`), `publiee` (`"locale"` ou
+#'   `"regionale"`) et `motif`.
+#' @examples
+#' r <- terra::rast(nrows = 2, ncols = 2, xmin = 1e6, xmax = 1000040, ymin = 6.8e6, ymax = 6800040,
+#'                  crs = "EPSG:2154", vals = 1)
+#' select_trophic_map(list(trophic = r), NULL, NULL)$publiee
+#' @export
+select_trophic_map <- function(maps_regional, local_map = NULL, comparison = NULL) {
+  if (!is.list(maps_regional) || !"trophic" %in% names(maps_regional)) {
+    stop("`maps_regional` doit \u00eatre une liste avec l'\u00e9l\u00e9ment `trophic`.", call. = FALSE)
+  }
+  if (is.null(comparison)) {
+    return(list(maps = maps_regional, publiee = "regionale",
+                motif = "aucune comparaison (pas d'ancrages) : carte r\u00e9gionale"))
+  }
+  if (isTRUE(comparison$remplace)) {
+    if (!inherits(local_map, "SpatRaster")) {
+      stop("D\u00e9cision de remplacement sans carte locale.", call. = FALSE)
+    }
+    m <- maps_regional
+    m$trophic <- local_map
+    return(list(maps = m, publiee = "locale", motif = comparison$resume$motif))
+  }
+  list(maps = maps_regional, publiee = "regionale", motif = comparison$resume$motif)
+}
+
+#' Variables du modèle trophique local : les mêmes variables larges que le régional, plus des fines
+#'
+#' Le modèle local (ancrages GBIF) prend **exactement les variables larges du modèle régional**
+#' (`vars_modele$trophic` : climat selon `trophique_climat`, lithologie, formation, pH) auxquelles
+#' s'ajoutent des variables **fines nommées** (terrain fin non vide, sols) : seule la finesse des
+#' données les distingue, jamais un climat que l'un verrait et l'autre non. Le local suit donc
+#' `trophique_climat` de lui-même.
+#'
+#' @param regional Variables du modèle trophique régional (`vars_modele$trophic`).
+#' @param fines Noms des variables fines ajoutées (couches de terrain fin non vides, sols). Une couche
+#'   préfixée `coarse_` (maille de 90 m ou plus, [stack_soil_layers()]) est **large** : elle est écartée
+#'   ici et n'entre dans le local que si le régional l'a (`regional`).
+#' @return Vecteur de noms de variables du modèle local (sans doublon), les larges d'abord.
+#' @examples
+#' local_trophic_vars(c("coarse_litho_enc", "coarse_formation_enc"), c("pente", "twi"))
+#' @export
+local_trophic_vars <- function(regional, fines) {
+  unique(c(regional, fines[!startsWith(fines, "coarse_")]))
 }

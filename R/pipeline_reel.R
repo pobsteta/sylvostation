@@ -19,11 +19,24 @@
 #' réseau n'a lieu. Sinon, avec `offline = TRUE`, la fonction **s'arrête** (le mode
 #' hors ligne ne télécharge jamais) ; sinon elle télécharge par `downloader`.
 #'
+#' **Reprise sur incident réseau** (mission 026) : un échec du téléchargement (erreur ou
+#' état non nul, par exemple « Stream error in the HTTP/2 framing layer ») est repris,
+#' jusqu'à `retries` tentatives au total, avec une attente croissante (`wait`). Le fichier
+#' partiel est supprimé avant chaque reprise et un message est émis à chaque tentative.
+#' Après la dernière, la fonction s'arrête avec une erreur claire (adresse, nombre de
+#' tentatives, dernière cause).
+#'
 #' @param url Adresse du fichier.
 #' @param dir Dossier de cache (créé si besoin, hors dépôt : sous `data/`).
 #' @param offline `TRUE` pour interdire tout téléchargement.
 #' @param downloader Fonction de téléchargement, de signature de
 #'   [utils::download.file()] (remplaçable dans les tests).
+#' @param retries Nombre total de tentatives (au moins 1). Par défaut l'option
+#'   `sylvostation.download_retries`, sinon 3 (valeur provisoire ; en mode réel, `_targets.R`
+#'   pose l'option depuis la clé `download_retries` de `config.yml`).
+#' @param wait Attentes (secondes) avant la 2e, la 3e... tentative ; la dernière valeur
+#'   est répétée si besoin. Défaut : 5, 20, 60 (provisoire).
+#' @param sleeper Fonction d'attente (remplaçable dans les tests).
 #' @return Le chemin du fichier local.
 #' @examples
 #' d <- tempfile("cache")
@@ -31,9 +44,18 @@
 #' writeLines("x", file.path(d, "a.csv"))
 #' fetch_cached("https://exemple.invalid/a.csv", d, offline = TRUE)
 #' @export
-fetch_cached <- function(url, dir, offline = FALSE, downloader = utils::download.file) {
+fetch_cached <- function(url, dir, offline = FALSE, downloader = utils::download.file,
+                         retries = getOption("sylvostation.download_retries", 3L),
+                         wait = c(5, 20, 60), sleeper = Sys.sleep) {
   if (!is.character(url) || length(url) != 1L || !nzchar(url)) {
     stop("`url` doit \u00eatre une adresse.", call. = FALSE)
+  }
+  if (!is.numeric(retries) || length(retries) != 1L || !is.finite(retries) || retries < 1 ||
+      retries != round(retries)) {
+    stop("`retries` doit \u00eatre un entier >= 1.", call. = FALSE)
+  }
+  if (!is.numeric(wait) || length(wait) < 1L || anyNA(wait) || any(wait < 0)) {
+    stop("`wait` doit contenir au moins une dur\u00e9e (s) >= 0.", call. = FALSE)
   }
   dest <- file.path(dir, basename(sub("[?#].*$", "", url)))
   if (file.exists(dest) && file.size(dest) > 0) return(dest)
@@ -42,13 +64,44 @@ fetch_cached <- function(url, dir, offline = FALSE, downloader = utils::download
   }
   dir.create(dir, recursive = TRUE, showWarnings = FALSE)
   tmp <- paste0(dest, ".part")
-  status <- downloader(url, tmp, mode = "wb", quiet = TRUE)
-  if (!identical(as.integer(status), 0L) || !file.exists(tmp)) {
-    unlink(tmp)
-    stop("T\u00e9l\u00e9chargement impossible : ", url, call. = FALSE)
-  }
+  .retry_download(url, tmp, downloader, as.integer(retries), wait, sleeper)
   file.rename(tmp, dest)
   dest
+}
+
+# Telechargement avec reprise pour les appels hors `fetch_cached()` (SER, dalles LiDAR,
+# tableau d'assemblage WFS, TOPAGE ; mission 026). `tmp` : fichier partiel, supprime avant
+# chaque reprise. Le telechargeur et l'attente se remplacent dans les tests par les options
+# `sylvostation.downloader` et `sylvostation.sleeper` ; le nombre de tentatives vient de
+# l'option `sylvostation.download_retries` (3 par defaut, config.yml: download_retries).
+.download_retry <- function(url, tmp) {
+  .retry_download(url, tmp,
+                  getOption("sylvostation.downloader", utils::download.file),
+                  as.integer(getOption("sylvostation.download_retries", 3L)),
+                  c(5, 20, 60), getOption("sylvostation.sleeper", Sys.sleep))
+}
+
+# Tente `downloader(url, tmp)` jusqu'a `retries` fois ; supprime `tmp` avant chaque reprise.
+.retry_download <- function(url, tmp, downloader, retries, wait, sleeper) {
+  cause <- ""
+  for (k in seq_len(retries)) {
+    unlink(tmp)
+    cause <- tryCatch({
+      status <- downloader(url, tmp, mode = "wb", quiet = TRUE)
+      if (identical(as.integer(status), 0L) && file.exists(tmp)) "" else
+        paste0("\u00e9tat ", paste(status, collapse = ","))
+    }, error = function(e) conditionMessage(e))
+    if (!nzchar(cause)) return(invisible(tmp))
+    unlink(tmp)
+    if (k < retries) {
+      w <- wait[min(k, length(wait))]
+      message("T\u00e9l\u00e9chargement en \u00e9chec (tentative ", k, "/", retries, ") : ", url,
+              " \u2014 ", cause, ". Nouvelle tentative dans ", w, " s.")
+      sleeper(w)
+    }
+  }
+  stop("T\u00e9l\u00e9chargement impossible apr\u00e8s ", retries, " tentative(s) : ", url,
+       " (derni\u00e8re cause : ", cause, ").", call. = FALSE)
 }
 
 #' Sources du mode réel (fichiers locaux ou téléchargement)
@@ -70,7 +123,7 @@ fetch_cached <- function(url, dir, offline = FALSE, downloader = utils::download
 #' f <- tempfile(fileext = ".yml")
 #' writeLines(c('ser_code: "D11"',
 #'   "emprise_test: {xmin: 1007000, ymin: 6790000, xmax: 1022000, ymax: 6805000, crs: 2154}",
-#'   "buffer_m: 5000", "resolution_m: 25", "crs: 2154", "data_dir: data",
+#'   "buffer_m: 5000", "resolution_m: 20", "crs: 2154", "data_dir: data",
 #'   "laz_dir: data/laz", "out_dir: data/sorties", "ifn_precision_m: 700",
 #'   "demo: false", "offline: true"), f)
 #' names(real_sources(read_config(f)))
@@ -134,6 +187,8 @@ real_sources <- function(cfg, extdata = system.file("extdata", package = "sylvos
   s$gnss <- opt(cfg$gnss_path, "gnss_path")
   s$reference <- opt(cfg$reference_path, "reference_path")
   s$soils <- opt(unlist(cfg$soil_paths), "soil_paths")
+  s$mnt_large <- opt(cfg$mnt_large_path, "mnt_large_path")
+  s$soilgrids_texture <- opt(cfg$soilgrids_texture_path, "soilgrids_texture_path")
   s
 }
 
@@ -188,8 +243,9 @@ assert_not_synthetic <- function(paths, entree = "entr\u00e9e") {
       }
     } else if (ext == "xlsx" && requireNamespace("readxl", quietly = TRUE)) {
       for (fe in readxl::excel_sheets(p)) {
-        if ("synthetic" %in% names(readxl::read_excel(p, sheet = fe, n_max = 0))) {
-          d <- readxl::read_excel(p, sheet = fe)
+        if ("synthetic" %in% names(readxl::read_excel(p, sheet = fe, n_max = 0,
+                                                              .name_repair = "minimal"))) {
+          d <- readxl::read_excel(p, sheet = fe, .name_repair = "minimal")
           if (vrai(d[["synthetic"]])) arret(p, "colonne synthetic = TRUE")
         }
       }
@@ -320,16 +376,25 @@ tile_blocks <- function(tiles, size = 3) {
   unname(split(d, d$block))
 }
 
-#' Traiter un bloc de dalles LiDAR (reprise après interruption)
+#' Traiter un bloc de dalles LiDAR (cache par dalle, reprise après interruption)
 #'
-#' Appelle `runner` ([run_lasr()] par défaut) sur les dalles du bloc dont les rasters
-#' `mnt_<dalle>.tif` et `mhc_<dalle>.tif` n'existent pas encore dans `out_dir` : une
-#' dalle déjà calculée n'est ni retéléchargée ni recalculée. Les LAZ téléchargés sont
-#' effacés après le bloc (`keep_laz = FALSE`).
+#' Appelle `runner` ([run_lasr()] par défaut) sur les dalles du bloc qui ne sont pas
+#' déjà calculées. Une dalle est **réutilisée** (ni retéléchargée ni recalculée) seulement
+#' si ses deux sorties `mnt_<dalle>.tif` et `mhc_<dalle>.tif` existent, se lisent avec
+#' `terra`, sont en EPSG:2154 et ont la résolution `res` demandée, et si les paramètres
+#' consignés à leur calcul (fichier `params_<dalle>.txt`) sont ceux demandés (`res`,
+#' `buffer`, `engine`). Une dalle sans fichier de paramètres (calculée avant la mission
+#' 032) est acceptée sur les seuls contrôles du raster. Sinon elle est recalculée.
+#' Avant tout recalcul, les sorties et le fichier de paramètres de la dalle sont effacés
+#' (pas de dalle mixte après une interruption). Une dalle reprise sans `params_*.txt` est
+#' signalée par un message. `force = TRUE` recalcule toutes les dalles du bloc. Les LAZ téléchargés sont effacés
+#' après le bloc (`keep_laz = FALSE`). Le nombre de coeurs (`ncores`) ne change pas le
+#' résultat et n'est pas consigné.
 #'
 #' @param block Un élément de [tile_blocks()].
 #' @param out_dir Dossier des rasters LiDAR (hors dépôt).
 #' @param res,buffer,ncores,engine Transmis à `runner`.
+#' @param force Si `TRUE`, recalcule toutes les dalles du bloc (défaut `FALSE`).
 #' @param runner Fonction de traitement (signature de [run_lasr()]).
 #' @return Les chemins des rasters du bloc (`mnt_*` puis `mhc_*`), pour une cible
 #'   `format = "file"`.
@@ -340,17 +405,37 @@ tile_blocks <- function(tiles, size = 3) {
 #' }
 #' @export
 run_tile_block <- function(block, out_dir, res = 1, buffer = 20, ncores = 3,
-                           engine = "auto", runner = run_lasr) {
+                           engine = "auto", force = FALSE, runner = run_lasr) {
   if (!is.data.frame(block) || !all(c("tile_id", "url") %in% names(block))) {
     stop("`block` doit venir de tile_blocks().", call. = FALSE)
+  }
+  if (!is.logical(force) || length(force) != 1L || is.na(force)) {
+    stop("`force` doit \u00eatre TRUE ou FALSE.", call. = FALSE)
   }
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   mnt <- file.path(out_dir, paste0("mnt_", block$tile_id, ".tif"))
   mhc <- file.path(out_dir, paste0("mhc_", block$tile_id, ".tif"))
-  a_faire <- !(file.exists(mnt) & file.exists(mhc))
+  par <- file.path(out_dir, paste0("params_", block$tile_id, ".txt"))
+  params <- .tile_params(res, buffer, engine)
+  a_faire <- if (force) rep(TRUE, nrow(block)) else
+    !vapply(seq_len(nrow(block)), function(i) {
+      .tile_cached(mnt[i], mhc[i], par[i], res, params)
+    }, logical(1))
+  sans_params <- !a_faire & !file.exists(par)
+  if (any(sans_params)) {
+    message("run_tile_block : ", sum(sans_params), " dalle(s) reprise(s) sans params_*.txt ",
+            "(calcul ant\u00e9rieur \u00e0 la mission 032, param\u00e8tres non v\u00e9rifi\u00e9s) ; ",
+            "param\u00e8tres demand\u00e9s : ", params)
+  }
   if (any(a_faire)) {
+    # efface sorties et params des dalles a refaire : un calcul interrompu ne laisse jamais
+    # une dalle mixte (mnt d'un calcul, mhc d'un autre) qui serait reprise ensuite
+    unlink(c(mnt[a_faire], mhc[a_faire], par[a_faire]))
     runner(block$url[a_faire], out_dir, res = res, ncores = ncores, buffer = buffer,
            keep_laz = FALSE, engine = engine)
+    for (i in which(a_faire)) {
+      if (file.exists(mnt[i]) && file.exists(mhc[i])) writeLines(params, par[i])
+    }
   }
   manque <- c(mnt, mhc)[!file.exists(c(mnt, mhc))]
   if (length(manque)) {
@@ -358,6 +443,25 @@ run_tile_block <- function(block, out_dir, res = 1, buffer = 20, ncores = 3,
          call. = FALSE)
   }
   c(mnt, mhc)
+}
+
+# Parametres qui changent le calcul d'une dalle, en une ligne de texte stable.
+.tile_params <- function(res, buffer, engine) {
+  sprintf("res=%s;buffer=%s;engine=%s", format(res), format(buffer), engine)
+}
+
+# Une dalle est-elle reutilisable ? (existence, lecture terra, EPSG:2154, resolution,
+# parametres consignes). Toute anomalie rend FALSE : la dalle est recalculee.
+.tile_cached <- function(mnt, mhc, par, res, params) {
+  if (!(file.exists(mnt) && file.exists(mhc))) return(FALSE)
+  if (file.exists(par) && !identical(readLines(par, warn = FALSE), params)) return(FALSE)
+  all(vapply(c(mnt, mhc), function(f) {
+    tryCatch({
+      r <- terra::rast(f)
+      identical(terra::crs(r, describe = TRUE)$code, "2154") &&
+        isTRUE(all.equal(unname(terra::res(r)), c(res, res)))
+    }, error = function(e) FALSE)
+  }, logical(1)))
 }
 
 #' Mosaïque des rasters LiDAR, agrégée
@@ -420,7 +524,7 @@ mosaic_tiles <- function(files, kind = c("mnt", "mhc"), fact = 5, tile_ids = NUL
 #' @examples
 #' chm <- terra::rast(xmin = 1015500, xmax = 1015550, ymin = 6793500, ymax = 6793550,
 #'                    resolution = 1, crs = "EPSG:2154", vals = 10)
-#' g <- build_grid(c(1015500, 6793500, 1015550, 6793550), 25)
+#' g <- build_grid(c(1015500, 6793500, 1015550, 6793550), 20)
 #' forest_mask(chm, g)
 #' @export
 forest_mask <- function(files, grid, height = 5, min_share = 0.5) {
@@ -446,7 +550,7 @@ forest_mask <- function(files, grid, height = 5, min_share = 0.5) {
 
 #' Grille de travail du mode réel
 #'
-#' Grille de `res` m (origine multiple de `res`, ADR 0004) sur l'intersection de
+#' Grille de `res` m (origine multiple de `res`, ADR 0007) sur l'intersection de
 #' l'emprise et de la partie renseignée du MNT (les dalles traitées).
 #'
 #' @param emprise `sfc` de [real_extent()].
@@ -458,7 +562,7 @@ forest_mask <- function(files, grid, height = 5, min_share = 0.5) {
 #'                  resolution = 5, crs = "EPSG:2154", vals = 1)
 #' e <- sf::st_as_sfc(sf::st_bbox(c(xmin = 1007000, ymin = 6790000, xmax = 1022000,
 #'                    ymax = 6805000), crs = sf::st_crs(2154)))
-#' terra::ext(real_grid(e, d, 25))
+#' terra::ext(real_grid(e, d, 20))
 #' @export
 real_grid <- function(emprise, dtm, res) {
   assert_crs_2154(dtm)
@@ -470,6 +574,27 @@ real_grid <- function(emprise, dtm, res) {
   ymax <- min(b[["ymax"]], e$ymax)
   if (xmin >= xmax || ymin >= ymax) stop("Le MNT ne recoupe pas l'emprise.", call. = FALSE)
   build_grid(c(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax), res)
+}
+
+#' Maille de comparaison à la référence
+#'
+#' Plus petit multiple commun de `resolution_m` et de la maille de la référence (50 m) :
+#' [compare_gradients()] exige un multiple entier de notre maille. 20 donne 100, 25 donne 50,
+#' 30 donne 150 (ADR 0007).
+#'
+#' @param resolution_m Résolution de la grille (m), nombre entier positif.
+#' @param ref_m Maille de la référence (m), 50 par défaut.
+#' @return Un nombre (m).
+#' @examples
+#' comparison_res(20)
+#' @export
+comparison_res <- function(resolution_m, ref_m = 50) {
+  ok <- function(x) is.numeric(x) && length(x) == 1L && !is.na(x) && x > 0 && x == round(x)
+  if (!ok(resolution_m) || !ok(ref_m)) {
+    stop("`resolution_m` et `ref_m` doivent \u00eatre des entiers positifs (m).", call. = FALSE)
+  }
+  pgcd <- function(a, b) if (b == 0) a else pgcd(b, a %% b)
+  resolution_m / pgcd(resolution_m, ref_m) * ref_m
 }
 
 #' Dérivés du terrain ramenés à la grille
@@ -484,22 +609,26 @@ real_grid <- function(emprise, dtm, res) {
 #' @param streams Réseau (`sf` de lignes) ou `NULL`.
 #' @param mrvbf Calculer le MRVBF (`TRUE` en mode réel).
 #' @param tpi_radii Rayons du TPI (m).
+#' @param mrvbf_res Maille (m) du calcul du MRVBF, passée à [derive_terrain()] (`mrvbf_res`,
+#'   `mrvbf_res_m` de `config.yml`) ; `NULL` = maille du MNT.
 #' @return Un `SpatRaster` sur `grid` : couches de [derive_terrain()] et `altitude`
 #'   (couches éventuellement vides : voir [empty_layers()]).
 #' @examples
 #' \donttest{
 #' f <- system.file("extdata", "synth_dtm.tif", package = "sylvostation")
 #' d <- terra::rast(f)
-#' g <- build_grid(terra::ext(d)[c(1, 3, 2, 4)], 25)
+#' g <- build_grid(terra::ext(d)[c(1, 3, 2, 4)], 20)
 #' suppressWarnings(names(real_terrain(d, g, mrvbf = FALSE)))
 #' }
 #' @export
-real_terrain <- function(dtm, grid, streams = NULL, mrvbf = TRUE, tpi_radii = c(100, 300)) {
+real_terrain <- function(dtm, grid, streams = NULL, mrvbf = TRUE, tpi_radii = c(100, 300),
+                         mrvbf_res = NULL) {
   assert_crs_2154(grid)
   # marge de NA pour que la fenetre du plus grand TPI tienne dans le raster (petite emprise)
   n <- ceiling(max(tpi_radii) / terra::res(dtm)[1])
   d <- terra::extend(dtm, n)
-  t5 <- derive_terrain(d, tpi_radii = tpi_radii, streams = streams, mrvbf = mrvbf)
+  t5 <- derive_terrain(d, tpi_radii = tpi_radii, streams = streams, mrvbf = mrvbf,
+                        mrvbf_res = mrvbf_res)
   t5 <- terra::crop(t5, dtm)
   alt <- dtm
   names(alt) <- "altitude"
@@ -569,7 +698,11 @@ read_safran <- function(paths) {
 #' `QUOT_SIM2_<année>.csv.gz` de meteo.data.gouv.fr (docs/referentiels.md, § 23,
 #' Licence Ouverte 2.0, « Source : Météo-France »), garde les mailles dont le centre est
 #' à moins d'une demi-diagonale de maille (5,7 km) de l'emprise, et écrit
-#' `emprise_<année>.csv` dans le cache.
+#' `emprise_<année>_<emprise>.csv` dans le cache. **Le nom du fichier porte l'emprise**
+#' (`.cle_emprise_safran()`) : un fichier filtré pour une autre emprise n'est jamais
+#' resservi (mission 035 : l'ancien nom `emprise_<année>.csv`, sans emprise, avait resservi
+#' 12 mailles pour toute la GRECO D). Seules les colonnes lues par [read_safran()] sont
+#' écrites.
 #'
 #' @param years Années (vecteur d'entiers).
 #' @param emprise Emprise (bbox, sf ou `c(xmin, ymin, xmax, ymax)`, EPSG:2154).
@@ -578,7 +711,7 @@ read_safran <- function(paths) {
 #' @param downloader Voir [fetch_cached()].
 #' @param lignes_par_bloc Lignes lues à la fois : le fichier (environ 137 Mo compressé,
 #'   toute la France) est filtré à la lecture, jamais chargé en entier.
-#' @return Les chemins des fichiers `emprise_<année>.csv`.
+#' @return Les chemins des fichiers `emprise_<année>_<emprise>.csv`.
 #' @examples
 #' \dontrun{
 #' fetch_safran(1996:2025, c(1007000, 6790000, 1022000, 6805000), "data/cache/safran")
@@ -589,11 +722,18 @@ fetch_safran <- function(years, emprise, cache_dir, offline = FALSE,
   b <- .as_bbox(emprise)
   m <- 8000 * sqrt(2) / 2
   vapply(as.integer(years), function(y) {
-    out <- file.path(cache_dir, sprintf("emprise_%d.csv", y))
+    out <- file.path(cache_dir, sprintf("emprise_%d_%s.csv", y, .cle_emprise_safran(b, m)))
     if (file.exists(out)) return(out)
     gz <- fetch_cached(sprintf(.URL_SAFRAN, y), cache_dir, offline, downloader)
     .filtrer_safran(gz, out, b, m, lignes_par_bloc)
   }, character(1))
+}
+
+# Cle d'emprise du fichier SAFRAN filtre : boite (m, arrondie au metre) et marge. Deux
+# emprises differentes donnent deux noms differents.
+.cle_emprise_safran <- function(b, marge) {
+  paste0("x", paste(round(c(b[["xmin"]], b[["ymin"]], b[["xmax"]], b[["ymax"]])), collapse = "_"),
+         "_m", round(marge))
 }
 
 # Lit un fichier SIM2 par blocs de lignes et n'ecrit que les mailles proches de la bbox
@@ -602,9 +742,13 @@ fetch_safran <- function(years, emprise, cache_dir, offline = FALSE,
   con <- gzfile(gz, "r")
   on.exit(close(con), add = TRUE)
   entete <- readLines(con, n = 1L)
+  # colonnes gardees (celles de read_safran) : fichier 3 fois plus petit
+  noms <- strsplit(entete, ";", fixed = TRUE)[[1]]
+  col <- match(intersect(c("LAMBX", "LAMBY", "DATE", "PRENEI", "PRELIQ", "ETP", "T", "FF", "HU", "SSI"),
+                         noms), noms)
   tmp <- paste0(out, ".part")
   sortie <- file(tmp, "w")
-  writeLines(entete, sortie)
+  writeLines(paste(noms[col], collapse = ";"), sortie)
   decision <- logical(0)  # maille -> garder ?
   repeat {
     l <- readLines(con, n = lignes_par_bloc)
@@ -619,7 +763,11 @@ fetch_safran <- function(years, emprise, cache_dir, offline = FALSE,
       decision <- c(decision, stats::setNames(ok, nouv))
     }
     garde <- unname(decision[cle])
-    if (any(garde)) writeLines(l[garde], sortie)
+    if (any(garde)) {
+      # sentinelle ";x" : strsplit ne perd pas les champs vides de fin de ligne
+      k <- do.call(rbind, strsplit(paste0(l[garde], ";x"), ";", fixed = TRUE))
+      writeLines(do.call(paste, c(as.data.frame(k[, col, drop = FALSE]), sep = ";")), sortie)
+    }
   }
   close(sortie)
   file.rename(tmp, out)
@@ -633,40 +781,39 @@ fetch_safran <- function(years, emprise, cache_dir, offline = FALSE,
 #' précipitations (`PRELIQ + PRENEI`, couche `p_sv`) et de l'ETP (`etp_sv`), et
 #' température moyenne annuelle (`t_moy`, `NA` si la colonne `T` manque). Le raster
 #' est construit en Lambert II étendu (EPSG:27572, grille SAFRAN) puis projeté en
-#' Lambert-93 à `res` m (plus proche voisin) : la maille reste celle de SAFRAN, donc
-#' utilisable avec les placettes IFN.
+#' Lambert-93 à `res` m.
+#'
+#' * `interpolation = "bilineaire"` (défaut, mission 033) : chaque cellule de `res` m
+#'   reçoit l'interpolation bilinéaire des valeurs des mailles entre leurs centres
+#'   ([safran_weights()]) : le champ est continu, sans saut aux limites des mailles.
+#'   Lissé à l'échelle de 8 km, il reste un climat kilométrique (variable large),
+#'   croisable avec les placettes IFN. Aucune correction d'altitude.
+#' * `interpolation = "proche"` : plus proche voisin (comportement d'avant 033), la
+#'   valeur de la maille est uniforme sur ses 8 km. **Attention** : la maille d'une placette
+#'   est lue dans un raster de 1 km reprojeté ; sur la GRECO D, 3,8 % des placettes (109 sur
+#'   2 894) reçoivent la maille voisine, avec jusqu'à 2,5 °C d'écart (mission 035).
 #'
 #' @param safran `data.frame` de [read_safran()].
 #' @param months Mois de la saison de végétation (4:9).
 #' @param res Résolution du raster en Lambert-93 (1000 m, minimum pour l'IFN).
-#' @return Un `SpatRaster` (EPSG:2154) : `p_sv`, `etp_sv`, `t_moy`.
+#' @param interpolation `"bilineaire"` (défaut) ou `"proche"`.
+#' @return Un `SpatRaster` (EPSG:2154) : `p_sv`, `etp_sv`, `t_moy` ; attributs `months`
+#'   et `interpolation`.
 #' @examples
 #' s <- read_safran(system.file("extdata", "safran_sim2_12mailles_extrait.csv",
 #'                               package = "sylvostation"))
 #' safran_climate(s)
 #' @export
-safran_climate <- function(safran, months = 4:9, res = 1000) {
+safran_climate <- function(safran, months = 4:9, res = 1000,
+                           interpolation = c("bilineaire", "proche")) {
+  interpolation <- match.arg(interpolation)
   if (!is.data.frame(safran) || !all(c("LAMBX", "LAMBY", "DATE") %in% names(safran))) {
     stop("`safran` doit venir de read_safran().", call. = FALSE)
   }
   if (!is.numeric(months) || !length(months) || any(!months %in% 1:12)) {
     stop("`months` doit contenir des mois de 1 \u00e0 12.", call. = FALSE)
   }
-  d <- as.data.frame(safran)
-  d$an <- as.integer(substr(as.character(d$DATE), 1, 4))
-  d$mois <- as.integer(substr(as.character(d$DATE), 5, 6))
-  d$cle <- paste(d$LAMBX, d$LAMBY, sep = "_")
-  sv <- d[d$mois %in% months, , drop = FALSE]
-  p <- stats::aggregate(cbind(p = PRELIQ + PRENEI, etp = ETP) ~ cle + an, data = sv, FUN = sum)
-  p <- stats::aggregate(cbind(p, etp) ~ cle, data = p, FUN = mean)
-  if ("T" %in% names(d) && any(!is.na(d$T))) {
-    t <- stats::aggregate(T ~ cle + an, data = d, FUN = mean)
-    t <- stats::aggregate(T ~ cle, data = t, FUN = mean)
-  } else {
-    t <- data.frame(cle = p$cle, T = NA_real_)
-  }
-  m <- unique(d[, c("cle", "LAMBX", "LAMBY")])
-  m <- merge(merge(m, p, by = "cle"), t, by = "cle", all.x = TRUE)
+  m <- .climat_mailles(safran, months)   # R/climat.R
   x <- m$LAMBX * 100
   y <- m$LAMBY * 100
   r <- terra::rast(xmin = min(x) - 4000, xmax = max(x) + 4000, ymin = min(y) - 4000,
@@ -677,8 +824,10 @@ safran_climate <- function(safran, months = 4:9, res = 1000) {
   terra::values(r) <- v
   names(r) <- c("p_sv", "etp_sv", "t_moy")
   out <- terra::project(r, "EPSG:2154", method = "near", res = res)
+  if (interpolation == "bilineaire") out <- .climat_bilineaire(out, m)
   assert_crs_2154(out)
   attr(out, "months") <- months
+  attr(out, "interpolation") <- interpolation
   out
 }
 
@@ -694,7 +843,7 @@ safran_climate <- function(safran, months = 4:9, res = 1000) {
 #' @examples
 #' s <- read_safran(system.file("extdata", "safran_sim2_12mailles_extrait.csv",
 #'                               package = "sylvostation"))
-#' g <- build_grid(c(1015500, 6793500, 1015600, 6793600), 25)
+#' g <- build_grid(c(1015500, 6793500, 1015600, 6793600), 20)
 #' names(coarse_predictors(safran_climate(s), g))
 #' @export
 coarse_predictors <- function(climat, grid) {
@@ -740,7 +889,7 @@ filter_greco <- function(ifn, greco) {
 #'
 #' Archive `export_dataifn_*.zip` (docs/referentiels.md § 7, Licence Ouverte 2.0),
 #' mise en cache, puis extraction de `PLACETTE.csv`, `ECOLOGIE.csv`, `FLORE.csv` et
-#' `ARBRE.csv` dans `cache_dir/ifn`.
+#' `ARBRE.csv`, ainsi que `espar-cdref13.csv` (essences et leur `CD_REF`), dans `cache_dir/ifn`.
 #'
 #' @param url Adresse de l'archive (`cfg$ifn_archive_url`).
 #' @param cache_dir Dossier de cache.
@@ -754,9 +903,15 @@ filter_greco <- function(ifn, greco) {
 fetch_ifn <- function(url, cache_dir, offline = FALSE, downloader = utils::download.file) {
   zip <- fetch_cached(url, cache_dir, offline, downloader)
   dir <- file.path(cache_dir, "ifn")
+  # espar-cdref13.csv (code d'essence -> CD_REF) sert a exclure les essences arborees de
+  # l'indice trophique (mission 035)
   fichiers <- c("PLACETTE.csv", "ECOLOGIE.csv", "FLORE.csv", "ARBRE.csv")
   if (!all(file.exists(file.path(dir, fichiers)))) {
     utils::unzip(zip, files = fichiers, exdir = dir)
+  }
+  # optionnel : absent de l'archive = exclusion des essences impossible (erreur claire plus tard)
+  if (!file.exists(file.path(dir, "espar-cdref13.csv"))) {
+    suppressWarnings(utils::unzip(zip, files = "espar-cdref13.csv", exdir = dir))
   }
   dir
 }
@@ -812,15 +967,21 @@ read_geology <- function(paths, emprise = NULL) {
 #' la température (« plus haut = plus chaud ») ; sans température, l'axe est
 #' `-(P - ETP)` réduit (« plus haut = plus sec »).
 #'
-#' @param data Tableau avec `coarse_p_etp_sv` et, si possible, `coarse_t_moy`.
+#' Depuis la mission 039, la température peut être la température corrigée du relief
+#' moyennée dans 700 m (`t_var = "coarse_t_corr_700m"`, [coarse_t_corr_layer()]) ; l'axe
+#' s'applique alors à la carte sur la température de la cellule (`t_corr`, variable fine)
+#' par l'argument `layers` de [apply_bioclim()].
+#'
+#' @param data Tableau avec `coarse_p_etp_sv` et, si possible, la température `t_var`.
+#' @param t_var Colonne de température (`"coarse_t_moy"` par défaut).
 #' @return Une liste : `vars`, `center`, `scale`, `loadings`, `sens`, `variance_expliquee`.
 #' @examples
 #' d <- data.frame(coarse_p_etp_sv = c(100, 300, 500), coarse_t_moy = c(10, 8, 6))
 #' bioclim_axis(d)$sens
 #' @export
-bioclim_axis <- function(data) {
+bioclim_axis <- function(data, t_var = "coarse_t_moy") {
   d <- .drop_geom(data)
-  vars <- intersect(c("coarse_p_etp_sv", "coarse_t_moy"), names(d))
+  vars <- intersect(c("coarse_p_etp_sv", t_var), names(d))
   vars <- vars[vapply(vars, function(v) any(!is.na(d[[v]])), logical(1))]
   if (!"coarse_p_etp_sv" %in% vars) stop("`coarse_p_etp_sv` absent ou vide.", call. = FALSE)
   m <- as.matrix(d[stats::complete.cases(d[, vars, drop = FALSE]), vars, drop = FALSE])
@@ -833,8 +994,8 @@ bioclim_axis <- function(data) {
     e <- eigen(stats::cov(z), symmetric = TRUE)
     l <- e$vectors[, 1]
     names(l) <- vars
-    if (l[["coarse_t_moy"]] < 0) l <- -l
-    if (l[["coarse_t_moy"]] == 0 && l[["coarse_p_etp_sv"]] > 0) l <- -l
+    if (l[[t_var]] < 0) l <- -l
+    if (l[[t_var]] == 0 && l[["coarse_p_etp_sv"]] > 0) l <- -l
     ve <- if (sum(e$values) > 0) e$values[1] / sum(e$values) else NA_real_
     sens <- "plus haut = plus chaud (axe 1 de P - ETP et T, centr\u00e9s-r\u00e9duits)"
   } else {
@@ -850,16 +1011,21 @@ bioclim_axis <- function(data) {
 #'
 #' @param x Tableau ou `SpatRaster` portant les couches de `axis$vars`.
 #' @param axis Résultat de [bioclim_axis()].
+#' @param layers Raster seulement : vecteur nommé (variable de l'axe = couche de `x` qui la
+#'   remplace), par exemple `c(coarse_t_corr_700m = "t_corr")` pour appliquer à la cellule
+#'   un axe appris sur la température moyennée dans 700 m (mission 039). `NULL` : mêmes noms.
 #' @return Un vecteur numérique (tableau) ou un `SpatRaster` `bioclim`.
 #' @examples
 #' d <- data.frame(coarse_p_etp_sv = c(100, 300, 500), coarse_t_moy = c(10, 8, 6))
 #' apply_bioclim(d, bioclim_axis(d))
 #' @export
-apply_bioclim <- function(x, axis) {
+apply_bioclim <- function(x, axis, layers = NULL) {
   v <- axis$vars
   if (inherits(x, "SpatRaster")) {
-    if (!all(v %in% names(x))) stop("Couches absentes : ", paste(setdiff(v, names(x)), collapse = ", "), call. = FALSE)
-    out <- Reduce(`+`, lapply(v, function(k) (x[[k]] - axis$center[[k]]) / axis$scale[[k]] *
+    src <- stats::setNames(v, v)
+    if (!is.null(layers)) src[intersect(names(layers), v)] <- layers[intersect(names(layers), v)]
+    if (!all(src %in% names(x))) stop("Couches absentes : ", paste(setdiff(src, names(x)), collapse = ", "), call. = FALSE)
+    out <- Reduce(`+`, lapply(v, function(k) (x[[src[[k]]]] - axis$center[[k]]) / axis$scale[[k]] *
                                 axis$loadings[[k]]))
     names(out) <- "bioclim"
     return(out)
@@ -884,6 +1050,13 @@ apply_bioclim <- function(x, axis) {
 #' @param safran `data.frame` de [read_safran()].
 #' @param ru_source Source de la réserve utile (`"euptf2"`, défaut ADR 0006).
 #' @param annees Années SAFRAN gardées (`NULL` : toutes).
+#' @param interpolation Séries SAFRAN aux placettes : `"bilineaire"` (défaut, mission 033)
+#'   ou `"proche"` ([hydric_stress()]).
+#' @param exclude_cd_ref,abundance_weights Indice trophique sans les essences arborées et/ou
+#'   pondéré par l'abondance (mission 035) : voir [compute_gradients()].
+#' @param t_layer `NULL` ou `SpatRaster` `coarse_t_corr_700m` ([coarse_t_corr_layer()],
+#'   mission 039) : sa valeur aux placettes (règle des 700 m appelée) est ajoutée en colonne
+#'   et l'axe bioclimatique est appris sur elle au lieu de `coarse_t_moy`.
 #' @return Un `sf` (une ligne par placette retenue avec flore) : `id_placette`,
 #'   `source`, `loc_precision_m`, `grad_trophique`, `ru_mm`, `grad_hydrique`,
 #'   `is_biljou`, `coarse_p_etp_sv`, `coarse_t_moy`, `bioclim`, `trophic`, `hydric`.
@@ -904,14 +1077,22 @@ apply_bioclim <- function(x, axis) {
 #' }
 #' @export
 ifn_real_gradients <- function(ifn, indicateurs, climat, safran, ru_source = "euptf2",
-                               annees = NULL) {
+                               annees = NULL, interpolation = "bilineaire",
+                               exclude_cd_ref = NULL, abundance_weights = FALSE,
+                               t_layer = NULL) {
   ind <- as.data.frame(indicateurs)
-  g <- compute_gradients(ifn, ind, climat)
+  g <- compute_gradients(ifn, ind, climat, exclude_cd_ref = exclude_cd_ref,
+                         abundance_weights = abundance_weights)
   ru <- ru_from_texture(ifn$placettes, ru_source = ru_source)
   g$ru_mm <- ru$ru_mm[match(g$id_placette, ru$id_placette)]
   g <- g[!is.na(g$grad_trophique), ]
-  h <- hydric_stress(g, safran, ru_col = "ru_mm", annees = annees)
-  axis <- bioclim_axis(h)
+  h <- hydric_stress(g, safran, ru_col = "ru_mm", annees = annees, interpolation = interpolation)
+  t_var <- "coarse_t_moy"
+  if (!is.null(t_layer)) {
+    t_var <- names(t_layer)[1]
+    h <- layers_at_points(h, t_layer[[1]])
+  }
+  axis <- bioclim_axis(h, t_var = t_var)
   h$bioclim <- apply_bioclim(h, axis)
   h$trophic <- h$grad_trophique
   h$hydric <- h$grad_hydrique
@@ -1066,7 +1247,7 @@ real_type_legend <- function(legend) {
 #'   `greco`, `mrvbf` (couche calculée ?), `empty_layers`, `hydro_n`, `methode_hydrique`, `n_gbif`
 #'   (`NA` hors ligne), `soils` (logique), `forest_mask` (logique), `n_cells`,
 #'   `n_types`, `key` (logique), `gnss` (logique), `reference` (logique),
-#'   `taxref_version`, `safran_annees`, et pour la carte hydrique de 25 m (mission 021)
+#'   `taxref_version`, `safran_annees`, et pour la carte hydrique (mission 021) et `resolution_m` (m, `config.yml`)
 #'   `methode_hydrique_carte`, `k_methode`, `ru_origine` (texte), `ecart_moyen_abs`,
 #'   `ecart_max_abs`, `n_controle`. Sans `methode_hydrique_carte`, la ligne « 6 bis » dit
 #'   que la carte n'a pas été calculée.
@@ -1085,9 +1266,10 @@ evidence_table_real <- function(f) {
                stringsAsFactors = FALSE)
   }
   n_gbif <- g("n_gbif")
+  maille <- .res_txt(g("resolution_m"))
   rbind(
     e("1. Emprise et grille", reel,
-      paste0("SER ", g("ser_code"), src, " ; grille de 25 m sur les dalles trait\u00e9es.")),
+      paste0("SER ", g("ser_code"), src, " ; grille ", maille, " sur les dalles trait\u00e9es.")),
     e("2. LiDAR HD et MNT", reel, paste0(g("n_tiles"), " dalle(s) LiDAR HD trait\u00e9e(s)", src,
                                          " ; MNT et MHC \u00e0 1 m, mosa\u00efque \u00e0 5 m.")),
     e("3. D\u00e9riv\u00e9s du terrain", reel,
@@ -1109,6 +1291,10 @@ evidence_table_real <- function(f) {
       e("7. Points d'ancrage (GBIF)", "non ex\u00e9cut\u00e9",
         "Hors ligne : pas d'extrait GBIF r\u00e9el (un DOI exige un t\u00e9l\u00e9chargement occ_download avec compte).",
         dans = "non")
+    } else if (n_gbif == 0) {
+      e("7. Points d'ancrage (GBIF)", "non atteint (aucune maille GBIF)",
+        "Aucune maille de bioindication avec occurrence lisible sur l'emprise : ancrages vides, rien n'est substitu\u00e9.",
+        dans = "non")
     } else {
       e("7. Points d'ancrage (GBIF)", "r\u00e9el", paste0(n_gbif, " maille(s) de bioindication."))
     },
@@ -1117,15 +1303,15 @@ evidence_table_real <- function(f) {
         "Aucune couche de sols fournie (cl\u00e9 soil_paths absente) ; GlobalSoilMap introuvable (r\u00e9f\u00e9rentiels \u00a7 18).",
       dans = if (isTRUE(g("soils"))) "oui" else "non"),
     e("9. Masque forestier (MHC > 5 m)", if (isTRUE(g("forest_mask"))) reel else "non ex\u00e9cut\u00e9",
-      paste0("Cellule de 25 m foresti\u00e8re si au moins la moiti\u00e9 de ses pixels du MHC d\u00e9passe 5 m ",
+      paste0("Cellule ", maille, " foresti\u00e8re si au moins la moiti\u00e9 de ses pixels du MHC d\u00e9passe 5 m ",
              "(seuil provisoire) ; BD For\u00eat non branch\u00e9e. ", g("n_cells"), " cellule(s) foresti\u00e8re(s)."),
       dans = if (isTRUE(g("forest_mask"))) "oui" else "non"),
     e("10. Mod\u00e8les, validation crois\u00e9e spatiale, zone d'applicabilit\u00e9", reel,
       paste0("Composante r\u00e9gionale seulement : placettes IFN et pr\u00e9dicteurs \u00e0 maille large (climat SAFRAN). ",
              if (!is.null(f$methode_hydrique_carte)) paste0(
-               "Hydrique : la carte est l'indice Istress de 25 m calcul\u00e9 (ligne 6 bis) ; le mod\u00e8le ",
+               "Hydrique : la carte est l'indice Istress ", maille, " calcul\u00e9 (ligne 6 bis) ; le mod\u00e8le ",
                "r\u00e9gional hydrique ne sert qu'\u00e0 la validation crois\u00e9e. ") else "",
-             if (off || is.na(n_gbif)) "Composante locale (pr\u00e9dicteurs fins, ancrages GBIF) non ex\u00e9cut\u00e9e." else
+             if (off || is.na(n_gbif) || n_gbif == 0) "Composante locale (pr\u00e9dicteurs fins, ancrages GBIF) non ex\u00e9cut\u00e9e." else
                "Composante locale trophique sur les ancrages GBIF.")),
     e("11. Typologie (seuils, fusion des types rares)", reel,
       paste0(g("n_types"), " type(s) ; seuils provisoires par quantiles ; aucun type azonal reconnu (azonal = FALSE).")),
@@ -1156,12 +1342,13 @@ evidence_table_real <- function(f) {
   )
 }
 
-# Ligne « 6 bis » de l'etat de preuve : carte hydrique de 25 m (mission 021).
+# Ligne « 6 bis » de l'etat de preuve : carte hydrique (mission 021).
 .evidence_hydric_grid <- function(f, reel, e) {
+  maille <- .res_txt(f$resolution_m)
   m <- f$methode_hydrique_carte
-  etape <- "6 bis. Carte hydrique de 25 m (BILJOU, rayonnement de la pente)"
+  etape <- "6 bis. Carte hydrique (BILJOU, rayonnement de la pente)"
   if (is.null(m)) {
-    return(e(etape, "non ex\u00e9cut\u00e9", "Carte hydrique de 25 m non calcul\u00e9e.", dans = "non"))
+    return(e(etape, "non ex\u00e9cut\u00e9", "Carte hydrique non calcul\u00e9e.", dans = "non"))
   }
   chiffre <- function(x) if (is.null(x) || !length(x) || is.na(x)) "NA" else format(signif(x, 3))
   quoi <- switch(m,
@@ -1176,7 +1363,7 @@ evidence_table_real <- function(f) {
   # etat \u00ab repli \u00bb des que la carte n'est pas modulee par le rayonnement r.sun
   etat <- if (identical(m, "biljou_topo")) reel else "repli"
   e(etape, etat, paste0(
-    "Istress \u00e0 25 m = BILJOU(ETP, P et RU de la maille SAFRAN) ; m\u00e9thode ", m, " (", quoi,
+    "Istress ", maille, " = BILJOU(ETP, P et RU de la maille SAFRAN) ; m\u00e9thode ", m, " (", quoi,
     ") ; k : ", if (is.null(f$k_methode)) "NA" else f$k_methode,
     ". Plat de r\u00e9f\u00e9rence par la m\u00eame formule (k = 1). ",
     "RU uniforme par maille SAFRAN, provisoire : m\u00e9diane euptf2 des placettes IFN de la maille (",
@@ -1184,10 +1371,10 @@ evidence_table_real <- function(f) {
     "), jamais modul\u00e9e par la topographie. \u00c9cart de la table au calcul direct (",
     chiffre(f$n_controle), " cellule(s) de contr\u00f4le) : moyen ", chiffre(f$ecart_moyen_abs),
     ", maximal ", chiffre(f$ecart_max_abs), " (unit\u00e9s d'Istress). ",
-    "La couche hydric de la carte est -Istress de 25 m. Placettes IFN : Istress sans k, sur la ",
+    "La couche hydric de la carte est -Istress ", maille, ". Placettes IFN : Istress sans k, sur la ",
     "RU de la placette (r\u00e8gle des 700 m) ; carte et placettes ne sont pas \u00e0 la m\u00eame ",
     "\u00e9chelle (RU de la placette contre m\u00e9diane de la maille, plat contre pente). ",
-    "Les placettes IFN sont discr\u00e9tis\u00e9es avec les seuils de la carte de 25 m alors que leur ",
+    "Les placettes IFN sont discr\u00e9tis\u00e9es avec les seuils de la carte hydrique alors que leur ",
     "Istress est calcul\u00e9 sans k : cet \u00e9cart d'\u00e9chelle peut d\u00e9placer des placettes d'un type ",
     "hydrique \u00e0 l'autre et changer les fusions de types rares (merge_rare) ; le calcul n'est ",
     "pas corrig\u00e9. TWI, MRVBF et ",
@@ -1196,7 +1383,7 @@ evidence_table_real <- function(f) {
     "rayonnement nuageux, contraste d'exposition surestim\u00e9 ; (b) ombres du relief hors de ",
     "l'emprise non vues au bord ; (c) le Penman de biljouR plafonne rg/rso \u00e0 1 : au-del\u00e0, le ",
     "terme de grandes ondes ne suit plus k ; (d) RU uniforme par maille, provisoire ; (e) aucune ",
-    "validation fran\u00e7aise \u00e0 25 m (adaptation non valid\u00e9e de Dyer 2009) ; apports lat\u00e9raux et ",
+    "validation fran\u00e7aise \u00e0 cette r\u00e9solution (adaptation non valid\u00e9e de Dyer 2009) ; apports lat\u00e9raux et ",
     "engorgement non capt\u00e9s. Valeurs provisoires : r\u00e9f\u00e9rentiels \u00a7 25.5."))
 }
 
@@ -1215,7 +1402,9 @@ evidence_table_real <- function(f) {
 #'   servi à `cells`.
 #' @param predictors `SpatRaster` des prédicteurs (fins et à maille large).
 #' @return Un `sf` de points : `cell_id`, `source`, `loc_precision_m`, `n_occ_maille`,
-#'   `trophic`, une colonne par couche de `predictors`. Attribut `n_ecartees`.
+#'   `trophic`, une colonne par couche de `predictors`. Attribut `n_ecartees`. Si aucune
+#'   maille n'est bioindiquée : `sf` de 0 ligne aux mêmes colonnes et avertissement de
+#'   classe `sylvostation_non_calcule` (l'aval, modèle trophique local, reste sauté).
 #' @examples
 #' cel <- sf::st_sf(cell_id = "a", ph = 5, azote = 4,
 #'   geometry = sf::st_sfc(sf::st_polygon(list(rbind(c(1015500, 6793500), c(1015550, 6793500),
@@ -1224,7 +1413,7 @@ evidence_table_real <- function(f) {
 #'                                loc_precision_m = c(5, 12)),
 #'                     coords = c("x", "y"), crs = 2154)
 #' r <- terra::rast(xmin = 1015500, xmax = 1015600, ymin = 6793500, ymax = 6793600,
-#'                  resolution = 25, crs = "EPSG:2154", vals = 1)
+#'                  resolution = 20, crs = "EPSG:2154", vals = 1)
 #' names(r) <- "pente"
 #' gbif_anchors(cel, occ, r)$loc_precision_m
 #' @export
@@ -1243,6 +1432,18 @@ gbif_anchors <- function(cells, occ, predictors) {
     if (!length(v) || anyNA(v)) NA_real_ else max(v)
   }, numeric(1))
   garde <- !is.na(prec)
+  if (!any(garde)) {
+    # aucune maille bioindiquee : resultat vide signale, pas d'erreur (mission 026)
+    .warn_non_calcule(paste0("Aucune maille GBIF bioindiqu\u00e9e (", nrow(cells),
+                             " maille(s), aucune avec occurrence lisible) : ancrages vides."))
+    out <- sf::st_sf(
+      cell_id = character(), source = character(), loc_precision_m = numeric(),
+      n_occ_maille = integer(), trophic = numeric(),
+      stats::setNames(rep(list(numeric()), length(names(predictors))), names(predictors)),
+      geometry = sf::st_sfc(crs = sf::st_crs(cells)))
+    attr(out, "n_ecartees") <- length(garde)
+    return(out)
+  }
   pts <- suppressWarnings(sf::st_centroid(cells[garde, ]))
   pts$source <- "gbif"
   pts$loc_precision_m <- prec[garde]
@@ -1353,4 +1554,57 @@ geology_coverage <- function(geol, emprise, departements = character(0), tol = 0
                     100 * part, paste(departements, collapse = ", ")), call. = FALSE)
   }
   invisible(part)
+}
+
+#' Effectifs de la calibration : où se perdent les placettes
+#'
+#' Tableau de l'entonnoir de la mission 035, de toutes les lignes `PLACETTE` de la GRECO
+#' aux placettes d'apprentissage : chaque étape, son effectif, ce qui est perdu et la cause.
+#' Une chute brutale à l'étape « climat » signale une emprise SAFRAN trop petite (cause de
+#' l'effectif de 187 de la mission 018).
+#'
+#' @param ifn Résultat de [filter_releves()] (`placettes` avec `en_saison`, `retenu`).
+#' @param ifn_gradients Résultat de [ifn_real_gradients()] (`coarse_t_moy`).
+#' @param train Liste par gradient (`trophic`, `hydric`) des placettes d'apprentissage avant
+#'   la lithologie (climat complet).
+#' @param litho Résultat de [lithology_at_points()] (`NULL` : étape omise).
+#' @param final Placettes du modèle trophique final (avec lithologie ; `NULL` : omis).
+#' @return Un `data.frame` : `etape`, `n`, `perdues`, `cause`.
+#' @examples
+#' ifn <- filter_releves(load_ifn(system.file("extdata", package = "sylvostation")))
+#' calibration_counts(ifn, data.frame(coarse_t_moy = c(1, NA)), list(trophic = 1, hydric = 1))
+#' @export
+calibration_counts <- function(ifn, ifn_gradients, train, litho = NULL, final = NULL) {
+  pl <- sf::st_drop_geometry(ifn$placettes)
+  n <- function(x) if (is.data.frame(x)) nrow(x) else length(x)
+  e <- list(
+    list("lignes PLACETTE de la GRECO", nrow(pl), "une ligne par visite"),
+    list("avec relev\u00e9 ECOLOGIE", sum(!is.na(pl$DATEECO)),
+         "la 2e visite n'a ni \u00e9cologie ni flore"),
+    list("relev\u00e9 en saison", sum(pl$en_saison), "mois de relev\u00e9 hors de la saison"),
+    list("sans incident r\u00e9cent", sum(pl$retenu), "placette perturb\u00e9e (NINCID, INCID)"),
+    list("trophique calculable", nrow(ifn_gradients),
+         "aucune esp\u00e8ce \u00e0 valeur indicatrice apr\u00e8s filtrage de la flore"),
+    list("avec climat SAFRAN", sum(!is.na(ifn_gradients$coarse_t_moy)),
+         "hors de l'emprise SAFRAN lue (une emprise trop petite fait chuter cet effectif)"))
+  if (!is.null(litho)) {
+    e <- c(e, list(list("avec lithologie (disque couvert)", sum(!is.na(litho$coarse_litho_700m)),
+                        "disque de 700 m hors des d\u00e9partements BD Charm-50 lus")))
+  }
+  if (!is.null(final)) {
+    e <- c(e, list(list("apprentissage trophique", n(final),
+                        "climat, lithologie (et pH) requis")))
+  }
+  out <- data.frame(etape = vapply(e, `[[`, "", 1), n = vapply(e, `[[`, 0L, 2),
+                    stringsAsFactors = FALSE)
+  out$perdues <- c(NA_integer_, -diff(out$n))
+  out$cause <- vapply(e, `[[`, "", 3)
+  # branche hydrique : comparee a l'effectif avec climat (elle ne passe pas par la lithologie)
+  hyd <- n(train$hydric)
+  ncl <- out$n[out$etape == "avec climat SAFRAN"]
+  out <- rbind(out, data.frame(etape = "apprentissage hydrique", n = as.integer(hyd),
+                               perdues = as.integer(ncl - hyd),
+                               cause = "r\u00e9serve utile ou BILJOU manquant (branche hydrique)",
+                               stringsAsFactors = FALSE))
+  out
 }

@@ -1,0 +1,196 @@
+code;nom;latin
+02;Chêne pédonculé;Quercus robur var. robur
+03;Chêne sessile;Quercus petraea subsp. petraea
+04;Chêne rouge;Quercus rubra
+05;Chêne pubescent;Quercus pubescens
+06;Chêne vert;Quercus ilex
+07;Chêne tauzin;Quercus pyrenaica
+08P;Chêne faux-liège;Quercus crenata
+08S;Chêne-liège;Quercus suber
+09;Hêtre;Fagus sylvatica
+10;Châtaignier;Castanea sativa
+11;Charme;Carpinus betulus
+12P;Bouleau pubescent;Betula pubescens
+12V;Bouleau verruqueux;Betula pendula
+13C;Aulne de Corse;Alnus cordata
+13G;Aulne glutineux;Alnus glutinosa
+13B;Aulne blanc;Alnus incana subsp. incana
+14;Robinier faux acacia;Robinia pseudoacacia
+15P;Érable plane;Acer platanoides
+15S;Érable sycomore;Acer pseudoplatanus
+16;Micocoulier;Celtis australis
+17C;Frêne commun;Fraxinus excelsior
+17F;Frêne à fleurs;Fraxinus ornus subsp. ornus
+17O;Frêne oxyphylle;Fraxinus angustifolia subsp. angustifolia
+18C;Orme champêtre;Ulmus minor
+18D;Orme lisse;Ulmus laevis
+18M;Orme de montagne;Ulmus glabra f. glabra
+19;Peuplier cultivé;Populus
+20P;Tilleul à petites feuilles;Tilia cordata
+20G;Tilleul à grandes feuilles;Tilia platyphyllos subsp. platyphyllos
+21C;Érable champêtre;Acer campestre
+21M;Érable de Montpellier;Acer monspessulanum
+21O;Érable à feuilles d'obier;Acer opalus subsp. opalus
+22M;Merisier;Prunus avium
+22C;Cerisier;Prunus cerasus
+22G;Cerisier à grappes;Prunus padus var. padus
+22S;Cerisier tardif;Prunus serotina
+23F;Figuier de Carie;Ficus carica
+23PA;Poirier à feuilles d'amandier;Pyrus spinosa
+23PC;Poirier commun;Pyrus communis subsp. pyraster
+23PM;Pommier sauvage;Malus sylvestris
+23A;Amandier;Prunus dulcis
+23PD;Prunier domestique;Prunus domestica
+23AB;Alisier blanc;Sorbus aria
+23SO;Sorbier des oiseleurs;Sorbus aucuparia subsp. aucuparia
+23C;Cormier;Sorbus domestica
+23AF;Alisier de Fontainebleau;Sorbus latifolia
+23AM;Alisier de Mougeot;Sorbus mougeotii
+23PF;Poirier à feuilles en cœur;Pyrus cordata
+24;Tremble;Populus tremula
+25B;Saule blanc;Salix alba
+25M;Saule marsault;Salix caprea
+25C;Saule cendré;Salix cinerea
+25FD;Saule faux daphné;Salix daphnoides
+25FR;Saule cassant;Salix fragilis
+25D;Saule drapé;Salix eleagnos subsp. eleagnos
+25P;Saule pédicellé;Salix pedicellata
+25E5;Saule à cinq étamines;Salix pentandra
+25XR;Saule rouge;Salix x rubens
+25E3;Saule à trois étamines;Salix triandra
+25V;Saule des vanniers;Salix viminalis
+25R;Saule roux;Salix atrocinerea
+26E;Platane à feuilles d'érable;Platanus x hispanica
+26OC;Platane d'Occident;Platanus occidentalis
+26OR;Platane d'Orient;Platanus orientalis
+27C;Noyer commun;Juglans regia
+27N;Noyer noir;Juglans nigra
+28;Olivier d'Europe;Olea europaea var. sylvestris
+29MI;Mimosa;Vachellia farnesiana
+29EN;Érable negundo;Acer negundo
+29MA;Marronnier d'Inde;Aesculus hippocastanum
+29AI;Ailante;Ailanthus altissima
+29CT;Catalpa;Catalpa bignonioides
+29CA;Caroubier;Ceratonia siliqua
+29PL;Plaqueminier;Diospyros lotus
+29FA;Frêne d'Amérique;Fraxinus americana
+29PV;Pistachier vrai;Pistacia vera
+29CE;Chêne écarlate;Quercus coccinea
+29CM;Chêne des marais;Quercus palustris
+29TA;Tilleul d'Amérique du Nord;Tilia americana
+29TT;Tilleul argenté;Tilia tomentosa
+29LI;Liquidambar;Liquidambar styraciflua
+29FI;Filao;Casuarina cunninghamiana
+29AF;Autre feuillu (espèce ligneuse feuillue sans code espar);-
+31;Noisetier coudrier;Corylus avellana
+32;Charme houblon;Ostrya carpinifolia
+33B;Peuplier blanc;Populus alba
+33G;Peuplier grisard;Populus x canescens
+33N;Peuplier noir;Populus nigra subsp. betulifolia
+34;Chêne chevelu;Quercus cerris
+36;Eucalyptus (genre);Eucalyptus
+37;Aulne vert;Alnus alnobetula subsp. alnobetula
+38AU;Cytise aubour;Laburnum anagyroides
+38AL;Cytise des alpes;Laburnum alpinum
+39;Cornouiller mâle;Cornus mas
+40;Arbousier;Arbutus unedo
+41;Alisier torminal;Sorbus torminalis
+42;Tulipier de Virginie;Liriodendron tulipifera
+51;Pin maritime;Pinus pinaster subsp. pinaster
+52;Pin sylvestre;Pinus sylvestris
+53CO;Pin laricio de Corse;Pinus nigra var. corsicana
+53CA;Pin laricio de Calabre;Pinus nigra var. calabrica
+53S;Pin de Salzmann;Pinus nigra subsp. salzmannii
+54;Pin noir d'Autriche;Pinus nigra subsp. nigra
+55;Pin parasol;Pinus pinea
+56;Pin Weymouth;Pinus strobus
+57A;Pin d'Alep;Pinus halepensis
+57B;Pin brutia (ou) eldarica;Pinus brutia
+58;Pin à crochets;Pinus mugo subsp. uncinata
+59;Pin cembro;Pinus cembra
+60;Pin mugo;Pinus mugo
+61;Sapin pectiné;Abies alba
+62;Épicéa commun;Picea abies subsp. abies
+63;Mélèze d'Europe;Larix decidua subsp. decidua
+64;Douglas;Pseudotsuga menziesii
+65;Cèdre de l'Atlas;Cedrus atlantica
+66;Cyprès de Provence;Cupressus sempervirens
+67;If;Taxus baccata
+68CM;Cyprès de Lambert;Cupressus macrocarpa
+68CB;Cèdre de Chypre;Cedrus libani var. brevifolia
+68CH;Cèdre de l'Himalaya;Cedrus deodara
+68PM;Pin de Monterey;Pinus radiata
+68CA;Cyprès de l'Arizona;Cupressus arizonica
+68EO;Épicéa omorika;Picea omorika
+68TG;Thuya géant;Thuja plicata
+68CL;Cyprès de Lawson;Chamaecyparis lawsoniana
+68SC;Sapin du Colorado;Abies concolor
+68SI;Sapin de Cilicie;Abies cilicica
+68PC;Pin de Murray;Pinus contorta
+68SV;Séquoia toujours vert;Sequoia sempervirens
+68SG;Séquoia géant;Sequoiadendron giganteum
+68CC;Cyprès chauve;Taxodium distichum
+68TH;Tsuga heterophylla;Tsuga heterophylla
+68CJ;Cryptomère du Japon;Cryptomeria japonica
+68CE;Autre résineux (espèce ligneuse résineuse sans code espar);-
+69;Genévrier thurifère;Juniperus thurifera
+70SE;Sapin d'Andalousie;Abies pinsapo
+70SC;Sapin de Céphalonie;Abies cephalonica
+70SB;Sapin de Turquie;Abies bornmuelleriana
+71;Sapin de Nordmann;Abies nordmanniana
+72V;Sapin de Vancouver;Abies grandis
+72N;Sapin noble;Abies procera
+73;Épicéa de Sitka;Picea sitchensis
+74J;Mélèze du Japon;Larix kaempferi
+74H;Mélèze hybride;Larix x marschlinsii
+76;Cèdre du Liban;Cedrus libani
+77;Pin à l'encens et hybrides;Pinus taeda
+20X;Tilleul de Hollande;Tilia x europaea
+29PT;Paulownia;Paulownia tomentosa
+29TX;Tilleul vert;Tilia x euchlora
+68TC;Thuya du Canada;Thuja occidentalis
+68TS;Tsuga du Canada;Tsuga canadensis
+49IA;Houx;Ilex aquifolium
+49MB;Mûrier blanc;Morus alba
+49MC;Mûrier de Chine;Broussonetia papyrifera
+49MN;Mûrier noir;Morus nigra
+49OO;Oranger des Osages;Maclura pomifera
+49VV;Vernis vrai;Rhus vernicifera
+23SF;Sorbier de Finlande;Sorbus legrei
+23SS;Sorbier de Suède;Sorbus intermedia
+49AA;Aubépine azérolier;Crataegus azarolus
+49AE;Aubépine épineuse;Crataegus laevigata
+49AM;Aubépine monogyne;Crataegus monogyna
+49BO;Bourdaine;Frangula alnus subsp. alnus
+49BS;Buis;Buxus sempervirens
+49C;Cognassier;Cydonia oblonga
+49CA;Oranger;Citrus aurantium
+49CM;Cédratier;Citrus medica
+49CN;Mandarinier;Citrus reticulata
+49CS;Arbre de Judée;Cercis siliquastrum
+49FL;Filaire à feuilles larges;Phillyrea latifolia
+49KK;Kaki;Diospyros kaki
+49LN;Laurier noble;Laurus nobilis
+49OB;Olivier de Bohême;Elaeagnus angustifolia
+49PA;Abricotier;Prunus armeniaca
+49PC;Prune-cerise;Prunus cerasifera
+49PM;Cerisier de Sainte Lucie;Prunus mahaleb
+49PN;Poirier neigeux;Pyrus nivalis
+49RT;Sumac de Virginie;Rhus typhina
+49SN;Sureau noir;Sambucus nigra
+49TA;Tamaris de France;Tamarix gallica
+49TF;Tamaris d'Afrique;Tamarix africana
+49TG;Tamaris de France;Tamarix gallica
+69JC;Genévrier commun;Juniperus communis subsp. communis
+69JO;Genévrier oxycèdre;Juniperus oxycedrus subsp. oxycedrus
+49EA;Bruyère arborescente;Erica arborea
+49PS;Prunelier;Prunus spinosa
+49RA;Nerprun alaterne;Rhamnus alaternus
+49RP;Nerprun des Alpes;Rhamnus alpina
+49RC;Nerprun purgatif;Rhamnus cathartica
+49EV;Fusain d'Europe;Euonymus europaeus
+49FA;Filaire à feuilles étroites;Phillyrea angustifolia
+49PB;Prunier de Briançon;Prunus brigantina
+49PL;Pistachier lentisque;Pistacia lentiscus
+49PT;Pistachier térébinthe;Pistacia terebinthus
+49SR;Sureau rouge;Sambucus racemosa subsp. racemosa

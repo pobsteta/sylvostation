@@ -3,7 +3,7 @@ ecrire_config <- function(modif = list()) {
     ser_code = "D11",
     emprise_test = list(xmin = 1007000, ymin = 6790000, xmax = 1022000,
                         ymax = 6805000, crs = 2154),
-    buffer_m = 5000, resolution_m = 25, crs = 2154,
+    buffer_m = 5000, resolution_m = 20, crs = 2154,
     data_dir = "data", laz_dir = "data/laz", out_dir = "data/sorties",
     ifn_precision_m = 700
   )
@@ -52,6 +52,17 @@ test_that("`demo` est facultatif (FALSE par défaut) et doit être booléen", {
   expect_error(read_config(ecrire_config(list(demo = "oui"))), "demo")
 })
 
+test_that("mrvbf_res_m : defaut = resolution_m, valeur lue, controle (mission 027)", {
+  expect_equal(read_config(ecrire_config())$mrvbf_res_m, 20)
+  expect_equal(read_config(ecrire_config(list(resolution_m = 25)))$mrvbf_res_m, 25)
+  expect_equal(read_config(ecrire_config(list(mrvbf_res_m = 5)))$mrvbf_res_m, 5)
+  expect_error(read_config(ecrire_config(list(mrvbf_res_m = -5))), "mrvbf_res_m")
+  expect_error(read_config(ecrire_config(list(mrvbf_res_m = "20"))), "mrvbf_res_m")
+  f <- testthat::test_path("..", "..", "config.yml")
+  skip_if_not(file.exists(f), "config.yml absent du paquet installé")
+  expect_equal(read_config(f)$mrvbf_res_m, 20)
+})
+
 test_that("cles de la carte hydrique de 25 m : defauts provisoires et controles", {
   cfg <- read_config(ecrire_config())
   expect_equal(cfg$solar_linke, 3)
@@ -63,4 +74,84 @@ test_that("cles de la carte hydrique de 25 m : defauts provisoires et controles"
   expect_error(read_config(ecrire_config(list(solar_albedo = 1.5))), "solar_albedo")
   expect_error(read_config(ecrire_config(list(hydric_pas_k = 0))), "hydric_pas_k")
   expect_error(read_config(ecrire_config(list(hydric_n_controle = 2.5))), "hydric_n_controle")
+})
+
+test_that("cles de la descente d'echelle du climat (mission 033) : defauts et controles", {
+  cfg <- read_config(ecrire_config())
+  expect_identical(cfg$safran_interpolation, "bilineaire")
+  expect_equal(cfg$hydric_node_res_m, 1000)
+  expect_identical(cfg$ru_min_placettes, 5L)
+  expect_identical(read_config(ecrire_config(list(safran_interpolation = "proche")))$safran_interpolation,
+                   "proche")
+  expect_error(read_config(ecrire_config(list(safran_interpolation = "krigeage"))),
+               "safran_interpolation")
+  expect_error(read_config(ecrire_config(list(hydric_node_res_m = 0))), "hydric_node_res_m")
+  expect_error(read_config(ecrire_config(list(ru_min_placettes = 0))), "ru_min_placettes")
+  f <- testthat::test_path("..", "..", "config.yml")
+  skip_if_not(file.exists(f), "config.yml absent du paquet installe")
+  cf <- read_config(f)
+  expect_identical(cf$safran_interpolation, "bilineaire")
+  expect_identical(cf$ru_min_placettes, 5L)
+})
+
+test_that("cles de la calibration GRECO (mission 035) : defauts et controles", {
+  cfg <- read_config(ecrire_config())
+  expect_equal(cfg$litho_min_cover, 0.5)
+  expect_equal(cfg$litho_encoding_k, 10)
+  expect_true(cfg$soilgrids_ph)
+  expect_null(cfg$cv_block_m)                      # portee estimee par defaut
+  expect_equal(cfg$cv_block_sensibilite_m, 8358)
+  expect_equal(cfg$cv_min_blocs_par_pli, 4)
+  expect_error(read_config(ecrire_config(list(cv_min_blocs_par_pli = -1))), "cv_min_blocs_par_pli")
+  expect_equal(read_config(ecrire_config(list(cv_block_m = 8358)))$cv_block_m, 8358)
+  expect_error(read_config(ecrire_config(list(cv_block_m = -5))), "cv_block_m")
+  expect_error(read_config(ecrire_config(list(cv_block_sensibilite_m = "a"))), "cv_block_sensibilite_m")
+  expect_false(read_config(ecrire_config(list(soilgrids_ph = FALSE)))$soilgrids_ph)
+  expect_error(read_config(ecrire_config(list(soilgrids_ph = "oui"))), "soilgrids_ph")
+  expect_equal(read_config(ecrire_config(list(litho_min_cover = 0.8)))$litho_min_cover, 0.8)
+  expect_error(read_config(ecrire_config(list(litho_min_cover = 1.5))), "litho_min_cover")
+  expect_error(read_config(ecrire_config(list(litho_encoding_k = -1))), "litho_encoding_k")
+  f <- testthat::test_path("..", "..", "config.yml")
+  skip_if_not(file.exists(f), "config.yml absent du paquet installe")
+  expect_null(read_config(f)$cv_block_m)
+  expect_equal(read_config(f)$cv_min_blocs_par_pli, 4)
+  expect_identical(read_config(f)$bdcharm_departements,
+                   c("054", "057", "067", "068", "070", "088", "090"))
+})
+
+test_that("config.yml du depot : grille de 20 m (mission 025, ADR 0007)", {
+  f <- testthat::test_path("..", "..", "config.yml")
+  skip_if_not(file.exists(f))
+  cfg <- read_config(f)
+  expect_equal(cfg$resolution_m, 20)
+})
+
+test_that("cles de la mission 039 : defauts (arbitrages du 2026-11-20) et controles", {
+  cfg <- read_config(ecrire_config())
+  expect_identical(cfg$climat_temperature, "corrigee")
+  expect_identical(cfg$trophique_climat, "sans")            # decision de Pascal (2026-11-20)
+  expect_identical(cfg$ru_carte, "apprise")
+  expect_false(cfg$bilan_lateral)                          # option C : desactive
+  expect_equal(cfg$bilan_lateral_ru_mm, c(-30, 0, 60))
+  expect_equal(cfg$mnt_large_res_m, 250)
+  expect_equal(cfg$bilan_lateral_coef$depart[["idr_1500"]], 3.410)   # tableau 20 (defaut)
+  expect_equal(cfg$bilan_lateral_coef$equilibre[["moore"]], -0.176)
+  expect_null(cfg$mnt_large_path)
+  expect_error(read_config(ecrire_config(list(climat_temperature = "meteoland"))), "climat_temperature")
+  expect_error(read_config(ecrire_config(list(trophique_climat = "oui"))), "trophique_climat")
+  expect_error(read_config(ecrire_config(list(ru_carte = "soilgrids"))), "ru_carte")
+  expect_error(read_config(ecrire_config(list(bilan_lateral = "oui"))), "bilan_lateral")
+  expect_error(read_config(ecrire_config(list(bilan_lateral_ru_mm = c(1, 2)))), "bilan_lateral_ru_mm")
+  expect_error(read_config(ecrire_config(list(mnt_large_res_m = 25))), "mnt_large_res_m")
+  cf <- list(depart = list(constante = -1, curv150 = 2, idr_1500 = 3, moore = -0.4),
+             equilibre = list(constante = 0.5, curv150 = 1, idr_1500 = 1, moore = -0.2))
+  expect_equal(read_config(ecrire_config(list(bilan_lateral_coef = cf)))$bilan_lateral_coef$depart[["idr_1500"]], 3)
+  expect_error(read_config(ecrire_config(list(bilan_lateral_coef = list(depart = 1)))), "bilan_lateral_coef")
+  expect_identical(read_config(ecrire_config(list(trophique_climat = "actuel")))$trophique_climat, "actuel")
+  f <- testthat::test_path("..", "..", "config.yml")
+  skip_if_not(file.exists(f), "config.yml absent du paquet installe")
+  expect_identical(read_config(f)$trophique_climat, "sans")
+  # config.yml du depot et defaut de R/config.R : memes coefficients du tableau 20
+  expect_equal(read_config(f)$bilan_lateral_coef, cfg$bilan_lateral_coef)
+  expect_false(read_config(f)$bilan_lateral)
 })
