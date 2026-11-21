@@ -1,0 +1,10 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  massif-test: massif-test.html
+  articles/resultats-vosges-d11: resultats-vosges-d11.html
+last_built: 2026-11-21T08:14Z
+urls:
+  reference: https://pobsteta.github.io/sylvostation/reference
+  article: https://pobsteta.github.io/sylvostation/articles
